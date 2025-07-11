@@ -42,7 +42,7 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 1. **Repository klonen:**
    ```bash
    git clone <dein-repo-link>
-   cd EntryMaster_Bot_Pro
+   cd EntryMaster_Tradingview
 
 
 ## dYdX Konfiguration
