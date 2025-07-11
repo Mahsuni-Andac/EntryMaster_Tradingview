@@ -11,7 +11,8 @@ from api_key_manager import APICredentialManager
 class TradingGUI(TradingGUILogicMixin):
     def __init__(self, root, cred_manager: APICredentialManager | None = None):
         self.root = root
-        self.root.title("🧞‍♂️ EntryMaster V11 – Kapital-Safe Edition")
+        # Set window title to reflect the new project name
+        self.root.title("🧞‍♂️ EntryMaster_Tradingview – Kapital-Safe Edition")
 
         # --- API-Zugangsdaten ---
         self.cred_manager = cred_manager or APICredentialManager()

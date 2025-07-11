@@ -25,7 +25,7 @@ from global_state import entry_time_global, ema_trend_global, atr_value_global
 init(autoreset=True)
 
 class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
-    """Kombiniert GUI und Logik für EntryMaster."""
+    """Kombiniert GUI und Logik für EntryMaster_Tradingview."""
     pass
 
 def load_settings_from_file(filename="tuning_config.json"):
