@@ -55,7 +55,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_puffer = tk.StringVar(value="10.0")
         self.andac_vol_mult = tk.StringVar(value="1.2")
 
-        self.andac_opt_tpsl = tk.BooleanVar(value=True)
         self.andac_opt_rsi_ema = tk.BooleanVar()
         self.andac_opt_safe_mode = tk.BooleanVar()
         self.andac_opt_engulf = tk.BooleanVar()
@@ -65,35 +64,22 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_mtf_confirm = tk.BooleanVar()
         self.andac_opt_volumen_strong = tk.BooleanVar()
         self.andac_opt_session_filter = tk.BooleanVar()
-        self.andac_opt_session_bg = tk.BooleanVar()
 
         # Zusätzliche Filter
         self.use_doji_blocker = tk.BooleanVar()
 
         self.interval = tk.StringVar(value="1m")
-        self.sl_mode = tk.StringVar(value="atr")
-        self.stop_loss_atr_multiplier = tk.StringVar(value="0.5")
-        self.take_profit_atr_multiplier = tk.StringVar(value="1.5")
-        self.sl_fix = tk.StringVar(value="20")
-        self.tp_fix = tk.StringVar(value="30")
-        self.sl_tp_min_distance = tk.StringVar(value="5")
-
         self.ema_length = tk.StringVar(value="20")
         self.use_time_filter = tk.BooleanVar()
         self.time_start = tk.StringVar(value="08:00")
         self.time_end = tk.StringVar(value="18:00")
-
-        self.use_smart_cooldown = tk.BooleanVar()
-        self.entry_score_threshold = tk.StringVar(value="0.6")
 
         # Empfehlungslayouts (optional)
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volboost_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.ema_rec_label = ttk.Label(self.root, text="", foreground="green")
-        self.slmode_rec_label = ttk.Label(self.root, text="", foreground="green")
-        self.slmin_rec_label = ttk.Label(self.root, text="", foreground="green")
-        self.score_rec_label = ttk.Label(self.root, text="", foreground="green")
+        
         self.bigcandle_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.breakout_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.rsi_chk_rec = ttk.Label(self.root, text="", foreground="green")
@@ -104,7 +90,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.engulfing_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.bigcandle_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.breakout_chk_rec = ttk.Label(self.root, text="", foreground="green")
-        self.smartcool_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.safemode_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.engulf_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.cool_chk_rec = ttk.Label(self.root, text="", foreground="green")
@@ -138,11 +123,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         # --- Rechts: Optionen ---
         ttk.Label(extra, text="⚙️ Optionen", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        ttk.Label(extra, text="SL/TP Modus:").pack()
-        ttk.Combobox(extra, textvariable=self.sl_mode, values=["atr", "fix"]).pack()
-        self._add_entry_group(extra, "SL/TP Mindestabstand", [self.sl_tp_min_distance])
-        ttk.Checkbutton(extra, text="SmartCooldown", variable=self.use_smart_cooldown).pack(anchor="w")
-        self._add_entry_group(extra, "Score-Schwelle", [self.entry_score_threshold])
+        # Entfernte Optionen (SL/TP Modus, Abstand, SmartCooldown, Score)
 
         # --- Middle ---
         ema_row = ttk.Frame(middle)
@@ -222,17 +203,31 @@ class TradingGUI(TradingGUILogicMixin):
         self._add_entry_group(parent, "Lookback", [self.andac_lookback])
         self._add_entry_group(parent, "Toleranz", [self.andac_puffer])
         self._add_entry_group(parent, "Volumen-Faktor", [self.andac_vol_mult])
-        ttk.Checkbutton(parent, text="TP/SL Zonen", variable=self.andac_opt_tpsl).pack(anchor="w")
-        ttk.Checkbutton(parent, text="RSI/EMA", variable=self.andac_opt_rsi_ema).pack(anchor="w")
-        ttk.Checkbutton(parent, text="🛡 Sicherheitsfilter", variable=self.andac_opt_safe_mode).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Engulfing", variable=self.andac_opt_engulf).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Engulfing + Breakout", variable=self.andac_opt_engulf_bruch).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Engulfing > ATR", variable=self.andac_opt_engulf_big).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Bestätigungskerze", variable=self.andac_opt_confirm_delay).pack(anchor="w")
-        ttk.Checkbutton(parent, text="MTF Bestätigung", variable=self.andac_opt_mtf_confirm).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Starkes Volumen", variable=self.andac_opt_volumen_strong).pack(anchor="w")
-        ttk.Checkbutton(parent, text="EU/NY Session", variable=self.andac_opt_session_filter).pack(anchor="w")
-        ttk.Checkbutton(parent, text="Session Farben", variable=self.andac_opt_session_bg).pack(anchor="w")
+
+        # Optionen zweispaltig aufteilen
+        options_frame = ttk.Frame(parent)
+        options_frame.pack()
+        left_col = ttk.Frame(options_frame)
+        right_col = ttk.Frame(options_frame)
+        left_col.grid(row=0, column=0, padx=5, sticky="nw")
+        right_col.grid(row=0, column=1, padx=5, sticky="nw")
+
+        for text, var in [
+            ("RSI/EMA", self.andac_opt_rsi_ema),
+            ("🛡 Sicherheitsfilter", self.andac_opt_safe_mode),
+            ("Engulfing", self.andac_opt_engulf),
+            ("Engulfing + Breakout", self.andac_opt_engulf_bruch),
+            ("Engulfing > ATR", self.andac_opt_engulf_big),
+        ]:
+            ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
+
+        for text, var in [
+            ("Bestätigungskerze", self.andac_opt_confirm_delay),
+            ("MTF Bestätigung", self.andac_opt_mtf_confirm),
+            ("Starkes Volumen", self.andac_opt_volumen_strong),
+            ("EU/NY Session", self.andac_opt_session_filter),
+        ]:
+            ttk.Checkbutton(right_col, text=text, variable=var).pack(anchor="w")
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)

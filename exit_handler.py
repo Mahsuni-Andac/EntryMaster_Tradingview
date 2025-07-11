@@ -14,7 +14,6 @@ def handle_exit(
     settings: Dict[str, Any],
     capital: float,
     app: Any,
-    smart_cooldown: Any,
     now: float,
 ) -> Dict[str, Any]:
     """Check for SL/TP hits and close position if required."""
@@ -79,8 +78,6 @@ def handle_exit(
                 pnl,
             )
 
-            if smart_cooldown:
-                smart_cooldown.register_sl(now)
 
         return position
 
