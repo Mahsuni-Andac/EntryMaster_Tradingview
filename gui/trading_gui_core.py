@@ -2,6 +2,8 @@
 
 import tkinter as tk
 from tkinter import ttk
+
+from .trading_gui_score_display import ScoreDisplay
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame
 from api_key_manager import APICredentialManager
@@ -9,7 +11,7 @@ from api_key_manager import APICredentialManager
 class TradingGUI(TradingGUILogicMixin):
     def __init__(self, root, cred_manager: APICredentialManager | None = None):
         self.root = root
-        self.root.title("🧞‍♂️ EntryMaster_Tradingview – Kapital-Safe Edition")
+        self.root.title("🧞‍♂️ EntryMaster V11 – Kapital-Safe Edition")
 
         # --- API-Zugangsdaten ---
         self.cred_manager = cred_manager or APICredentialManager()
@@ -36,6 +38,7 @@ class TradingGUI(TradingGUILogicMixin):
         # --- Controls & Vars ---
         self.multiplier_entry = None
         self.capital_entry = None
+        self.score_display = None
         self.log_box = None
         self.auto_status_label = None
 
@@ -46,6 +49,23 @@ class TradingGUI(TradingGUILogicMixin):
         self.multiplier_var = tk.StringVar(value="20")
         self.capital_var = tk.StringVar(value="1000")
         
+        # --- Signal-/Strukturfilter & weitere Einstellungen ---
+        self.use_rsi_filter = tk.BooleanVar()
+        self.rsi_min = tk.StringVar(value="30")
+        self.rsi_max = tk.StringVar(value="70")
+
+        self.use_volume_filter = tk.BooleanVar()
+        self.min_volume = tk.StringVar(value="100")
+        self.use_volume_boost = tk.BooleanVar()
+        self.volume_avg_period = tk.StringVar(value="14")
+
+        self.use_engulfing_filter = tk.BooleanVar()
+        self.use_bigcandle_filter = tk.BooleanVar()
+        self.bigcandle_threshold = tk.StringVar(value="1.5")
+        self.use_breakout_filter = tk.BooleanVar()
+        self.breakout_lookback = tk.StringVar(value="10")
+        self.use_doji_blocker = tk.BooleanVar()
+
         self.interval = tk.StringVar(value="1m")
         self.sl_mode = tk.StringVar(value="atr")
         self.stop_loss_atr_multiplier = tk.StringVar(value="0.5")
@@ -54,9 +74,39 @@ class TradingGUI(TradingGUILogicMixin):
         self.tp_fix = tk.StringVar(value="30")
         self.sl_tp_min_distance = tk.StringVar(value="5")
 
+        self.use_ema_filter = tk.BooleanVar()
+        self.ema_length = tk.StringVar(value="20")
+        self.use_time_filter = tk.BooleanVar()
+        self.time_start = tk.StringVar(value="08:00")
+        self.time_end = tk.StringVar(value="18:00")
+
+        self.use_smart_cooldown = tk.BooleanVar()
+        self.entry_score_threshold = tk.StringVar(value="0.6")
         self.use_safe_mode = tk.BooleanVar(value=True)
 
-        # Keine Empfehlungslayouts notwendig
+        # Empfehlungslayouts (optional)
+        self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.volboost_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.ema_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.slmode_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.slmin_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.score_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.bigcandle_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.breakout_rec_label = ttk.Label(self.root, text="", foreground="green")
+        self.rsi_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.volume_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.volboost_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.ema_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.doji_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.engulfing_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.bigcandle_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.breakout_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.smartcool_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.safemode_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.engulf_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.cool_chk_rec = ttk.Label(self.root, text="", foreground="green")
+        self.safe_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.auto_status_label = None
 
     def _build_gui(self):
@@ -87,12 +137,18 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Label(extra, text="SL/TP Modus:").pack()
         ttk.Combobox(extra, textvariable=self.sl_mode, values=["atr", "fix"]).pack()
         self._add_entry_group(extra, "SL/TP Mindestabstand", [self.sl_tp_min_distance])
+        ttk.Checkbutton(extra, text="SmartCooldown", variable=self.use_smart_cooldown).pack(anchor="w")
         ttk.Checkbutton(extra, text="🛡 Sicherer Modus", variable=self.use_safe_mode).pack(anchor="w")
+        self._add_entry_group(extra, "Score-Schwelle", [self.entry_score_threshold])
 
         # --- Middle ---
-        ttk.Label(middle, text="Intervall:").grid(row=0, column=0, sticky="w")
+        ema_row = ttk.Frame(middle)
+        ema_row.grid(row=0, column=0, columnspan=6, pady=(0, 8), sticky="w")
+        ttk.Checkbutton(ema_row, text="EMA-Filter", variable=self.use_ema_filter).pack(side="left")
+        ttk.Entry(ema_row, textvariable=self.ema_length, width=8).pack(side="left", padx=(4, 8))
+        ttk.Label(ema_row, text="Intervall:").pack(side="left")
         ttk.Combobox(
-            middle,
+            ema_row,
             textvariable=self.interval,
             values=[
                 "1m", "3m", "5m", "10m", "15m", "30m", "45m",
@@ -100,7 +156,7 @@ class TradingGUI(TradingGUILogicMixin):
                 "1d", "2d", "3d", "1w"
             ],
             width=6
-        ).grid(row=0, column=1, padx=(4,0))
+        ).pack(side="left", padx=(4,0))
 
         multi_row = ttk.Frame(middle)
         multi_row.grid(row=1, column=0, columnspan=6, pady=(0, 8), sticky="w")
@@ -112,9 +168,24 @@ class TradingGUI(TradingGUILogicMixin):
         self.capital_entry = ttk.Entry(multi_row, width=8, textvariable=self.capital_var)
         self.capital_entry.pack(side="left", padx=(4,0))
 
+        time_filter_row = ttk.Frame(middle)
+        time_filter_row.grid(row=2, column=0, columnspan=6, pady=(0, 8), sticky="w")
+        ttk.Checkbutton(time_filter_row, text="Uhrzeit-Filter", variable=self.use_time_filter).pack(side="left")
 
+        self.time_filters = []
+        for i in range(4):
+            row = 3 + (i // 2)
+            col = i % 2
+            label = ttk.Label(middle, text=f"Zeitfenster {i+1}")
+            label.grid(row=row*2, column=col, padx=5, pady=(5, 0), sticky="w")
+            start = tk.StringVar(value="08:00")
+            end = tk.StringVar(value="18:00")
+            ttk.Entry(middle, textvariable=start, width=8).grid(row=row*2+1, column=col*2, padx=5)
+            ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
+            self.time_filters.append((start, end))
 
         self._build_signalfilter(left)
+        self._build_strukturfilter(right)
         self._build_controls(self.root)
 
         # --- Unten: Auto Partial Close und Verlust-Limit ---
@@ -141,12 +212,21 @@ class TradingGUI(TradingGUILogicMixin):
         self.max_loss_status_label = ttk.Label(loss_frame, text="", foreground="red")
         self.max_loss_status_label.grid(row=3, column=0, columnspan=2, sticky="w")
 
+        self.score_display = ScoreDisplay(self.root)
+        self.score_display.pack(pady=(8, 4))
 
     def _build_signalfilter(self, parent):
-        ttk.Label(parent, text="Andac Entry-Master", font=("Arial", 11, "bold")).pack(pady=(0, 5))
+        ttk.Label(parent, text="📊 Signal-Filter", font=("Arial", 11, "bold")).pack(pady=(0, 5))
+        self._add_checkbox_entry(parent, "RSI-Filter", self.use_rsi_filter, [self.rsi_min, self.rsi_max])
+        self._add_checkbox_entry(parent, "Volumen-Filter", self.use_volume_filter, [self.min_volume])
+        self._add_checkbox_entry(parent, "Volumen-Anstieg", self.use_volume_boost, [self.volume_avg_period])
 
     def _build_strukturfilter(self, parent):
-        pass
+        ttk.Label(parent, text="🧱 Struktur-Filter", font=("Arial", 11, "bold")).pack(pady=(0, 5))
+        ttk.Checkbutton(parent, text="Engulfing", variable=self.use_engulfing_filter).pack(anchor="w")
+        self._add_checkbox_entry(parent, "Big-Candle", self.use_bigcandle_filter, [self.bigcandle_threshold])
+        self._add_checkbox_entry(parent, "Breakout", self.use_breakout_filter, [self.breakout_lookback])
+        ttk.Checkbutton(parent, text="Doji-Blocker", variable=self.use_doji_blocker).pack(anchor="w")
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
@@ -158,8 +238,11 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Button(button_frame, text="❗️ Notausstieg", command=self.emergency_exit).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="🛑 Alles stoppen & sichern", command=self.stop_and_reset).grid(row=0, column=3, padx=5)
 
-        ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file).grid(row=1, column=0, padx=5)
-        ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file).grid(row=1, column=1, padx=5)
+        ttk.Checkbutton(button_frame, text="🔁 Auto-Empfehlungen", command=self.apply_recommendations).grid(row=1, column=0, padx=5)
+        ttk.Button(button_frame, text="✅ Empfehlungen übernehmen", command=self.apply_recommendations).grid(row=1, column=1, padx=5)
+        ttk.Button(button_frame, text="🧹 Alles deaktivieren", command=self.disable_all_filters).grid(row=1, column=2, padx=5)
+        ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file).grid(row=1, column=3, padx=5)
+        ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file).grid(row=1, column=4, padx=5)
 
         # Auto-Status-Label weiter rechts platzieren
         self.auto_status_label = ttk.Label(button_frame, font=("Arial", 10, "bold"), foreground="green")
