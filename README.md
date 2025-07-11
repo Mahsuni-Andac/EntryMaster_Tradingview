@@ -7,14 +7,12 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 
 ## 🚀 **Features**
 
-- **Adaptive Entry-Engine:**  
-  Nutzt eine Kombination aus RSI, Volumen, Candlestick-Mustern und weiteren Filtern für smarte Einstiegssignale.
+- **Andac Entry-Master Indikator**
+  Alle Handelssignale basieren auf dem portierten TradingView-Skript.
 - **Risikomanagement:**  
   - Dynamisches Stop-Loss/Take-Profit (ATR-basiert)
   - Maximalverlust pro Trade/Kapital-Schutz
   - Simulationsmodus ("Paper Trading") **und** echter Exchange-Modus (z.B. für MEXC)
-- **Autopilot:**  
-  Optionaler Automatikmodus mit Score-Threshold und Empfehlungen.
 - **Simulationsdaten:**  
   Inklusive Beispieldaten für sofortigen Start im Backtest/Sim-Modus.
 - **Modular und erweiterbar:**  
@@ -27,11 +25,10 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 - **Technik:**  
   Die GUI basiert auf [Tkinter](https://docs.python.org/3/library/tkinter.html) (keine Zusatzinstallation nötig).
 - **Elemente:**  
-  - Live-Status (Balance, PnL, Score)
-  - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital, Filter, Autopilot, ...)
+  - Live-Status (Balance, PnL)
+  - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital)
   - Start/Stopp-Buttons für Bot & Simulation
-  - Übersicht über aktuelle Empfehlungen & Positionen
-  - Farbige Score-Anzeige und Live-Log
+  - Übersicht über Positionen und Log
 - **Konfigurierbar:**  
   Fast alle Einstellungen können über die GUI angepasst und als **Profil gespeichert** werden.
 

@@ -84,20 +84,7 @@ def bot_control(gui):
                 if hasattr(gui, "position") and gui.position:
                     trade_info = f"{gui.position['side'].upper()} @ {gui.position['entry']}"
                 # Filterstatus
-                filter_status = {
-                    "RSI": (gui.use_rsi_filter.get(), SETTINGS.get("last_rsi_allowed", True)),
-                    "Vol": (gui.use_volume_filter.get(), SETTINGS.get("last_volume_allowed", True)),
-                    "EMA": (gui.use_ema_filter.get(), SETTINGS.get("last_ema_allowed", True)),
-                    "ENG": (gui.use_engulfing_filter.get(), SETTINGS.get("last_engulfing_allowed", True)),
-                    "BIG": (gui.use_bigcandle_filter.get(), SETTINGS.get("last_bigcandle_allowed", True)),
-                    "BRK": (gui.use_breakout_filter.get(), SETTINGS.get("last_breakout_allowed", True)),
-                    "DOJI": (gui.use_doji_blocker.get(), SETTINGS.get("last_doji_allowed", True)),
-                    "T-FLT": (gui.use_time_filter.get(), SETTINGS.get("last_time_allowed", True)),
-                    "SCool": (gui.use_smart_cooldown.get(), True),
-                }
-                filter_line = "🎛 Filter: " + " ".join(
-                    f"{k}{'✅' if a and b else '⛔' if a else '❌'}" for k, (a, b) in filter_status.items()
-                )
+                filter_line = "Andac Entry-Master aktiv"
                 status = (
                     f"{farbe} Aktueller PnL: ${pnl:.1f} | Laufzeit: {laufzeit}s | ⏰ {uhrzeit} | 📅 {datum}\n"
                     f"💼 Kapital: ${capital:.2f} | 📊 Lev: x{leverage} | 📍 Trade: {trade_info}\n"

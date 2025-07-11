@@ -19,55 +19,12 @@ def _throttle_warn(key, seconds=30):
     return False
 
 def print_full_filter_overview(settings):
-    """
-    Gibt eine Übersicht aller Filter und Optionen mit Status (grüner Haken / rotes Kreuz) aus.
-    """
-    groups = [
-        ("RSI", settings.get("rsi_filter", False)),
-        ("Volume", settings.get("volume_filter", False)),
-        ("EMA", settings.get("ema_filter", False)),
-        ("SmartCooldown", settings.get("smart_cooldown", False)),
-        ("TrailingSL", settings.get("trailing_sl", False)),
-        ("Doji", settings.get("doji_filter", False)),
-        ("Session", settings.get("session_filter", False)),
-        ("Engulfing", settings.get("engulfing_filter", False)),
-        ("BigMove", settings.get("big_move_filter", False)),
-        ("Breakout", settings.get("breakout_filter", False)),
-        ("TimeFilter", settings.get("time_filter", False)),
-        ("ATR-Filter", settings.get("atr_filter", False)),
-        ("Momentum", settings.get("momentum_filter", False)),
-        ("Wick", settings.get("wick_filter", False)),
-        ("Rejection", settings.get("rejection_filter", False)),
-        ("ReEntry", settings.get("reentry_filter", False)),
-        ("SL-Intelligenz", settings.get("sl_intel", False)),
-        ("CapitalSafe", settings.get("capital_safe", False)),
-        ("LiveMode", not settings.get("test_mode", True)),
-        ("SimMode", settings.get("test_mode", False)),
-        ("SessionBlock", settings.get("session_block", False)),
-        ("SignalEngine", settings.get("signal_engine", False)),
-        ("EntryMaster", settings.get("entry_master", False)),
-        ("AdaptiveSL", settings.get("adaptive_sl", False)),
-    ]
-    print("🛠 Filter- & Optionen-Status:")
-    for i, (name, active) in enumerate(groups):
-        status = "✅" if active else "❌"
-        print(f"{name:16}: {status}", end="   ")
-        if (i + 1) % 4 == 0:
-            print("")
-    print("\n")
+    """Ausgabe des aktuellen Betriebsmodus."""
+    print("🛠 Andac Entry-Master aktiviert")
 
 def options_snapshot(settings):
-    """
-    Liefert einen Hash/Snapshot der wichtigsten Einstellungen für Change-Detection.
-    """
-    keys = (
-        "rsi_filter", "volume_filter", "ema_filter", "smart_cooldown", "trailing_sl",
-        "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
-        "breakout_filter", "time_filter", "atr_filter", "momentum_filter", "wick_filter",
-        "rejection_filter", "reentry_filter", "sl_intel", "capital_safe", "test_mode",
-        "session_block", "signal_engine", "entry_master", "adaptive_sl"
-    )
-    return tuple(settings.get(k) for k in keys)
+    """Liefer einen einfachen Snapshot für Reload-Checks."""
+    return tuple(settings.get(k) for k in sorted(settings.keys()))
 
 def print_no_signal_status(settings, position=None, price=None, session_name=None, saved_profit=None, only_active_filters=True):
     """
@@ -75,39 +32,7 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     """
     nowstr = datetime.now().strftime("[%H:%M:%S]")
     print(f"{nowstr} ➖ Kein Signal" + (f" | Session: {session_name}" if session_name else ""))
-    # Aktive Filter oder alle anzeigen
-    filter_status = []
-    filter_status.append("RSI✅" if settings.get("rsi_filter", False) else "RSI❌")
-    filter_status.append("Volume✅" if settings.get("volume_filter", False) else "Volume❌")
-    filter_status.append("EMA✅" if settings.get("ema_filter", False) else "EMA❌")
-    filter_status.append("SmartCooldown✅" if settings.get("smart_cooldown", False) else "SmartCooldown❌")
-    filter_status.append("TrailingSL✅" if settings.get("trailing_sl", False) else "TrailingSL❌")
-    filter_status.append("Doji✅" if settings.get("doji_filter", False) else "Doji❌")
-    filter_status.append("Session✅" if settings.get("session_filter", False) else "Session❌")
-    filter_status.append("Engulfing✅" if settings.get("engulfing_filter", False) else "Engulfing❌")
-    filter_status.append("BigMove✅" if settings.get("big_move_filter", False) else "BigMove❌")
-    filter_status.append("Breakout✅" if settings.get("breakout_filter", False) else "Breakout❌")
-    filter_status.append("TimeFilter✅" if settings.get("time_filter", False) else "TimeFilter❌")
-    filter_status.append("ATR-Filter✅" if settings.get("atr_filter", False) else "ATR-Filter❌")
-    filter_status.append("Momentum✅" if settings.get("momentum_filter", False) else "Momentum❌")
-    filter_status.append("Wick✅" if settings.get("wick_filter", False) else "Wick❌")
-    filter_status.append("Rejection✅" if settings.get("rejection_filter", False) else "Rejection❌")
-    filter_status.append("ReEntry✅" if settings.get("reentry_filter", False) else "ReEntry❌")
-    filter_status.append("SL-Intelligenz✅" if settings.get("sl_intel", False) else "SL-Intelligenz❌")
-    filter_status.append("CapitalSafe✅" if settings.get("capital_safe", False) else "CapitalSafe❌")
-    filter_status.append("LiveMode✅" if not settings.get("test_mode", True) else "LiveMode❌")
-    filter_status.append("SimMode✅" if settings.get("test_mode", False) else "SimMode❌")
-    filter_status.append("SessionBlock✅" if settings.get("session_block", False) else "SessionBlock❌")
-    filter_status.append("SignalEngine✅" if settings.get("signal_engine", False) else "SignalEngine❌")
-    filter_status.append("EntryMaster✅" if settings.get("entry_master", False) else "EntryMaster❌")
-    filter_status.append("AdaptiveSL✅" if settings.get("adaptive_sl", False) else "AdaptiveSL❌")
-
-    if only_active_filters:
-        active = [f.replace("✅", "") for f in filter_status if "✅" in f]
-        filters_text = " | ".join(active) if active else "Keine aktiven Filter"
-        print("🎛 Aktive Filter:", filters_text)
-    else:
-        print("🎛 Filter/Optionen:", " | ".join(filter_status))
+    print("🎛 Andac Entry-Master aktiv")
 
     sl = tp = "-"
     if position:
