@@ -1,61 +1,23 @@
 {
-  "running": false,
-  "force_exit": false,
-  "live_pnl": 0.0,
-  "auto_apply_recommendations": false,
   "auto_multiplier": false,
-  "apc_enabled": true,
-  "apc_rate": "5",
-  "apc_interval": "5",
-  "apc_min_profit": "30",
-  "max_loss_enabled": true,
-  "max_loss_value": "30",
-  "multiplier_var": "5",
-  "capital_var": "100",
-  "use_rsi_filter": true,
-  "rsi_min": "40",
-  "rsi_max": "80",
-  "use_volume_filter": true,
-  "min_volume": "110",
-  "use_volume_boost": true,
-  "volume_avg_period": "13",
-  "use_engulfing_filter": true,
-  "use_bigcandle_filter": true,
-  "bigcandle_threshold": "1.6",
-  "use_breakout_filter": true,
-  "breakout_lookback": "12",
-  "use_doji_blocker": true,
+  "capital_var": "1000",
   "interval": "1m",
   "sl_mode": "atr",
   "stop_loss_atr_multiplier": "0.5",
   "take_profit_atr_multiplier": "1.5",
-  "sl_fix": "20",
-  "tp_fix": "30",
-  "sl_tp_min_distance": "4.3",
-  "use_ema_filter": true,
-  "ema_length": "22",
-  "use_time_filter": false,
-  "time_start": "08:00",
-  "time_end": "18:00",
-  "use_smart_cooldown": true,
-  "entry_score_threshold": "0.7",
-  "use_safe_mode": true,
-  "time_filters": [
-    [
-      "08:00",
-      "18:00"
-    ],
-    [
-      "08:00",
-      "18:00"
-    ],
-    [
-      "08:00",
-      "18:00"
-    ],
-    [
-      "08:00",
-      "18:00"
-    ]
-  ]
+  "andac_config": {
+    "lookback": 20,
+    "puffer": 10.0,
+    "vol_mult": 1.2,
+    "opt_tpsl": true,
+    "opt_rsi_ema": false,
+    "opt_safe_mode": false,
+    "opt_engulf": false,
+    "opt_engulf_bruch": false,
+    "opt_engulf_big": false,
+    "opt_confirm_delay": false,
+    "opt_mtf_confirm": false,
+    "opt_volumen_strong": false,
+    "opt_session_filter": false
+  }
 }

@@ -15,7 +15,6 @@ from credential_checker import check_all_credentials
 from gui import (
     TradingGUI,
     TradingGUILogicMixin,
-    setup_score_bar_styles,
 )
 from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
@@ -119,7 +118,6 @@ def main():
     detect_available_exchanges(SETTINGS)
     check_all_credentials(SETTINGS)
     root = tk.Tk()
-    setup_score_bar_styles(root)
     cred_manager = APICredentialManager()
     gui = EntryMasterTradingviewGUI(root, cred_manager=cred_manager)
     gui_bridge = GUIBridge(gui_instance=gui)

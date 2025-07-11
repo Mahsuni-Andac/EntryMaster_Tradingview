@@ -14,7 +14,6 @@ from datetime import datetime
 
 from data_provider import fetch_latest_candle
 from cooldown_manager import CooldownManager
-from smart_cooldown import SmartCooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from gui import TradingGUI, TradingGUILogicMixin
@@ -117,7 +116,6 @@ def run_bot_live(settings=None, app=None):
 
     # Restliche Initialisierung...
     cooldown = CooldownManager(settings.get("cooldown", 3))
-    smart_cooldown = SmartCooldownManager()
 
     # Andac Entry-Master
     from andac_entry_master import AndacEntryMaster
@@ -183,7 +181,6 @@ def run_bot_live(settings=None, app=None):
         # Historie wird innerhalb des Indikators verwaltet
 
         # Adaptive Entry Check
-        entry_master.tick()
         decision = entry_master.evaluate(candle, settings.get("symbol", "BTCUSDT"))
         entry_type = decision.signal
 
@@ -342,7 +339,7 @@ def run_bot_live(settings=None, app=None):
                 app.live_pnl = 0.0
 
                 if hit_sl:
-                    entry_master.register_sl()
+                    cooldown.register_sl(now)
 
                 position = None
                 entry_time_global = None

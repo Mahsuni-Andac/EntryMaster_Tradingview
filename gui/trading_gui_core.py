@@ -54,7 +54,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.tp_fix = tk.StringVar(value="30")
         self.sl_tp_min_distance = tk.StringVar(value="5")
 
-        self.use_smart_cooldown = tk.BooleanVar()
         self.use_safe_mode = tk.BooleanVar(value=True)
 
         # Keine Empfehlungslayouts notwendig
@@ -88,7 +87,6 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Label(extra, text="SL/TP Modus:").pack()
         ttk.Combobox(extra, textvariable=self.sl_mode, values=["atr", "fix"]).pack()
         self._add_entry_group(extra, "SL/TP Mindestabstand", [self.sl_tp_min_distance])
-        ttk.Checkbutton(extra, text="SmartCooldown", variable=self.use_smart_cooldown).pack(anchor="w")
         ttk.Checkbutton(extra, text="🛡 Sicherer Modus", variable=self.use_safe_mode).pack(anchor="w")
 
         # --- Middle ---
