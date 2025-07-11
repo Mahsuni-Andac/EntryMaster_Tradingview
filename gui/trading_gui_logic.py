@@ -8,47 +8,7 @@ import tkinter as tk
 TUNING_FILE = "tuning_config.json"
 
 class TradingGUILogicMixin:
-    def apply_recommendations(self):
-        try:
-            self.rsi_min.set("40")
-            self.rsi_max.set("80")
-            self.min_volume.set("110")
-            self.volume_avg_period.set("13")
-            self.bigcandle_threshold.set("1.6")
-            self.breakout_lookback.set("12")
-            self.ema_length.set("22")
-            self.sl_mode.set("atr")
-            self.sl_tp_min_distance.set("4.3")
-            self.entry_score_threshold.set("0.7")
-            for var in [
-                self.use_rsi_filter, self.use_volume_filter, self.use_volume_boost,
-                self.use_bigcandle_filter, self.use_breakout_filter, self.use_doji_blocker,
-                self.use_engulfing_filter, self.use_ema_filter, self.use_smart_cooldown,
-                self.use_safe_mode
-            ]:
-                var.set(True)
-            self.log_event("✅ Empfehlungen übernommen")
-        except Exception as e:
-            self.log_event(f"⚠️ Fehler beim Anwenden: {e}")
-
-    def disable_all_filters(self):
-        try:
-            for var in [
-                self.use_rsi_filter, self.use_volume_filter, self.use_volume_boost,
-                self.use_bigcandle_filter, self.use_breakout_filter, self.use_doji_blocker,
-                self.use_engulfing_filter, self.use_ema_filter, self.use_smart_cooldown,
-                self.use_safe_mode, self.use_time_filter
-            ]:
-                var.set(False)
-            self.log_event("🧹 Alle Filter & Optionen deaktiviert")
-        except Exception as e:
-            self.log_event(f"⚠️ Fehler beim Deaktivieren: {e}")
-
-    def update_auto_status(self):
-        if self.auto_apply_recommendations.get():
-            self.auto_status_label.config(text="🟢 Auto-Empfehlung aktiv")
-        else:
-            self.auto_status_label.config(text="")
+    """Logikmixin für grundlegende GUI-Funktionen ohne Filter-Helfer."""
 
     def start_bot(self):
         try:
@@ -114,9 +74,7 @@ class TradingGUILogicMixin:
             elif isinstance(v, (str, float, int, bool)):
                 state[k] = v
         if hasattr(self, "time_filters"):
-            state["time_filters"] = [
-                (start.get(), end.get()) for (start, end) in self.time_filters
-            ]
+            state["time_filters"] = []
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
@@ -137,11 +95,7 @@ class TradingGUILogicMixin:
                     if isinstance(var, tk.Variable):
                         var.set(v)
             if "time_filters" in state and hasattr(self, "time_filters"):
-                loaded_filters = state["time_filters"]
-                if len(loaded_filters) == len(self.time_filters):
-                    for (start_val, end_val), (start, end) in zip(loaded_filters, self.time_filters):
-                        start.set(start_val)
-                        end.set(end_val)
+                pass
             self.log_event("⏏️ Einstellungen geladen")
         except Exception as e:
             self.log_event(f"Fehler beim Laden: {e}")

@@ -28,28 +28,9 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
     # Leverage als x20, ohne Nachkommastellen wenn möglich
     lev_str = f"x{int(leverage)}" if leverage == int(leverage) else f"x{leverage:.2f}"
 
-    # Filterstatus
-    filters = {
-        "RSI": app.use_rsi_filter.get(),
-        "Vol": app.use_volume_filter.get(),
-        "EMA": app.use_ema_filter.get(),
-        "ENG": app.use_engulfing_filter.get(),
-        "BIG": app.use_bigcandle_filter.get(),
-        "BRK": app.use_breakout_filter.get(),
-        "DOJI": app.use_doji_blocker.get(),
-        "T-FLT": app.use_time_filter.get(),
-        "SCool": app.use_smart_cooldown.get(),
-    }
-    filter_line = "🎛 Filter: " + "  ".join(f"{k}{'✅' if v else '❌'}" for k, v in filters.items())
+    filter_line = "Andac Entry-Master aktiv"
 
-    # SmartCooldown-Anzeige
     scool_line = ""
-    if filters["SCool"] and hasattr(app, "smart_cooldown"):
-        rem_fn = getattr(app.smart_cooldown, 'get_remaining_cooldown', None)
-        if callable(rem_fn):
-            remaining = rem_fn()
-            if remaining > 0:
-                scool_line = f"\n🧠 Cooldown aktiv ({remaining}s)"
 
     # Zeilen
     lines = [
