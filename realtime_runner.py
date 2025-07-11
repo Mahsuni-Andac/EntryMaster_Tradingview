@@ -4,6 +4,7 @@
 # - Integrated console_status utilities for consistent output
 # - Added drawdown limit check via RiskManager
 # - Dynamic stop reason on loop exit
+# - Updated for ``EntryDecision`` dataclass
 # - Fixed max loss check to ignore non-positive limits
 
 import os
@@ -12,8 +13,11 @@ import time
 import traceback
 from datetime import datetime
 
+from signal_engine import SignalEngine
 from data_provider import fetch_latest_candle
 from cooldown_manager import CooldownManager
+from session_filter import SessionFilter
+from smart_cooldown import SmartCooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from gui import TradingGUI, TradingGUILogicMixin
@@ -28,9 +32,10 @@ from global_state import (
 )
 
 from init_helpers import import_trader
-
+from indicator_utils import calculate_ema, calculate_atr
 
 # NEU: Adaptive Engines
+from entry_master_engine import EntryMasterEngine, EntryDecision
 from adaptive_sl_manager import AdaptiveSLManager
 
 from risk_manager import RiskManager
@@ -88,7 +93,22 @@ def emergency_exit_position(app):
 
 def run_bot_live(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
-    print_info("Debug: Starte Andac Entry-Master...")
+    print_info("Debug: Überprüfe die Signalverarbeitung...")
+
+    # Instanziiere die SignalEngine
+    signal_engine = SignalEngine(SETTINGS)
+    
+    # Hole die aktuellen Candle-Daten
+    candle = fetch_latest_candle(SETTINGS["symbol"], SETTINGS["interval"])
+    
+    if candle:
+        signal = signal_engine.evaluate(candle, SETTINGS)  # Jetzt ist candle definiert       
+        if signal:
+            print(f"🚀 Signal: {signal['signal']} | Score: {signal['score']} | RSI: {signal['rsi']} | EMA Trend: {signal['ema_trend']}")
+        else:
+            print("⚠️ Kein Signal gefunden.")
+    else:
+        print("⚠️ Keine Candle-Daten gefunden!")
 
     capital = SETTINGS.get("starting_capital", 1000)
     start_capital = capital
@@ -115,11 +135,13 @@ def run_bot_live(settings=None, app=None):
     # interval wird aus GUI übernommen, NICHT überschreiben!
 
     # Restliche Initialisierung...
+    engine = SignalEngine(threshold=settings.get("entry_score_threshold", 0.7))
     cooldown = CooldownManager(settings.get("cooldown", 3))
+    smart_cooldown = SmartCooldownManager()
+    session_filter = SessionFilter()
 
-    # Andac Entry-Master
-    from andac_entry_master import AndacEntryMaster
-    entry_master = AndacEntryMaster(**settings.get("andac_config", {}))
+    # Adaptive Engines
+    entry_master = EntryMasterEngine(settings, mode="sim" if settings.get("test_mode") else "live")
     adaptive_sl = AdaptiveSLManager()
 
     TraderClass = import_trader(settings.get("trading_backend", "sim"))
@@ -163,9 +185,18 @@ def run_bot_live(settings=None, app=None):
             if len(candles) > 100:
                 candles.pop(0)
 
-            # ATR für Statusinformationen
-            atr_value_global = entry_master._atr(candles, 14)
-            ema_trend_global = "-"
+            # Berechnung des ATR und Zuordnung zu atr_value_global
+            atr_value_global = calculate_atr(candles, 14) if calculate_atr(candles, 14) is not None else 0.0
+
+            # Der Rest des Codes bleibt unverändert
+            close_list = [c["close"] for c in candles[-20:] if "close" in c]
+            ema = calculate_ema(close_list, 20)
+            settings["ema_value"] = ema
+
+            if ema is not None:
+                ema_trend_global = "⬆️" if candle["close"] > ema else "⬇️"
+            else:
+                ema_trend_global = "❓"
 
             close_price = candle["close"]
             now = time.time()
@@ -177,12 +208,38 @@ def run_bot_live(settings=None, app=None):
             continue  # Weiter zum nächsten Loop
 
         # GUI Empfehlungen/Filter (wie gehabt)
-        # Kontext für den Indikator vorbereiten (nur Kerzenhistorie)
-        # Historie wird innerhalb des Indikators verwaltet
+        if app:
+            try:
+                from filter_recommender import update_filter_recommendations
+                update_filter_recommendations(app, candle)
+            except Exception as e:
+                if "Kerzen für ATR-Berechnung" in str(e):
+                    print("⏳ Sammle Kerzen für ATR-Berechnung...")
+                else:
+                    print("❌ Fehler im Botlauf:", e)
+                    traceback.print_exc()
+                time.sleep(2)
+                print(f"⚠️ Empfehlungssystem konnte nicht geladen werden: {e}")
+
+        if hasattr(app, "auto_apply_recommendations") and app.auto_apply_recommendations.get():
+            try:
+                app.apply_recommendations()
+            except Exception as e:
+                print(f"⚠️ Automatisches Anwenden fehlgeschlagen: {e}")
+
+        # Adaptive Kontext-Vorbereitung
+        context = {
+            "momentum": candle["close"] - candle["open"],
+            "ema": ema if ema is not None else 0,
+            "history": candles[-20:],
+            "support": min(c["low"] for c in candles[-5:]),
+            "resistance": max(c["high"] for c in candles[-5:])
+        }
 
         # Adaptive Entry Check
-        decision = entry_master.evaluate(candle, settings.get("symbol", "BTCUSDT"))
-        entry_type = decision.signal
+        entry_master.tick()
+        entry_decision: EntryDecision = entry_master.evaluate_entry(candle, context)
+        entry_type = entry_decision.entry_type
 
         # --- POSITION HANDLING ---
         if position:
@@ -339,7 +396,7 @@ def run_bot_live(settings=None, app=None):
                 app.live_pnl = 0.0
 
                 if hit_sl:
-                    cooldown.register_sl(now)
+                    entry_master.register_sl()
 
                 position = None
                 entry_time_global = None

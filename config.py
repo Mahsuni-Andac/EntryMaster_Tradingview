@@ -7,6 +7,7 @@ SETTINGS = {
     "leverage": 20,
     "stop_loss_atr_multiplier": 0.5,
     "take_profit_atr_multiplier": 1.5,
+    "entry_score_threshold": 0.6,  # ⏳ Mindestscore für Einstieg (0.0–1.0)
     "use_session_filter": False,
     "test_mode": False,            # 🧪 Kein Live-Trade
     "trading_backend": "sim",      # 🔁 "mexc", "andac", "sim"
@@ -15,21 +16,15 @@ SETTINGS = {
     "capital": 1000,
     "sim_data_path": "sim_data.csv",
     "dydx_api_url": "https://api.dydx.trade/v4",
-    "version": "EntryMaster_Tradingview",
-    # Parameter des Andac Entry-Master Indikators
-    "andac_config": {
-        "lookback": 20,
-        "puffer": 10.0,
-        "vol_mult": 1.2,
-        "opt_tpsl": True,
-        "opt_rsi_ema": False,
-        "opt_safe_mode": False,
-        "opt_engulf": False,
-        "opt_engulf_bruch": False,
-        "opt_engulf_big": False,
-        "opt_confirm_delay": False,
-        "opt_mtf_confirm": False,
-        "opt_volumen_strong": False,
-        "opt_session_filter": False,
-    },
+    "version": "V10.4_Pro",
+    # Entry-Score-Konfiguration:
+    "score_config": {
+        "rsi_weight": 0.3,
+        "rsi_long_threshold": 35,
+        "rsi_short_threshold": 65,
+        "volume_weight": 0.2,
+        "engulfing_weight": 0.3,
+        "breakout_weight": 0.2,
+        # TODO: Erweiterbar um momentum_weight, trend_align_weight etc.
+    }
 }
