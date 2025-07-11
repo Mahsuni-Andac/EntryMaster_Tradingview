@@ -24,8 +24,8 @@ from global_state import entry_time_global, ema_trend_global, atr_value_global
 
 init(autoreset=True)
 
-class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
-    """Kombiniert GUI und Logik für EntryMaster."""
+class EntryMasterTradingviewGUI(TradingGUI, TradingGUILogicMixin):
+    """Kombiniert GUI und Logik für EntryMaster_Tradingview."""
     pass
 
 def load_settings_from_file(filename="tuning_config.json"):
@@ -134,7 +134,7 @@ def main():
     root = tk.Tk()
     setup_score_bar_styles(root)
     cred_manager = APICredentialManager()
-    gui = EntryMasterGUI(root, cred_manager=cred_manager)
+    gui = EntryMasterTradingviewGUI(root, cred_manager=cred_manager)
     gui_bridge = GUIBridge(gui_instance=gui)
     gui.callback = lambda: on_gui_start(gui)
     threading.Thread(target=bot_control, args=(gui,), daemon=True).start()
