@@ -16,7 +16,7 @@ SETTINGS = {
     "capital": 1000,
     "sim_data_path": "sim_data.csv",
     "dydx_api_url": "https://api.dydx.trade/v4",
-    "version": "V10.4_Pro",
+    "version": "EntryMaster_Tradingview",
     # Entry-Score-Konfiguration:
     "score_config": {
         "rsi_weight": 0.3,
