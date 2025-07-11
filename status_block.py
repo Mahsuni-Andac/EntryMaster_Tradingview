@@ -30,17 +30,19 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
 
     # Filterstatus
     filters = {
-        "RSI": app.use_rsi_filter.get(),
-        "Vol": app.use_volume_filter.get(),
-        "EMA": app.use_ema_filter.get(),
-        "ENG": app.use_engulfing_filter.get(),
-        "BIG": app.use_bigcandle_filter.get(),
-        "BRK": app.use_breakout_filter.get(),
-        "DOJI": app.use_doji_blocker.get(),
-        "T-FLT": app.use_time_filter.get(),
+        "TPSL": app.andac_opt_tpsl.get(),
+        "RSI/EMA": app.andac_opt_rsi_ema.get(),
+        "SAFE": app.andac_opt_safe_mode.get(),
+        "ENG": app.andac_opt_engulf.get(),
+        "BRUCH": app.andac_opt_engulf_bruch.get(),
+        "BIG": app.andac_opt_engulf_big.get(),
+        "DELAY": app.andac_opt_confirm_delay.get(),
+        "MTF": app.andac_opt_mtf_confirm.get(),
+        "VOL": app.andac_opt_volumen_strong.get(),
+        "SES": app.andac_opt_session_filter.get(),
         "SCool": app.use_smart_cooldown.get(),
     }
-    filter_line = "🎛 Filter: " + "  ".join(f"{k}{'✅' if v else '❌'}" for k, v in filters.items())
+    filter_line = "🎛 Andac: " + "  ".join(f"{k}{'✅' if v else '❌'}" for k, v in filters.items())
 
     # SmartCooldown-Anzeige
     scool_line = ""

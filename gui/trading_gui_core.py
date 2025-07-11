@@ -50,21 +50,24 @@ class TradingGUI(TradingGUILogicMixin):
         self.multiplier_var = tk.StringVar(value="20")
         self.capital_var = tk.StringVar(value="1000")
         
-        # --- Signal-/Strukturfilter & weitere Einstellungen ---
-        self.use_rsi_filter = tk.BooleanVar()
-        self.rsi_min = tk.StringVar(value="30")
-        self.rsi_max = tk.StringVar(value="70")
+        # --- Andac Entry-Master Optionen ---
+        self.andac_lookback = tk.StringVar(value="20")
+        self.andac_puffer = tk.StringVar(value="10.0")
+        self.andac_vol_mult = tk.StringVar(value="1.2")
 
-        self.use_volume_filter = tk.BooleanVar()
-        self.min_volume = tk.StringVar(value="100")
-        self.use_volume_boost = tk.BooleanVar()
-        self.volume_avg_period = tk.StringVar(value="14")
+        self.andac_opt_tpsl = tk.BooleanVar(value=True)
+        self.andac_opt_rsi_ema = tk.BooleanVar()
+        self.andac_opt_safe_mode = tk.BooleanVar()
+        self.andac_opt_engulf = tk.BooleanVar()
+        self.andac_opt_engulf_bruch = tk.BooleanVar()
+        self.andac_opt_engulf_big = tk.BooleanVar()
+        self.andac_opt_confirm_delay = tk.BooleanVar()
+        self.andac_opt_mtf_confirm = tk.BooleanVar()
+        self.andac_opt_volumen_strong = tk.BooleanVar()
+        self.andac_opt_session_filter = tk.BooleanVar()
+        self.andac_opt_session_bg = tk.BooleanVar()
 
-        self.use_engulfing_filter = tk.BooleanVar()
-        self.use_bigcandle_filter = tk.BooleanVar()
-        self.bigcandle_threshold = tk.StringVar(value="1.5")
-        self.use_breakout_filter = tk.BooleanVar()
-        self.breakout_lookback = tk.StringVar(value="10")
+        # Zusätzliche Filter
         self.use_doji_blocker = tk.BooleanVar()
 
         self.interval = tk.StringVar(value="1m")
@@ -75,7 +78,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.tp_fix = tk.StringVar(value="30")
         self.sl_tp_min_distance = tk.StringVar(value="5")
 
-        self.use_ema_filter = tk.BooleanVar()
         self.ema_length = tk.StringVar(value="20")
         self.use_time_filter = tk.BooleanVar()
         self.time_start = tk.StringVar(value="08:00")
@@ -83,7 +85,6 @@ class TradingGUI(TradingGUILogicMixin):
 
         self.use_smart_cooldown = tk.BooleanVar()
         self.entry_score_threshold = tk.StringVar(value="0.6")
-        self.use_safe_mode = tk.BooleanVar(value=True)
 
         # Empfehlungslayouts (optional)
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -128,10 +129,12 @@ class TradingGUI(TradingGUILogicMixin):
         right = ttk.Frame(container)
         middle = ttk.Frame(container)
         extra = ttk.Frame(container)
+        andac = ttk.Frame(container)
         left.grid(row=0, column=0, padx=10, sticky="nw")
         right.grid(row=0, column=1, padx=10, sticky="ne")
         middle.grid(row=0, column=2, padx=10, sticky="n")
         extra.grid(row=0, column=3, padx=10, sticky="ne")
+        andac.grid(row=0, column=4, padx=10, sticky="ne")
 
         # --- Rechts: Optionen ---
         ttk.Label(extra, text="⚙️ Optionen", font=("Arial", 11, "bold")).pack(pady=(0, 5))
@@ -139,13 +142,11 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Combobox(extra, textvariable=self.sl_mode, values=["atr", "fix"]).pack()
         self._add_entry_group(extra, "SL/TP Mindestabstand", [self.sl_tp_min_distance])
         ttk.Checkbutton(extra, text="SmartCooldown", variable=self.use_smart_cooldown).pack(anchor="w")
-        ttk.Checkbutton(extra, text="🛡 Sicherer Modus", variable=self.use_safe_mode).pack(anchor="w")
         self._add_entry_group(extra, "Score-Schwelle", [self.entry_score_threshold])
 
         # --- Middle ---
         ema_row = ttk.Frame(middle)
         ema_row.grid(row=0, column=0, columnspan=6, pady=(0, 8), sticky="w")
-        ttk.Checkbutton(ema_row, text="EMA-Filter", variable=self.use_ema_filter).pack(side="left")
         ttk.Entry(ema_row, textvariable=self.ema_length, width=8).pack(side="left", padx=(4, 8))
         ttk.Label(ema_row, text="Intervall:").pack(side="left")
         ttk.Combobox(
@@ -185,8 +186,7 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
             self.time_filters.append((start, end))
 
-        self._build_signalfilter(left)
-        self._build_strukturfilter(right)
+        self._build_andac_options(andac)
         self._build_controls(self.root)
 
         # --- Unten: Auto Partial Close und Verlust-Limit ---
@@ -216,18 +216,23 @@ class TradingGUI(TradingGUILogicMixin):
         self.score_display = ScoreDisplay(self.root)
         self.score_display.pack(pady=(8, 4))
 
-    def _build_signalfilter(self, parent):
-        ttk.Label(parent, text="📊 Signal-Filter", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        self._add_checkbox_entry(parent, "RSI-Filter", self.use_rsi_filter, [self.rsi_min, self.rsi_max])
-        self._add_checkbox_entry(parent, "Volumen-Filter", self.use_volume_filter, [self.min_volume])
-        self._add_checkbox_entry(parent, "Volumen-Anstieg", self.use_volume_boost, [self.volume_avg_period])
 
-    def _build_strukturfilter(self, parent):
-        ttk.Label(parent, text="🧱 Struktur-Filter", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        ttk.Checkbutton(parent, text="Engulfing", variable=self.use_engulfing_filter).pack(anchor="w")
-        self._add_checkbox_entry(parent, "Big-Candle", self.use_bigcandle_filter, [self.bigcandle_threshold])
-        self._add_checkbox_entry(parent, "Breakout", self.use_breakout_filter, [self.breakout_lookback])
-        ttk.Checkbutton(parent, text="Doji-Blocker", variable=self.use_doji_blocker).pack(anchor="w")
+    def _build_andac_options(self, parent):
+        ttk.Label(parent, text="🤑 Entry-Master 🚀", font=("Arial", 11, "bold")).pack(pady=(0, 5))
+        self._add_entry_group(parent, "Lookback", [self.andac_lookback])
+        self._add_entry_group(parent, "Toleranz", [self.andac_puffer])
+        self._add_entry_group(parent, "Volumen-Faktor", [self.andac_vol_mult])
+        ttk.Checkbutton(parent, text="TP/SL Zonen", variable=self.andac_opt_tpsl).pack(anchor="w")
+        ttk.Checkbutton(parent, text="RSI/EMA", variable=self.andac_opt_rsi_ema).pack(anchor="w")
+        ttk.Checkbutton(parent, text="🛡 Sicherheitsfilter", variable=self.andac_opt_safe_mode).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Engulfing", variable=self.andac_opt_engulf).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Engulfing + Breakout", variable=self.andac_opt_engulf_bruch).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Engulfing > ATR", variable=self.andac_opt_engulf_big).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Bestätigungskerze", variable=self.andac_opt_confirm_delay).pack(anchor="w")
+        ttk.Checkbutton(parent, text="MTF Bestätigung", variable=self.andac_opt_mtf_confirm).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Starkes Volumen", variable=self.andac_opt_volumen_strong).pack(anchor="w")
+        ttk.Checkbutton(parent, text="EU/NY Session", variable=self.andac_opt_session_filter).pack(anchor="w")
+        ttk.Checkbutton(parent, text="Session Farben", variable=self.andac_opt_session_bg).pack(anchor="w")
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
