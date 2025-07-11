@@ -102,23 +102,5 @@ class GUIBridge:
             self.gui.running = False
 
     def update_filter_feedback(self, score):
-        if not self.gui:
-            return
-        try:
-            score = float(score)
-            if score >= 0.9:
-                self.gui.use_breakout_filter.set(True)
-                self.gui.use_volume_boost.set(True)
-                self.gui.breakout_rec_label.config(text="🚀 Boost aktivieren")
-                self.gui.volboost_rec_label.config(text="🚀 Volume Surge aktiv")
-            elif score >= 0.8:
-                self.gui.breakout_rec_label.config(text="🟢 Breakout sinnvoll")
-                self.gui.volboost_rec_label.config(text="🟢 Volumen ok")
-            elif score >= 0.7:
-                self.gui.breakout_rec_label.config(text="🟢 Bestätigung leicht")
-            elif score >= 0.6:
-                self.gui.breakout_rec_label.config(text="🟡 RSI/EMA prüfen")
-            else:
-                self.gui.breakout_rec_label.config(text="🔻 Entry vermeiden")
-        except Exception as e:
-            self.log_event(f"⚠️ Fehler bei Score-Auswertung: {e}")
+        """Placeholder for legacy feedback – no longer used."""
+        return

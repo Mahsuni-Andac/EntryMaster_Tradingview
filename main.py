@@ -85,18 +85,19 @@ def bot_control(gui):
                     trade_info = f"{gui.position['side'].upper()} @ {gui.position['entry']}"
                 # Filterstatus
                 filter_status = {
-                    "RSI": (gui.use_rsi_filter.get(), SETTINGS.get("last_rsi_allowed", True)),
-                    "Vol": (gui.use_volume_filter.get(), SETTINGS.get("last_volume_allowed", True)),
-                    "EMA": (gui.use_ema_filter.get(), SETTINGS.get("last_ema_allowed", True)),
-                    "ENG": (gui.use_engulfing_filter.get(), SETTINGS.get("last_engulfing_allowed", True)),
-                    "BIG": (gui.use_bigcandle_filter.get(), SETTINGS.get("last_bigcandle_allowed", True)),
-                    "BRK": (gui.use_breakout_filter.get(), SETTINGS.get("last_breakout_allowed", True)),
-                    "DOJI": (gui.use_doji_blocker.get(), SETTINGS.get("last_doji_allowed", True)),
-                    "T-FLT": (gui.use_time_filter.get(), SETTINGS.get("last_time_allowed", True)),
-                    "SCool": (gui.use_smart_cooldown.get(), True),
+                    "TPSL": gui.andac_opt_tpsl.get(),
+                    "RSI/EMA": gui.andac_opt_rsi_ema.get(),
+                    "SAFE": gui.andac_opt_safe_mode.get(),
+                    "ENG": gui.andac_opt_engulf.get(),
+                    "BRUCH": gui.andac_opt_engulf_bruch.get(),
+                    "BIG": gui.andac_opt_engulf_big.get(),
+                    "DELAY": gui.andac_opt_confirm_delay.get(),
+                    "MTF": gui.andac_opt_mtf_confirm.get(),
+                    "VOL": gui.andac_opt_volumen_strong.get(),
+                    "SES": gui.andac_opt_session_filter.get(),
                 }
-                filter_line = "🎛 Filter: " + " ".join(
-                    f"{k}{'✅' if a and b else '⛔' if a else '❌'}" for k, (a, b) in filter_status.items()
+                filter_line = "🎛 Andac: " + " ".join(
+                    f"{k}{'✅' if v else '❌'}" for k, v in filter_status.items()
                 )
                 status = (
                     f"{farbe} Aktueller PnL: ${pnl:.1f} | Laufzeit: {laufzeit}s | ⏰ {uhrzeit} | 📅 {datum}\n"

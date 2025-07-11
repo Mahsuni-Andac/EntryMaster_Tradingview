@@ -10,21 +10,23 @@ TUNING_FILE = "tuning_config.json"
 class TradingGUILogicMixin:
     def apply_recommendations(self):
         try:
-            self.rsi_min.set("40")
-            self.rsi_max.set("80")
-            self.min_volume.set("110")
-            self.volume_avg_period.set("13")
-            self.bigcandle_threshold.set("1.6")
-            self.breakout_lookback.set("12")
-            self.ema_length.set("22")
             self.sl_mode.set("atr")
             self.sl_tp_min_distance.set("4.3")
             self.entry_score_threshold.set("0.7")
             for var in [
-                self.use_rsi_filter, self.use_volume_filter, self.use_volume_boost,
-                self.use_bigcandle_filter, self.use_breakout_filter, self.use_doji_blocker,
-                self.use_engulfing_filter, self.use_ema_filter, self.use_smart_cooldown,
-                self.use_safe_mode
+                self.use_smart_cooldown,
+                self.andac_opt_tpsl,
+                self.andac_opt_rsi_ema,
+                self.andac_opt_safe_mode,
+                self.andac_opt_engulf,
+                self.andac_opt_engulf_bruch,
+                self.andac_opt_engulf_big,
+                self.andac_opt_confirm_delay,
+                self.andac_opt_mtf_confirm,
+                self.andac_opt_volumen_strong,
+                self.andac_opt_session_filter,
+                self.andac_opt_session_bg,
+                self.use_time_filter,
             ]:
                 var.set(True)
             self.log_event("✅ Empfehlungen übernommen")
@@ -34,10 +36,20 @@ class TradingGUILogicMixin:
     def disable_all_filters(self):
         try:
             for var in [
-                self.use_rsi_filter, self.use_volume_filter, self.use_volume_boost,
-                self.use_bigcandle_filter, self.use_breakout_filter, self.use_doji_blocker,
-                self.use_engulfing_filter, self.use_ema_filter, self.use_smart_cooldown,
-                self.use_safe_mode, self.use_time_filter
+                self.use_smart_cooldown,
+                self.andac_opt_tpsl,
+                self.andac_opt_rsi_ema,
+                self.andac_opt_safe_mode,
+                self.andac_opt_engulf,
+                self.andac_opt_engulf_bruch,
+                self.andac_opt_engulf_big,
+                self.andac_opt_confirm_delay,
+                self.andac_opt_mtf_confirm,
+                self.andac_opt_volumen_strong,
+                self.andac_opt_session_filter,
+                self.andac_opt_session_bg,
+                self.use_time_filter,
+                self.use_doji_blocker,
             ]:
                 var.set(False)
             self.log_event("🧹 Alle Filter & Optionen deaktiviert")
