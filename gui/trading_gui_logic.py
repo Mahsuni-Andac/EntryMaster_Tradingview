@@ -19,8 +19,6 @@ class TradingGUILogicMixin:
                 self.log_event("⚠️ Einsatz muss größer 0 sein")
                 return
             interval = self.interval.get()
-            if hasattr(self, "bridge") and self.bridge is not None:
-                self.bridge.update_params(multiplier, auto_multi, capital, interval)
         except Exception as e:
             self.log_event(f"⚠️ Fehler bei Eingaben: {e}")
         if hasattr(self, "callback"):
