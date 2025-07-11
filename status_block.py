@@ -30,7 +30,6 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
 
     # Filterstatus
     filters = {
-        "TPSL": app.andac_opt_tpsl.get(),
         "RSI/EMA": app.andac_opt_rsi_ema.get(),
         "SAFE": app.andac_opt_safe_mode.get(),
         "ENG": app.andac_opt_engulf.get(),
@@ -40,18 +39,8 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
         "MTF": app.andac_opt_mtf_confirm.get(),
         "VOL": app.andac_opt_volumen_strong.get(),
         "SES": app.andac_opt_session_filter.get(),
-        "SCool": app.use_smart_cooldown.get(),
     }
     filter_line = "🎛 Andac: " + "  ".join(f"{k}{'✅' if v else '❌'}" for k, v in filters.items())
-
-    # SmartCooldown-Anzeige
-    scool_line = ""
-    if filters["SCool"] and hasattr(app, "smart_cooldown"):
-        rem_fn = getattr(app.smart_cooldown, 'get_remaining_cooldown', None)
-        if callable(rem_fn):
-            remaining = rem_fn()
-            if remaining > 0:
-                scool_line = f"\n🧠 Cooldown aktiv ({remaining}s)"
 
     # Zeilen
     lines = [
@@ -59,7 +48,7 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
         f"PnL: ${pnl:.2f} | Laufzeit: {runtime_str} | ⏰ {uhrzeit} | 📅 {datum}",
         f"📉 ATR: ${atr:.2f} | 📈 EMA: {ema_trend} | {modus}",
         "",
-        filter_line + scool_line,
+        filter_line,
         Style.RESET_ALL  # Damit Farbcodes zurückgesetzt werden (wenn im CMD)
     ]
     return "\n".join(lines)

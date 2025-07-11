@@ -51,15 +51,7 @@ def update_filter_recommendations(app, candle):
         app.ema_rec_label.config(text="22")
         app.ema_chk_rec.config(text="✅")
 
-        # 🔎 SL/TP-Modus & Mindestabstand
-        app.sl_mode.set("atr")
-        app.slmode_rec_label.config(text="ATR")
-        app.sl_tp_min_distance.set("4.3")
-        app.slmin_rec_label.config(text="4.3")
 
-        # 🔎 Score-Schwelle
-        app.entry_score_threshold.set("0.7")
-        app.score_rec_label.config(text="0.7")
 
         # 🔎 Struktur-Filter
         app.bigcandle_threshold.set("1.6")
@@ -75,7 +67,6 @@ def update_filter_recommendations(app, candle):
         app.ema_chk_rec.config(text="✅")
         app.cool_chk_rec.config(text="✅")
         app.safe_chk_rec.config(text="✅")
-        app.smartcool_chk_rec = app.cool_chk_rec  # Fallback alias für alte Namen
 
     except Exception as e:
         print(f"⚠️ Fehler bei Filter-Empfehlung: {e}")

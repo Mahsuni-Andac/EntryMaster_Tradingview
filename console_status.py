@@ -26,7 +26,6 @@ def print_full_filter_overview(settings):
         ("RSI", settings.get("rsi_filter", False)),
         ("Volume", settings.get("volume_filter", False)),
         ("EMA", settings.get("ema_filter", False)),
-        ("SmartCooldown", settings.get("smart_cooldown", False)),
         ("TrailingSL", settings.get("trailing_sl", False)),
         ("Doji", settings.get("doji_filter", False)),
         ("Session", settings.get("session_filter", False)),
@@ -61,7 +60,7 @@ def options_snapshot(settings):
     Liefert einen Hash/Snapshot der wichtigsten Einstellungen für Change-Detection.
     """
     keys = (
-        "rsi_filter", "volume_filter", "ema_filter", "smart_cooldown", "trailing_sl",
+        "rsi_filter", "volume_filter", "ema_filter", "trailing_sl",
         "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
         "breakout_filter", "time_filter", "atr_filter", "momentum_filter", "wick_filter",
         "rejection_filter", "reentry_filter", "sl_intel", "capital_safe", "test_mode",
@@ -80,7 +79,6 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     filter_status.append("RSI✅" if settings.get("rsi_filter", False) else "RSI❌")
     filter_status.append("Volume✅" if settings.get("volume_filter", False) else "Volume❌")
     filter_status.append("EMA✅" if settings.get("ema_filter", False) else "EMA❌")
-    filter_status.append("SmartCooldown✅" if settings.get("smart_cooldown", False) else "SmartCooldown❌")
     filter_status.append("TrailingSL✅" if settings.get("trailing_sl", False) else "TrailingSL❌")
     filter_status.append("Doji✅" if settings.get("doji_filter", False) else "Doji❌")
     filter_status.append("Session✅" if settings.get("session_filter", False) else "Session❌")
@@ -195,5 +193,3 @@ def print_stop_banner(reason: str | None = None) -> None:
 def print_settings_overview(settings):
     print_full_filter_overview(settings)
 
-def print_sl_tp_distance_warning():
-    print_warning("SL/TP Abstand zu klein – Trade ignoriert", warn_key="sl_tp_distance", seconds=30)

@@ -85,7 +85,6 @@ def bot_control(gui):
                     trade_info = f"{gui.position['side'].upper()} @ {gui.position['entry']}"
                 # Filterstatus
                 filter_status = {
-                    "TPSL": gui.andac_opt_tpsl.get(),
                     "RSI/EMA": gui.andac_opt_rsi_ema.get(),
                     "SAFE": gui.andac_opt_safe_mode.get(),
                     "ENG": gui.andac_opt_engulf.get(),

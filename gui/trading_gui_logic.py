@@ -10,12 +10,7 @@ TUNING_FILE = "tuning_config.json"
 class TradingGUILogicMixin:
     def apply_recommendations(self):
         try:
-            self.sl_mode.set("atr")
-            self.sl_tp_min_distance.set("4.3")
-            self.entry_score_threshold.set("0.7")
             for var in [
-                self.use_smart_cooldown,
-                self.andac_opt_tpsl,
                 self.andac_opt_rsi_ema,
                 self.andac_opt_safe_mode,
                 self.andac_opt_engulf,
@@ -25,7 +20,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
                 self.andac_opt_session_filter,
-                self.andac_opt_session_bg,
                 self.use_time_filter,
             ]:
                 var.set(True)
@@ -36,8 +30,6 @@ class TradingGUILogicMixin:
     def disable_all_filters(self):
         try:
             for var in [
-                self.use_smart_cooldown,
-                self.andac_opt_tpsl,
                 self.andac_opt_rsi_ema,
                 self.andac_opt_safe_mode,
                 self.andac_opt_engulf,
@@ -47,7 +39,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
                 self.andac_opt_session_filter,
-                self.andac_opt_session_bg,
                 self.use_time_filter,
                 self.use_doji_blocker,
             ]:

@@ -7,7 +7,6 @@ SETTINGS = {
     "leverage": 20,
     "stop_loss_atr_multiplier": 0.5,
     "take_profit_atr_multiplier": 1.5,
-    "entry_score_threshold": 0.6,  # ⏳ Mindestscore für Einstieg (0.0–1.0)
     "use_session_filter": False,
     "test_mode": False,            # 🧪 Kein Live-Trade
     "trading_backend": "sim",      # 🔁 "mexc", "andac", "sim"

@@ -15,7 +15,6 @@ from datetime import datetime
 from data_provider import fetch_latest_candle
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
-from smart_cooldown import SmartCooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from gui import TradingGUI, TradingGUILogicMixin
@@ -119,14 +118,12 @@ def run_bot_live(settings=None, app=None):
 
     # Restliche Initialisierung...
     cooldown = CooldownManager(settings.get("cooldown", 3))
-    smart_cooldown = SmartCooldownManager()
     session_filter = SessionFilter()
 
     andac_params = {
         "lookback": int(app.andac_lookback.get()),
         "puffer": float(app.andac_puffer.get()),
         "vol_mult": float(app.andac_vol_mult.get()),
-        "opt_tpsl": app.andac_opt_tpsl.get(),
         "opt_rsi_ema": app.andac_opt_rsi_ema.get(),
         "opt_safe_mode": app.andac_opt_safe_mode.get(),
         "opt_engulf": app.andac_opt_engulf.get(),
@@ -136,7 +133,6 @@ def run_bot_live(settings=None, app=None):
         "opt_mtf_confirm": app.andac_opt_mtf_confirm.get(),
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
         "opt_session_filter": app.andac_opt_session_filter.get(),
-        "opt_session_bg": app.andac_opt_session_bg.get(),
     }
     andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
@@ -157,7 +153,6 @@ def run_bot_live(settings=None, app=None):
     entry_repeat_delay = settings.get("entry_repeat_delay", 3)
     sl_mult = settings["stop_loss_atr_multiplier"]
     tp_mult = settings["take_profit_atr_multiplier"]
-    sl_mode = settings.get("sl_mode", "atr")
 
     last_printed_pnl = None
     last_printed_price = None
@@ -396,18 +391,9 @@ def run_bot_live(settings=None, app=None):
                         entry_type, entry, candles, tp_multiplier=tp_mult
                     )
                 if sl is None or tp is None:
-                    if sl_mode == "atr":
-                        atr = candle["high"] - candle["low"]
-                        sl = entry - atr * sl_mult if entry_type == "long" else entry + atr * sl_mult
-                        tp = entry + atr * tp_mult if entry_type == "long" else entry - atr * tp_mult
-                    else:
-                        sl = entry - settings["sl_fix"] if entry_type == "long" else entry + settings["sl_fix"]
-                        tp = entry + settings["tp_fix"] if entry_type == "long" else entry - settings["tp_fix"]
-
-                min_dist = float(settings.get("sl_tp_min_distance", 5))
-                if abs(tp - entry) < min_dist or abs(entry - sl) < min_dist:
-                    app.log_event("⚠️ SL/TP Abstand zu klein – Trade ignoriert")
-                    continue
+                    atr = candle["high"] - candle["low"]
+                    sl = entry - atr * sl_mult if entry_type == "long" else entry + atr * sl_mult
+                    tp = entry + atr * tp_mult if entry_type == "long" else entry - atr * tp_mult
 
                 position = {
                     "side": entry_type,
