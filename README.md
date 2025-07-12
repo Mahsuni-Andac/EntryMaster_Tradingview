@@ -87,3 +87,20 @@ Nach jedem Speichern und beim Bot-Start erfolgt automatisch eine Prüfung aller 
 ```
 
 Ohne gültige Zugangsdaten läuft der Bot nicht. Ein Simulations- oder Backtest-Modus ist nicht vorhanden – es werden ausschließlich Live-Marktdaten verwendet.
+
+### Preisfeeds & Endpunkte
+
+Für jede unterstützte Börse wird ein eigener Preisfeed-Endpunkt genutzt. Die eigentlichen
+Liveness-Checks erfolgen ausschließlich über einfache `/ping`- oder Zeit-Endpunkte.
+So bleiben Verbindungsprüfung und Marktdaten klar getrennt.
+
+| Exchange | Ping-Endpunkt | Preisfeed | Beispiel-Symbol |
+|---------|---------------|-----------|-----------------|
+| MEXC | `https://api.mexc.com/api/v3/ping` | `https://contract.mexc.com/api/v1/contract/ticker?symbol=BTC_USDT` | `BTC_USDT` |
+| BitMEX | `https://www.bitmex.com/api/v1/instrument` | `https://www.bitmex.com/api/v1/instrument?symbol=XBTUSD` | `XBTUSD` |
+| Binance | `https://api.binance.com/api/v3/ping` | `https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT` | `BTCUSDT` |
+| Bybit | `https://api.bybit.com/v2/public/time` | `https://api.bybit.com/v2/public/tickers?symbol=BTCUSDT` | `BTCUSDT` |
+| OKX | `https://www.okx.com/api/v5/public/time` | `https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP` | `BTC-USDT-SWAP` |
+
+Fehlerhafte Symbole oder API-Antworten werden im Debug-Modus vollständig geloggt, damit
+Probleme schnell erkannt werden können.

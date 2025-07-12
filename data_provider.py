@@ -17,6 +17,23 @@ import requests
 from config import SETTINGS
 
 
+def _normalize_symbol(exchange: str, symbol: str) -> str:
+    """Return API-compatible symbol name for *exchange*"""
+    sym = symbol.replace("/", "").upper()
+    ex = exchange.lower()
+    if ex == "mexc":
+        return sym.replace("USDT", "_USDT") if "_" not in sym else sym
+    if ex == "okx":
+        return sym.replace("USDT", "-USDT-SWAP") if "-" not in sym else sym
+    if ex in {"binance", "bybit"}:
+        return sym
+    if ex == "bitmex":
+        from symbol_utils import bitmex_symbol
+
+        return bitmex_symbol(sym)
+    return sym
+
+
 class Candle(TypedDict):
     """Typed representation of a OHLCV candle."""
 
@@ -42,6 +59,21 @@ PRICE_FEEDS = {
         "url": "https://www.bitmex.com/api/v1/instrument?symbol={symbol}",
         "path": [0, "lastPrice"],
     },
+    "binance": {
+        "symbol": "BTCUSDT",
+        "url": "https://api.binance.com/api/v3/ticker/price?symbol={symbol}",
+        "path": ["price"],
+    },
+    "bybit": {
+        "symbol": "BTCUSDT",
+        "url": "https://api.bybit.com/v2/public/tickers?symbol={symbol}",
+        "path": ["result", 0, "last_price"],
+    },
+    "okx": {
+        "symbol": "BTC-USDT-SWAP",
+        "url": "https://www.okx.com/api/v5/market/ticker?instId={symbol}",
+        "path": ["data", 0, "last"],
+    },
 }
 
 def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[float]:
@@ -57,12 +89,7 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
         raise ValueError(f"Unknown exchange '{exchange}'")
 
     query_symbol = symbol or info["symbol"]
-    if symbol:
-        query_symbol = query_symbol.replace("_", "")
-        if exchange.lower() == "bitmex":
-            from symbol_utils import bitmex_symbol
-
-            query_symbol = bitmex_symbol(query_symbol)
+    query_symbol = _normalize_symbol(exchange, query_symbol)
 
     url = info["url"].format(symbol=query_symbol)
     now = datetime.now().strftime("%H:%M:%S")
@@ -90,7 +117,10 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
     if isinstance(data, dict) and data.get("success") is False:
         code = data.get("code", "?")
         err = data.get("message", "Unknown error")
-        msg = f"{query_symbol}: -- ({now}) | ERROR: [code: {code}] {err}"
+        extra = ""
+        if "不存在" in err or "exist" in err.lower():
+            extra = " - Symbol existiert nicht"
+        msg = f"{query_symbol}: -- ({now}) | ERROR: [code: {code}] {err}{extra}"
         logging.error(msg)
         print(msg)
         if exchange.lower() == "mexc":
