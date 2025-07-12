@@ -50,6 +50,12 @@ class TradingGUI(TradingGUILogicMixin):
         StatusDispatcher.on_api_status(self.update_api_status)
         StatusDispatcher.on_feed_status(self.update_feed_status)
 
+        # Reduce overall window height by 10% after layout is built
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = int(self.root.winfo_height() * 0.9)
+        self.root.geometry(f"{width}x{height}")
+
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")
         self.capital_var = tk.StringVar(value="1000")
@@ -273,7 +279,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.auto_status_label.grid(row=2, column=0, columnspan=5, pady=(5, 0), padx=10, sticky="w")
 
         # Logbox unterhalb der Buttons
-        self.log_box = tk.Text(root, height=14, width=85, wrap="word", bg="#f9f9f9", relief="sunken", borderwidth=2)
+        self.log_box = tk.Text(root, height=13, width=85, wrap="word", bg="#f9f9f9", relief="sunken", borderwidth=2)
         self.log_box.pack(pady=12)
 
     def stop_and_reset(self):

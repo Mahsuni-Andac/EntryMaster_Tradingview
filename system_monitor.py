@@ -10,9 +10,9 @@ timestamp the bot resumes and the status changes back to ``✅``.
 
 from __future__ import annotations
 
+from datetime import datetime
 import threading
 import time
-from datetime import datetime
 from typing import Optional
 
 from config import SETTINGS
