@@ -62,12 +62,6 @@ class SystemMonitor:
             return
         if global_state.last_feed_time is None:
             global_state.last_feed_time = time.time()
-        if hasattr(self.gui, "update_api_status"):
-            self.gui.update_api_status(True)
-        if hasattr(self.gui, "update_feed_status"):
-            self.gui.update_feed_status(True)
-        StatusDispatcher.dispatch("api", True)
-        StatusDispatcher.dispatch("feed", True)
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -93,7 +87,10 @@ class SystemMonitor:
     def _run(self) -> None:
         while self._running:
             try:
-                enabled = SETTINGS.get("enabled_exchanges")
+                enabled = SETTINGS.get("enabled_exchanges") or []
+                if not enabled:
+                    time.sleep(self.interval)
+                    continue
                 creds = check_all_credentials(SETTINGS, enabled)
                 if hasattr(self.gui, "update_exchange_status"):
                     for ex, (ok, _msg) in creds.items():
