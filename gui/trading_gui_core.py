@@ -44,6 +44,8 @@ class TradingGUI(TradingGUILogicMixin):
         self.capital_entry = None
         self.log_box = None
         self.auto_status_label = None
+        self.live_trading = tk.BooleanVar(value=False)
+        self.mode_label = None
 
         self._init_variables()
         self._build_gui()
@@ -91,6 +93,16 @@ class TradingGUI(TradingGUILogicMixin):
     def _update_neon_var(self, key, var):
         color = "green" if var.get() else "blue"
         self.neon_panel.set_status(key, color)
+
+    def _update_mode_label(self):
+        if self.live_trading.get():
+            text = "Live-Modus"
+            color = "red"
+        else:
+            text = "Simulationsmodus"
+            color = "blue"
+        if self.mode_label is not None:
+            self.mode_label.config(text=text, foreground=color)
 
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")
@@ -174,6 +186,10 @@ class TradingGUI(TradingGUILogicMixin):
         self.api_status_label.pack(side="left", padx=10)
         self.feed_status_label = ttk.Label(top_info, textvariable=self.feed_status_var, foreground="red", font=("Arial", 11, "bold"))
         self.feed_status_label.pack(side="left", padx=10)
+        self.mode_label = ttk.Label(top_info, text="Simulationsmodus", foreground="blue", font=("Arial", 11, "bold"))
+        self.mode_label.pack(side="left", padx=10)
+        ttk.Checkbutton(top_info, text="Live-Trading", variable=self.live_trading, command=self._update_mode_label).pack(side="left")
+        self._update_mode_label()
 
         # --- Hauptcontainer ---
         container = ttk.Frame(self.main_frame)

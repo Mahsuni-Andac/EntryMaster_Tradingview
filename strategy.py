@@ -8,12 +8,12 @@ def execute_trading_strategy(settings, gui):
     if hasattr(gui, "log_event"):
         gui.log_event(msg)
 
-    strategy_mode = settings.get("strategy_mode", "live")
+    strategy_mode = "live" if not settings.get("paper_mode", True) else "paper"
 
     try:
         if strategy_mode == "live":
             from realtime_runner import run_bot_live
-            msg = "🚀 Modus: LIVE aktiviert"
+            msg = "🚀 Modus: LIVE aktiviert" if not settings.get("paper_mode", True) else "🚀 Modus: SIMULATION"
             print(msg)
             if hasattr(gui, "log_event"):
                 gui.log_event(msg)

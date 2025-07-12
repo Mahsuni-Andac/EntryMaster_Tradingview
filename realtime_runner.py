@@ -108,6 +108,8 @@ def run_bot_live(settings=None, app=None):
     start_capital = capital                  # <--- Startwert merken für Verlustlimit
     interval = gui_bridge.interval
     auto_multi = gui_bridge.auto_multiplier
+    live_trading = gui_bridge.live_trading and API_KEY and API_SECRET
+    settings["paper_mode"] = not live_trading
 
     leverage = multiplier
     # interval wird aus GUI übernommen, NICHT überschreiben!
@@ -310,7 +312,7 @@ def run_bot_live(settings=None, app=None):
                         )
                         app.log_event(log_msg)
                         app.apc_status_label.config(text=log_msg, foreground="blue")
-                        if trader:
+                        if trader and live_trading:
                             live_partial_close(trader, settings["symbol"], position["side"], to_close)
                         if position["amount"] <= 0:
                             position = None
@@ -425,7 +427,7 @@ def run_bot_live(settings=None, app=None):
 
 
 
-                if amount > 0:
+                if amount > 0 and trader and live_trading:
                     try:
                         direction = "BUY" if entry_type == "long" else "SELL"
                         trader.place_order(
