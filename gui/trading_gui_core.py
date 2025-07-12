@@ -7,6 +7,7 @@ from datetime import datetime
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame, EXCHANGES
 from api_key_manager import APICredentialManager
+from status_events import StatusDispatcher
 
 class TradingGUI(TradingGUILogicMixin):
     def __init__(self, root, cred_manager: APICredentialManager | None = None):
@@ -46,6 +47,8 @@ class TradingGUI(TradingGUILogicMixin):
         self._build_gui()
         self._collect_setting_vars()
         self._build_status_panel()
+        StatusDispatcher.on_api_status(self.update_api_status)
+        StatusDispatcher.on_feed_status(self.update_feed_status)
 
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")

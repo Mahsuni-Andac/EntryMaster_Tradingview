@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from api_key_manager import APICredentialManager
 from credential_checker import check_exchange_credentials
+from status_events import StatusDispatcher
 from config import SETTINGS
 
 EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "BitMEX"]
@@ -88,6 +89,8 @@ class APICredentialFrame(ttk.LabelFrame):
         else:
             messagebox.showinfo("Status", msg)
 
+        StatusDispatcher.dispatch("api", ok, None if ok else msg)
+
         # Status für GUI anzeigen
         self.status_var.set("aktiv" if ok else f"Fehler: {msg}")
 
@@ -98,3 +101,4 @@ class APICredentialFrame(ttk.LabelFrame):
             messagebox.showwarning("Fehler", msg)
         # Status aktualisieren
         self.status_var.set(f"Fehler: {msg}")
+        StatusDispatcher.dispatch("api", False, msg)

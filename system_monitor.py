@@ -17,6 +17,7 @@ from typing import Optional
 
 from config import SETTINGS
 from credential_checker import check_all_credentials
+from status_events import StatusDispatcher
 import global_state
 
 DISPLAY_NAMES = {
@@ -65,6 +66,8 @@ class SystemMonitor:
             self.gui.update_api_status(True)
         if hasattr(self.gui, "update_feed_status"):
             self.gui.update_feed_status(True)
+        StatusDispatcher.dispatch("api", True)
+        StatusDispatcher.dispatch("feed", True)
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -121,6 +124,7 @@ class SystemMonitor:
             self._log(f"{reason} – Bot pausiert")
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(False, reason)
+            StatusDispatcher.dispatch("api", False, reason)
             if getattr(self.gui, "running", False):
                 self.gui.running = False
                 self._pause_reason = "api"
@@ -130,12 +134,14 @@ class SystemMonitor:
         if not self._api_ok:
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(True)
+            StatusDispatcher.dispatch("api", True)
             if not getattr(self.gui, "running", False) and self._pause_reason == "api":
                 self.gui.running = True
             self._pause_reason = None
         else:
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(True)
+            StatusDispatcher.dispatch("api", True)
         self._api_ok = True
 
     def _handle_feed_down(self, reason: str) -> None:
@@ -144,6 +150,7 @@ class SystemMonitor:
             self._log(f"{reason} – Bot pausiert")
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(False, reason)
+            StatusDispatcher.dispatch("feed", False, reason)
             if getattr(self.gui, "running", False):
                 self.gui.running = False
                 self._pause_reason = "feed"
@@ -153,10 +160,12 @@ class SystemMonitor:
         if not self._feed_ok:
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(True)
+            StatusDispatcher.dispatch("feed", True)
             if not getattr(self.gui, "running", False) and self._pause_reason == "feed":
                 self.gui.running = True
             self._pause_reason = None
         else:
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(True)
+            StatusDispatcher.dispatch("feed", True)
         self._feed_ok = True
