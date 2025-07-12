@@ -87,6 +87,10 @@ class APICredentialFrame(ttk.LabelFrame):
     def _on_select(self) -> None:
         exch = self.active_exchange.get()
         self._select_exchange(exch)
+        # limit credential checks to the selected exchange
+        from config import SETTINGS
+        SETTINGS["enabled_exchanges"] = [exch.lower()] if exch else []
+        SETTINGS.pop("trading_backend", None)
         if self.select_callback:
             self.select_callback(exch)
 
@@ -141,7 +145,11 @@ class APICredentialFrame(ttk.LabelFrame):
         else:
             messagebox.showinfo("Status", msg)
 
-        SETTINGS["trading_backend"] = exch.lower()
-        SETTINGS["enabled_exchanges"] = [e.lower() for e in EXCHANGES]
+        if ok:
+            SETTINGS["trading_backend"] = exch.lower()
+            SETTINGS["enabled_exchanges"] = [exch.lower()]
+        else:
+            SETTINGS.pop("trading_backend", None)
+            SETTINGS["enabled_exchanges"] = [exch.lower()]
         StatusDispatcher.dispatch("api", ok, None if ok else "Keine API aktiv")
 

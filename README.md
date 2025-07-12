@@ -76,9 +76,9 @@ Alternativ können die gleichen Werte im `tuning_config.json` hinterlegt werden 
 
 ### Dynamische API-Eingabe in der GUI
 
-In der GUI kann die gewünschte Börse ausgewählt werden. Je nach Auswahl erscheinen passende Felder (API Key/Secret oder Wallet/Private Key). Eingaben werden live validiert und nur im Arbeitsspeicher gespeichert. Beim Programmstart ist keine Exchange aktiv; erst nach einer Auswahl werden die Zugangsdaten geprüft und der Status angezeigt. Auch beim Start über die Kommandozeile werden alle vorhandenen Zugangsdaten sofort geprüft.
+In der GUI kann die gewünschte Börse ausgewählt werden. Je nach Auswahl erscheinen passende Felder (API Key/Secret oder Wallet/Private Key). Eingaben werden live validiert und nur im Arbeitsspeicher gespeichert. Beim Programmstart ist keine Exchange aktiv; Marktdaten werden aber bereits im Hintergrund geladen. Erst nach einer Auswahl werden die Zugangsdaten geprüft und der Status angezeigt.
 
-Nach jedem Speichern und beim Bot-Start erfolgt automatisch eine Prüfung aller hinterlegten Exchanges. Das Ergebnis wird mit Zeitstempel im Log ausgegeben, z.B.:
+Nach dem Speichern prüft der Bot die gewählte Exchange und zeigt das Ergebnis mit Zeitstempel im Log an, z.B.:
 
 ```
 [12:00:00] ✅ MEXC API OK – Live-Marktdaten werden empfangen
