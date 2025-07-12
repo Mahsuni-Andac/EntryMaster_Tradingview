@@ -4,20 +4,22 @@ from gui.api_credential_frame import APICredentialFrame
 from api_key_manager import APICredentialManager
 
 class GUICredentialFrameTest(unittest.TestCase):
-    def test_checkbox_enables_fields(self):
+    def test_active_exchange_selection(self):
         try:
             root = tk.Tk()
         except tk.TclError:
             self.skipTest("Tkinter not available")
         frame = APICredentialFrame(root, APICredentialManager())
-        data = frame.vars["MEXC"]
-        self.assertEqual(data["entry1"].cget("state"), "disabled")
-        data["enabled"].set(True)
-        frame._toggle_exchange("MEXC")
-        self.assertEqual(data["entry1"].cget("state"), "normal")
-        data["enabled"].set(False)
-        frame._toggle_exchange("MEXC")
-        self.assertEqual(data["entry1"].cget("state"), "disabled")
+        mexc = frame.vars["MEXC"]
+        dydx = frame.vars["dYdX"]
+        # default should enable MEXC
+        self.assertEqual(mexc["entry1"].cget("state"), "normal")
+        self.assertEqual(dydx["entry1"].cget("state"), "disabled")
+        # switch to dYdX
+        frame.active_exchange.set("dYdX")
+        frame._select_exchange("dYdX")
+        self.assertEqual(dydx["entry1"].cget("state"), "normal")
+        self.assertEqual(mexc["entry1"].cget("state"), "disabled")
         root.destroy()
 
 if __name__ == '__main__':

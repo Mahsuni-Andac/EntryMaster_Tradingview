@@ -17,12 +17,20 @@ class APICredentialFrame(ttk.LabelFrame):
         self.cred_manager = cred_manager
         self.log_callback = log_callback
 
+        self.active_exchange = tk.StringVar(value=EXCHANGES[0])
+
         self.vars: Dict[str, Dict[str, tk.Variable]] = {}
         self.status_vars: Dict[str, tk.StringVar] = {}
         self.status_labels: Dict[str, ttk.Label] = {}
 
-        for row, exch in enumerate(EXCHANGES):
-            enabled = tk.BooleanVar(value=False)
+        ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
+        box = ttk.Combobox(self, state="readonly", values=EXCHANGES, textvariable=self.active_exchange, width=10)
+        box.grid(row=0, column=1, sticky="w")
+        box.bind("<<ComboboxSelected>>", lambda _e: self._select_exchange(self.active_exchange.get()))
+
+        start_row = 1
+        for idx, exch in enumerate(EXCHANGES):
+            row = start_row + idx
             status = tk.StringVar(value="⚪")
             self.status_vars[exch] = status
             key = tk.StringVar()
@@ -30,20 +38,18 @@ class APICredentialFrame(ttk.LabelFrame):
             wallet = tk.StringVar()
             priv = tk.StringVar()
             self.vars[exch] = {
-                "enabled": enabled,
                 "key": key,
                 "secret": secret,
                 "wallet": wallet,
                 "priv": priv,
             }
-            chk = ttk.Checkbutton(self, text=f"API {exch}", variable=enabled, command=lambda e=exch: self._toggle_exchange(e))
-            chk.grid(row=row, column=0, sticky="w")
+            ttk.Label(self, text=f"API {exch}").grid(row=row, column=0, sticky="w")
             if exch == "dYdX":
-                entry1 = ttk.Entry(self, textvariable=wallet, width=20, state="disabled")
-                entry2 = ttk.Entry(self, textvariable=priv, width=34, show="*", state="disabled")
+                entry1 = ttk.Entry(self, textvariable=wallet, width=20)
+                entry2 = ttk.Entry(self, textvariable=priv, width=34, show="*")
             else:
-                entry1 = ttk.Entry(self, textvariable=key, width=20, show="*", state="disabled")
-                entry2 = ttk.Entry(self, textvariable=secret, width=20, show="*", state="disabled")
+                entry1 = ttk.Entry(self, textvariable=key, width=20, show="*")
+                entry2 = ttk.Entry(self, textvariable=secret, width=20, show="*")
             entry1.grid(row=row, column=1, padx=2)
             entry2.grid(row=row, column=2, padx=2)
             lbl = ttk.Label(self, textvariable=status, foreground="grey")
@@ -52,7 +58,9 @@ class APICredentialFrame(ttk.LabelFrame):
             self.vars[exch]["entry1"] = entry1
             self.vars[exch]["entry2"] = entry2
 
-        ttk.Button(self, text="Speichern", command=self._save).grid(row=len(EXCHANGES), column=0, pady=5, sticky="w")
+        ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
+
+        self._select_exchange(self.active_exchange.get())
 
         # Mini price monitor
         term_frame = tk.Frame(self, bg="black")
@@ -61,23 +69,15 @@ class APICredentialFrame(ttk.LabelFrame):
         self.price_terminal.pack()
 
     # ------------------------------------------------------------------
-    def _toggle_exchange(self, exch: str) -> None:
-        data = self.vars[exch]
-        state = "normal" if data["enabled"].get() else "disabled"
-        data["entry1"].config(state=state)
-        data["entry2"].config(state=state)
-        if not data["enabled"].get():
-            data["key"].set("")
-            data["secret"].set("")
-            data["wallet"].set("")
-            data["priv"].set("")
-            self.status_vars[exch].set("⚪")
-            self.status_labels[exch].config(foreground="grey")
-            SETTINGS.pop(f"{exch.lower()}_key", None)
-            SETTINGS.pop(f"{exch.lower()}_secret", None)
-            if exch == "dYdX":
-                SETTINGS.pop("dydx_wallet", None)
-                SETTINGS.pop("dydx_private_key", None)
+    def _select_exchange(self, exch: str) -> None:
+        for name in EXCHANGES:
+            data = self.vars[name]
+            state = "normal" if name == exch else "disabled"
+            data["entry1"].config(state=state)
+            data["entry2"].config(state=state)
+            if name != exch:
+                self.status_vars[name].set("⚪")
+                self.status_labels[name].config(foreground="grey")
 
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
@@ -91,44 +91,40 @@ class APICredentialFrame(ttk.LabelFrame):
 
     # ------------------------------------------------------------------
     def _save(self) -> None:
-        any_ok = False
-        active = []
-        for exch in EXCHANGES:
-            data = self.vars[exch]
-            if not data["enabled"].get():
-                continue
-            active.append(exch.lower())
-            if exch == "dYdX":
-                wallet = data["wallet"].get().strip()
-                priv = data["priv"].get().strip()
-                ok, msg = check_exchange_credentials(exch, wallet=wallet, private_key=priv)
-                if ok:
-                    SETTINGS["dydx_wallet"] = wallet
-                    SETTINGS["dydx_private_key"] = priv
-                else:
-                    SETTINGS.pop("dydx_wallet", None)
-                    SETTINGS.pop("dydx_private_key", None)
+        exch = self.active_exchange.get()
+        data = self.vars[exch]
+        if exch == "dYdX":
+            wallet = data["wallet"].get().strip()
+            priv = data["priv"].get().strip()
+            ok, msg = check_exchange_credentials(exch, wallet=wallet, private_key=priv)
+            if ok:
+                SETTINGS["dydx_wallet"] = wallet
+                SETTINGS["dydx_private_key"] = priv
             else:
-                key = data["key"].get().strip()
-                secret = data["secret"].get().strip()
-                if not key or not secret:
-                    ok, msg = False, "API Key und Secret erforderlich"
-                else:
-                    ok, msg = check_exchange_credentials(exch, key=key, secret=secret)
-                if ok:
-                    SETTINGS[f"{exch.lower()}_key"] = key
-                    SETTINGS[f"{exch.lower()}_secret"] = secret
-                else:
-                    SETTINGS.pop(f"{exch.lower()}_key", None)
-                    SETTINGS.pop(f"{exch.lower()}_secret", None)
+                SETTINGS.pop("dydx_wallet", None)
+                SETTINGS.pop("dydx_private_key", None)
+        else:
+            key = data["key"].get().strip()
+            secret = data["secret"].get().strip()
+            if not key or not secret:
+                ok, msg = False, "API Key und Secret erforderlich"
+            else:
+                ok, msg = check_exchange_credentials(exch, key=key, secret=secret)
+            if ok:
+                SETTINGS[f"{exch.lower()}_key"] = key
+                SETTINGS[f"{exch.lower()}_secret"] = secret
+            else:
+                SETTINGS.pop(f"{exch.lower()}_key", None)
+                SETTINGS.pop(f"{exch.lower()}_secret", None)
 
-            self.status_vars[exch].set("✅" if ok else "❌")
-            self.status_labels[exch].config(foreground="green" if ok else "red")
-            if self.log_callback:
-                self.log_callback(msg)
-            else:
-                messagebox.showinfo("Status", msg)
-            any_ok = any_ok or ok
-        SETTINGS["enabled_exchanges"] = active
-        StatusDispatcher.dispatch("api", any_ok, None if any_ok else "Keine API aktiv")
+        self.status_vars[exch].set("✅" if ok else "❌")
+        self.status_labels[exch].config(foreground="green" if ok else "red")
+        if self.log_callback:
+            self.log_callback(msg)
+        else:
+            messagebox.showinfo("Status", msg)
+
+        SETTINGS["trading_backend"] = exch.lower()
+        SETTINGS["enabled_exchanges"] = [e.lower() for e in EXCHANGES]
+        StatusDispatcher.dispatch("api", ok, None if ok else "Keine API aktiv")
 
