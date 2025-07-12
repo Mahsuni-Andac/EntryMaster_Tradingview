@@ -174,18 +174,25 @@ def run_bot_live(settings=None, app=None):
 
         try:
             candle = fetch_latest_candle(settings["symbol"], interval)
-            price = fetch_last_price(
-                settings.get("trading_backend", "mexc"), settings["symbol"]
-            )
+            exchange = settings.get("trading_backend", "mexc")
+            price = fetch_last_price(exchange, settings["symbol"])
             stamp = datetime.now().strftime("%H:%M:%S")
             if price is not None and hasattr(app, "log_event"):
                 msg = f"[{stamp}] Preis-Update: {settings['symbol']} = {price:.2f}"
                 print(msg)
                 app.log_event(msg)
                 if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
-                    app.api_frame.log_price(f"{settings['symbol'].replace('_','')}: {price:.2f} ({stamp})")
-            elif price is None and hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
-                app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
+                    app.api_frame.log_price(
+                        f"{settings['symbol'].replace('_','')}: {price:.2f} ({stamp})"
+                    )
+            elif price is None:
+                if hasattr(app, "log_event"):
+                    if exchange == "sim":
+                        app.log_event("Sim-Modus – Marktdaten werden nicht geladen")
+                    else:
+                        app.log_event(f"Keine Marktdaten – Exchange: {exchange.upper()}")
+                if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
+                    app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
             if not candle:
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
