@@ -60,6 +60,9 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
     When *symbol* is given it overrides the default symbol.  For BitMEX the
     value is converted via :func:`bitmex_symbol`.
     """
+    if exchange.lower() == "sim":
+        logging.info("Sim-Modus – Marktdaten werden nicht geladen")
+        return None
     info = PRICE_FEEDS.get(exchange.lower())
     if not info:
         raise ValueError(f"Unknown exchange '{exchange}'")
