@@ -169,7 +169,10 @@ class TradingGUILogicMixin:
         self.capital_value.config(text=f"💰 Kapital: ${capital:.2f}")
 
     def update_api_status(self, ok: bool, reason: str | None = None) -> None:
-        """Display API problems only."""
+        """Update API status label only when changed."""
+        if getattr(self, "_last_api_status", (None, None)) == (ok, reason):
+            return
+        self._last_api_status = (ok, reason)
         self.api_ok = ok
         if ok:
             if hasattr(self, "api_status_label") and self.api_status_label.winfo_ismapped():
@@ -187,7 +190,10 @@ class TradingGUILogicMixin:
                     self.api_status_label.pack(side="left", padx=10)
 
     def update_feed_status(self, ok: bool, reason: str | None = None) -> None:
-        """Display feed problems only."""
+        """Update feed status label only when changed."""
+        if getattr(self, "_last_feed_status", (None, None)) == (ok, reason):
+            return
+        self._last_feed_status = (ok, reason)
         self.feed_ok = ok
         if ok:
             if hasattr(self, "feed_status_label") and self.feed_status_label.winfo_ismapped():
@@ -206,6 +212,10 @@ class TradingGUILogicMixin:
 
     def update_exchange_status(self, exchange: str, ok: bool) -> None:
         if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:
+            if getattr(self, "_last_exchange_status", {}).get(exchange) == ok:
+                return
+            self._last_exchange_status = getattr(self, "_last_exchange_status", {})
+            self._last_exchange_status[exchange] = ok
             lbl = self.exchange_status_labels.get(exchange)
             if ok:
                 if lbl and lbl.winfo_ismapped():
@@ -224,8 +234,10 @@ class TradingGUILogicMixin:
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
 
     def log_event(self, msg):
-        # ENTRY-DEBUG: Limit Log auf 30 Zeilen
-        self.log_box.insert("end", f"{msg}\n")
+        from central_logger import log_messages
+
+        for line in log_messages(msg):
+            self.log_box.insert("end", f"{line}\n")
         lines = self.log_box.get("1.0", "end-1c").splitlines()
         if len(lines) > 30:
             self.log_box.delete("1.0", f"{len(lines)-30 + 1}.0")

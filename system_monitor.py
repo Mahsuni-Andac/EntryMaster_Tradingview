@@ -80,12 +80,15 @@ class SystemMonitor:
 
     # ---- Internals -----------------------------------------------------
     def _log(self, msg: str) -> None:
-        stamp = datetime.now().strftime("[%H:%M:%S]")
-        full = f"{stamp} {msg}"
-        if hasattr(self.gui, "log_event"):
-            self.gui.log_event(full)
-        else:
-            print(full)
+        from central_logger import log_messages
+
+        for line in log_messages(msg):
+            stamp = datetime.now().strftime("[%H:%M:%S]")
+            full = f"{stamp} {line}"
+            if hasattr(self.gui, "log_event"):
+                self.gui.log_event(full)
+            else:
+                print(full)
 
     def _run(self) -> None:
         while self._running:
