@@ -12,6 +12,8 @@ from colorama import Fore, Style, init
 from config import SETTINGS
 from exchange_manager import detect_available_exchanges
 from credential_checker import check_all_credentials
+from auto_recommender import AutoRecommender
+from system_monitor import SystemMonitor
 from gui import (
     TradingGUI,
     TradingGUILogicMixin,
@@ -135,6 +137,12 @@ def main():
     gui = EntryMasterGUI(root, cred_manager=cred_manager)
     gui_bridge = GUIBridge(gui_instance=gui)
     gui.callback = lambda: on_gui_start(gui)
+
+    gui.auto_recommender = AutoRecommender(gui)
+    gui.auto_recommender.start()
+    gui.system_monitor = SystemMonitor(gui)
+    gui.system_monitor.start()
+
     threading.Thread(target=bot_control, args=(gui,), daemon=True).start()
     root.mainloop()
 
