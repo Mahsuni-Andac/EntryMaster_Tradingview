@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
+from symbol_utils import bitmex_symbol
+
 import requests
 
 from exchange_interface import ExchangeAdapter
@@ -24,6 +26,7 @@ class BitmexTrader(ExchangeAdapter):
 
     def get_market_price(self, symbol: str = "XBTUSD") -> Optional[float]:
         """Return the latest market price for *symbol*."""
+        symbol = bitmex_symbol(symbol)
         try:
             url = f"{self.base_url}/instrument?symbol={symbol}"
             resp = self.session.get(url, timeout=10)
@@ -68,5 +71,6 @@ class BitmexTrader(ExchangeAdapter):
         return {}
 
     def fetch_funding_rate(self, market: str) -> Dict[str, Any]:
+        market = bitmex_symbol(market)
         params = {"symbol": market, "count": 1, "reverse": "true"}
         return self._get("/funding", **params)

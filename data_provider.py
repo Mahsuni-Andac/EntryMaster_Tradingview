@@ -52,17 +52,27 @@ PRICE_FEEDS = {
     },
 }
 
-def fetch_last_price(exchange: str) -> Optional[float]:
+def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[float]:
     """Return the latest price for *exchange* using the REST API.
 
     Supported exchanges are defined in ``PRICE_FEEDS``.  The mapping includes
     the default symbol, endpoint URL and JSON path to the ``lastPrice`` field.
+    When *symbol* is given it overrides the default symbol.  For BitMEX the
+    value is converted via :func:`bitmex_symbol`.
     """
     info = PRICE_FEEDS.get(exchange.lower())
     if not info:
         raise ValueError(f"Unknown exchange '{exchange}'")
 
-    url = info["url"].format(symbol=info["symbol"])
+    query_symbol = symbol or info["symbol"]
+    if symbol:
+        query_symbol = query_symbol.replace("_", "")
+        if exchange.lower() == "bitmex":
+            from symbol_utils import bitmex_symbol
+
+            query_symbol = bitmex_symbol(query_symbol)
+
+    url = info["url"].format(symbol=query_symbol)
     try:
         resp = _SESSION.get(url, timeout=10)
         resp.raise_for_status()
