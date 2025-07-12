@@ -37,5 +37,24 @@ class AllCredentialCheckTest(unittest.TestCase):
         del os.environ['BITMEX_API_KEY']
         del os.environ['BITMEX_API_SECRET']
 
+    @patch('credential_checker.requests.get')
+    @patch('dydx_api_utils.requests.get')
+    def test_enabled_filter(self, mock_dydx, mock_get):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.raise_for_status.return_value = None
+        mock_get.return_value = mock_resp
+        mock_dydx.return_value = mock_resp
+        os.environ['MEXC_API_KEY'] = 'key12345'
+        os.environ['MEXC_API_SECRET'] = 'sec12345'
+        os.environ['BITMEX_API_KEY'] = 'key12345'
+        os.environ['BITMEX_API_SECRET'] = 'secret123'
+        res = check_all_credentials({}, enabled=['mexc'])
+        self.assertIn('mexc', res['active'])
+        self.assertNotIn('bitmex', res['active'])
+        del os.environ['MEXC_API_KEY']
+        del os.environ['MEXC_API_SECRET']
+        del os.environ['BITMEX_API_KEY']
+        del os.environ['BITMEX_API_SECRET']
+
 if __name__ == '__main__':
     unittest.main()

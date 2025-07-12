@@ -93,7 +93,8 @@ class SystemMonitor:
     def _run(self) -> None:
         while self._running:
             try:
-                creds = check_all_credentials(SETTINGS)
+                enabled = SETTINGS.get("enabled_exchanges")
+                creds = check_all_credentials(SETTINGS, enabled)
                 if hasattr(self.gui, "update_exchange_status"):
                     for ex, (ok, _msg) in creds.items():
                         if ex in {"active", "live"}:
