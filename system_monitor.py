@@ -1,4 +1,11 @@
-"""Real-time system monitoring and auto-pause utilities."""
+"""Real-time system monitoring with auto-pause/resume.
+
+This watchdog checks exchange connectivity and incoming market data every
+few seconds.  If no fresh candles arrive within ``timeout`` seconds the bot
+is automatically paused and the GUI status switches to ``❌``.  As soon as the
+feed recovers the bot resumes trading and the status changes back to ``✅``.
+The logic is exchange agnostic and works for all supported backends.
+"""
 
 from __future__ import annotations
 
@@ -23,16 +30,31 @@ def _beep() -> None:
 class SystemMonitor:
     """Background watchdog for API and market data integrity."""
 
-    def __init__(self, gui, interval: int = 15) -> None:
+    def __init__(self, gui, interval: int = 2, timeout: int = 8) -> None:
+        """Create monitor with *interval* seconds and feed *timeout*.
+
+        ``interval`` controls how often the APIs are polled.  If no candle
+        update happens within ``timeout`` seconds the bot will be paused
+        automatically.
+        """
         self.gui = gui
-        self.interval = interval
+        self.interval = max(1, interval)
+        self.timeout = timeout
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._last_candle_ts: Optional[int] = None
+        self._last_update = time.time()
+        self._feed_ok = True
+        self._api_ok = True
+        self._pause_reason: Optional[str] = None
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
+        if hasattr(self.gui, "update_api_status"):
+            self.gui.update_api_status(True)
+        if hasattr(self.gui, "update_feed_status"):
+            self.gui.update_feed_status(True)
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -54,32 +76,82 @@ class SystemMonitor:
 
     def _run(self) -> None:
         while self._running:
-            if not getattr(self.gui, "running", False):
-                time.sleep(1)
-                continue
             try:
                 creds = check_all_credentials(SETTINGS)
-                if not creds.get("live"):
-                    _beep()
-                    self._log("API nicht erreichbar – Bot pausiert")
-                    self.gui.running = False
+                if creds.get("live"):
+                    self._handle_api_up()
+                else:
+                    self._handle_api_down()
+                    time.sleep(self.interval)
                     continue
 
-                candle = fetch_latest_candle(SETTINGS.get("symbol", "BTCUSDT"), SETTINGS.get("interval", "1m"))
+                candle = fetch_latest_candle(
+                    SETTINGS.get("symbol", "BTCUSDT"),
+                    SETTINGS.get("interval", "1m"),
+                )
                 if not candle:
-                    _beep()
-                    self._log("Keine Marktdaten empfangen – Bot pausiert")
-                    self.gui.running = False
+                    self._handle_feed_down("Keine Marktdaten empfangen")
+                    time.sleep(self.interval)
                     continue
+
                 ts = candle.get("timestamp")
-                if ts == self._last_candle_ts:
-                    _beep()
-                    self._log("Marktdaten aktualisieren sich nicht – Bot pausiert")
-                    self.gui.running = False
-                    continue
-                self._last_candle_ts = ts
+                if ts != self._last_candle_ts:
+                    self._last_candle_ts = ts
+                    self._last_update = time.time()
+                    self._handle_feed_up()
+                elif time.time() - self._last_update > self.timeout:
+                    self._handle_feed_down("Marktdaten aktualisieren sich nicht")
+                else:
+                    self._handle_feed_up()
             except Exception as exc:
-                _beep()
-                self._log(f"Systemmonitor Fehler: {exc}")
-                self.gui.running = False
+                self._handle_feed_down(f"Systemmonitor Fehler: {exc}")
             time.sleep(self.interval)
+
+    # ---- State Handlers -------------------------------------------------
+    def _handle_api_down(self) -> None:
+        if self._api_ok:
+            _beep()
+            self._log("API nicht erreichbar – Bot pausiert")
+            if hasattr(self.gui, "update_api_status"):
+                self.gui.update_api_status(False)
+            if getattr(self.gui, "running", False):
+                self.gui.running = False
+                self._pause_reason = "api"
+        self._api_ok = False
+
+    def _handle_api_up(self) -> None:
+        if not self._api_ok:
+            self._log("✅ API wieder erreichbar – Bot läuft weiter")
+            if hasattr(self.gui, "update_api_status"):
+                self.gui.update_api_status(True)
+            if not getattr(self.gui, "running", False) and self._pause_reason == "api":
+                self.gui.running = True
+            self._pause_reason = None
+        else:
+            if hasattr(self.gui, "update_api_status"):
+                self.gui.update_api_status(True)
+        self._api_ok = True
+
+    def _handle_feed_down(self, reason: str) -> None:
+        if self._feed_ok:
+            _beep()
+            self._log(f"{reason} – Bot pausiert")
+            if hasattr(self.gui, "update_feed_status"):
+                self.gui.update_feed_status(False)
+            if getattr(self.gui, "running", False):
+                self.gui.running = False
+                self._pause_reason = "feed"
+        self._feed_ok = False
+
+    def _handle_feed_up(self) -> None:
+        if not self._feed_ok:
+            self._log("✅ Marktdaten-Feed wieder aktiv – Bot läuft weiter")
+            if hasattr(self.gui, "update_feed_status"):
+                self.gui.update_feed_status(True)
+            if not getattr(self.gui, "running", False) and self._pause_reason == "feed":
+                self.gui.running = True
+            self._pause_reason = None
+        else:
+            if hasattr(self.gui, "update_feed_status"):
+                self.gui.update_feed_status(True)
+        self._feed_ok = True

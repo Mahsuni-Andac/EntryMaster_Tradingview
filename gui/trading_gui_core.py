@@ -96,6 +96,12 @@ class TradingGUI(TradingGUILogicMixin):
         self.safe_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.auto_status_label = None
 
+        # Statusanzeigen für API & Datenfeed
+        self.api_status_var = tk.StringVar(value="API ❌")
+        self.feed_status_var = tk.StringVar(value="Feed ❌")
+        self.api_status_label = None
+        self.feed_status_label = None
+
     def _build_gui(self):
         # --- Oberer Info-Bereich ---
         top_info = ttk.Frame(self.root)
@@ -106,6 +112,11 @@ class TradingGUI(TradingGUILogicMixin):
         # Sparkonto/Gewinn-Anzeige entfernt
         self.pnl_value = ttk.Label(top_info, text="📉 PnL: $0", foreground="black", font=("Arial", 11, "bold"))
         self.pnl_value.pack(side="left", padx=10)
+
+        self.api_status_label = ttk.Label(top_info, textvariable=self.api_status_var, foreground="red", font=("Arial", 11, "bold"))
+        self.api_status_label.pack(side="left", padx=10)
+        self.feed_status_label = ttk.Label(top_info, textvariable=self.feed_status_var, foreground="red", font=("Arial", 11, "bold"))
+        self.feed_status_label.pack(side="left", padx=10)
 
         # --- Hauptcontainer ---
         container = ttk.Frame(self.root)
