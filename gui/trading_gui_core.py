@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 import logging
+from binance.client import Client
 
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame, EXCHANGES
@@ -55,6 +56,9 @@ class TradingGUI(TradingGUILogicMixin):
         self._build_status_panel()
         StatusDispatcher.on_api_status(self.update_api_status)
         StatusDispatcher.on_feed_status(self.update_feed_status)
+
+        # Binance REST client für Preisabfragen
+        self.binance_client = Client()
 
         # MARKTDATEN-MONITOR starten
         self.market_interval_ms = 1000
@@ -517,36 +521,28 @@ class TradingGUI(TradingGUILogicMixin):
 
     # MARKTDATEN-MONITOR -------------------------------------------------
     def _update_market_monitor(self) -> None:
-        """Fetch market price and update mini terminal."""
-        from data_provider import fetch_last_price
+        """Fetch Binance spot price and update mini terminal."""
         from config import SETTINGS
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")
-        active = SETTINGS.get("trading_backend", "bitmex")
 
-        if not hasattr(self, "market_prices"):
-            self.market_prices = {}
+        try:
+            ticker = self.binance_client.get_symbol_ticker(symbol=symbol)
+            price = float(ticker["price"])
+        except Exception:
+            price = None
 
-        for exch in [e.lower() for e in EXCHANGES]:
-            if exch == "bitmex":
-                key = self.cred_manager.get_key() if hasattr(self, "cred_manager") else None
-                secret = self.cred_manager.get_secret() if hasattr(self, "cred_manager") else None
-                if not (key and secret):
-                    self.market_prices[exch] = None
-                    continue
-            price = fetch_last_price(exch, symbol)
-            self.market_prices[exch] = price
-            if exch == active:
-                stamp = datetime.now().strftime("%H:%M:%S")
-                line = (
-                    f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: -- ({stamp})"
-                )
-                if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
-                    self.api_frame.log_price(line, error=price is None)
-                if price is not None:
-                    self.update_feed_status(True)
-                else:
-                    self.update_feed_status(False, "Keine Marktdaten – bitte prüfen")
+        stamp = datetime.now().strftime("%H:%M:%S")
+        line = (
+            f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: ❌ ({stamp})"
+        )
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
+            self.api_frame.log_price(line, error=price is None)
+        if price is not None:
+            self.update_feed_status(True)
+        else:
+            self.update_feed_status(False, "Keine Marktdaten – bitte prüfen")
+
         self.root.after(self.market_interval_ms, self._update_market_monitor)
 
 
