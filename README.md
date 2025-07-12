@@ -1,106 +1,89 @@
 # EntryMaster_Tradingview
 
-**EntryMaster_Tradingview** ist ein professioneller, aber einsteigerfreundlicher Bitcoin-Bot mit intelligenter Entry-Logik, risikoadaptivem Management und moderner, übersichtlicher GUI.  
-Entwickelt für Einsteiger und Profis, die Live-Trading einfach und transparent steuern möchten.
+**EntryMaster_Tradingview** ist ein reiner Live‑Trading‑Bot für Bitcoin-Futures. Das Projekt kombiniert einen TradingView-basierten Indikator mit einem anpassbaren Risiko- und Positionsmanagement. Die Bedienung erfolgt über eine Tkinter-GUI, die alle wichtigen Einstellungen und den API-Status anzeigt.
 
----
+## Funktionen
 
-## 🚀 **Features**
+- **Andac Entry-Master** – Port des TradingView-Skripts zur Generierung von Long-/Short-Signalen.
+- **Adaptive SL/TP** – der `AdaptiveSLManager` berechnet Stop-Loss und Take-Profit dynamisch anhand des ATR.
+- **Auto Partial Close** und Verlustbegrenzung – über den `RiskManager` können Teilverkaäufe und Drawdown-Limits konfiguriert werden.
+- **Mehrere Börsen** – Unterstützt MEXC, dYdX, BitMEX sowie optionale Platzhalter für Binance und Bybit.
+- **Preisfeed & Systemüberwachung** – der `SystemMonitor` prüft API‑Erreichbarkeit und Marktdaten. Die Zuordnung der REST-Endpunkte geschieht in `data_provider.py`.
+- **GUI mit Status-Panel** – Eingabefelder für API-Schlüssel, Filteroptionen und Risko-Features. Ein Neon-Panel signalisiert wichtige Zustände.
 
-- **Andac Entry-Master Indikator**
-  Alle Handelssignale basieren auf dem portierten TradingView-Skript.
-- **Risikomanagement:**  
-  - Dynamisches Stop-Loss/Take-Profit (ATR-basiert)
-  - Maximalverlust pro Trade/Kapital-Schutz
-- **Modular und erweiterbar:**  
-  Saubere Trennung von Logik, Daten und GUI – einfach neue Strategien/Filter hinzufügen.
+## Installation
 
----
-
-## 🖥️ **Grafische Oberfläche (GUI)**
-
-- **Technik:**  
-  Die GUI basiert auf [Tkinter](https://docs.python.org/3/library/tkinter.html) (keine Zusatzinstallation nötig).
-- **Elemente:**
-  - Live-Status (Balance, PnL)
-  - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital)
-  - Start/Stopp-Button für den Bot
-  - Übersicht über Positionen und Log
-  - Wirksamkeits-Status aller Einstellungen (✅/❌) – Änderungen werden sofort geprüft
-- **Konfigurierbar:**  
-  Fast alle Einstellungen können über die GUI angepasst und als **Profil gespeichert** werden.
-
----
-
-## ⚡ **Schnellstart**
-
-1. **Repository klonen:**
+1. Python 3.10 oder neuer installieren.
+2. Abhängigkeiten installieren:
    ```bash
-   git clone <dein-repo-link>
+   pip install requests colorama ecdsa bech32
+   ```
+3. Repository klonen und in das Verzeichnis wechseln:
+   ```bash
+   git clone <repo>
    cd EntryMaster_Tradingview
+   ```
+4. (Optional) eigene Einstellungen in `tuning_config.json` hinterlegen.
 
+## Start
 
-## dYdX Konfiguration
+Der Bot wird über `python main.py` gestartet. Unter Windows steht alternativ `start_bot.cmd` bereit. Beim Start prüft `exchange_manager.py` vorhandene API-Daten und aktiviert nur korrekt konfigurierte Börsen.
 
-Um dYdX als dezentrale Perpetuals-Börse zu aktivieren, kann ein Private Key über die Umgebungsvariable `DYDX_PRIVATE_KEY` oder innerhalb der `SETTINGS` als `dydx_private_key` hinterlegt werden. Fehlt diese Angabe, bleibt der Adapter deaktiviert.
+## Konfiguration
 
-Der genutzte REST-Endpunkt lässt sich über `DYDX_API_URL` oder `dydx_api_url` anpassen. Standard ist `https://api.dydx.trade/v4`.
+Standardwerte befinden sich in `config.py`:
+```python
+SETTINGS = {
+    "symbol": "BTC_USDT",
+    "interval": "1m",
+    "starting_balance": 1000,
+    "leverage": 20,
+    "stop_loss_atr_multiplier": 0.5,
+    "take_profit_atr_multiplier": 1.5,
+    "use_session_filter": False,
+    "trading_backend": "mexc",
+    "multiplier": 20,
+    "auto_multiplier": False,
+    "capital": 1000,
+    "dydx_api_url": "https://api.dydx.trade/v4",
+    "version": "V10.4_Pro",
+}
+```
+Einstellungen lassen sich über die GUI oder durch Bearbeiten der `tuning_config.json` anpassen.
 
-Beispiel `.env` Datei:
-```env
-DYDX_PRIVATE_KEY=mysecretkey
+### API-Schlüssel
+
+Alle Zugangsdaten können als Umgebungsvariable oder über die GUI gesetzt werden. Wichtige Variablen sind u.a. `MEXC_API_KEY`, `MEXC_API_SECRET`, `DYDX_PRIVATE_KEY`, `BINANCE_API_KEY`, `BYBIT_API_KEY` usw. Wird keine Börse korrekt konfiguriert, bleibt der Bot im Pausemodus.
+
+## GUI
+
+Die Tkinter-Oberfläche zeigt Kapital, PnL und Statusleuchten für API und Datenfeed. Parameter wie Multiplikator, Kapital oder Zeitfilter lassen sich direkt ändern. Buttons bieten Start/Stopp, Notausstieg und das Speichern von Profilen.
+
+Ausschnitt aus der GUI-Initialisierung:
+```python
+self.apc_enabled = tk.BooleanVar(value=False)
+self.max_loss_enabled = tk.BooleanVar(value=True)
+self._build_controls(self.main_frame)  # Startknöpfe und Aktionen
 ```
 
-Alternativ in der `tuning_config.json`:
-```json
-{"dydx_private_key": "mysecretkey"}
+## Preisfeeds
+
+`data_provider.py` definiert REST-Endpunkte je Exchange:
+```python
+PRICE_FEEDS = {
+    "mexc":    {"url": "https://contract.mexc.com/api/v1/contract/ticker?symbol={symbol}"},
+    "bitmex":  {"url": "https://www.bitmex.com/api/v1/instrument?symbol={symbol}"},
+    "binance": {"url": "https://api.binance.com/api/v3/ticker/price?symbol={symbol}"},
+    "bybit":   {"url": "https://api.bybit.com/v2/public/tickers?symbol={symbol}"},
+    "okx":     {"url": "https://www.okx.com/api/v5/market/ticker?instId={symbol}"},
+}
 ```
+Bei fehlerhaften Symbolen oder Netzwerkproblemen werden entsprechende Meldungen im Log ausgegeben.
 
-Der Private Key wird nun beim Speichern genutzt, um die passende
-`dydx1...`-Adresse lokal zu berechnen. Nur wenn Adresse und Key zusammenpassen
-wird die Konfiguration übernommen.
+## Logging & Fehlermeldungen
 
-### Automatische Exchange-Erkennung
+Das Projekt nutzt `central_logger.setup_logging()` für Datei- und Konsolenlogs. Wiederholte Meldungen werden zusammengefasst. Der `SystemMonitor` liefert Warnungen, wenn API oder Datenfeed ausfallen, und pausiert den Bot automatisch.
 
-Beim Start prüft der Bot, welche Zugangsdaten vorhanden sind. Nur vollständig konfigurierte Börsen werden aktiviert. Im Log erscheint eine Übersicht der aktiven Exchanges.
+## Lizenz
 
-Unterstützte Umgebungsvariablen:
-
-- `MEXC_API_KEY` / `MEXC_API_SECRET`
-- `DYDX_PRIVATE_KEY`
-- `DYDX_API_URL`
-- `BINANCE_API_KEY` / `BINANCE_API_SECRET`
-- `BYBIT_API_KEY` / `BYBIT_API_SECRET`
-
-Alternativ können die gleichen Werte im `tuning_config.json` hinterlegt werden (`mexc_key`, `mexc_secret`, ...).
-
-### Dynamische API-Eingabe in der GUI
-
-In der GUI kann die gewünschte Börse ausgewählt werden. Je nach Auswahl erscheinen passende Felder (API Key/Secret oder Wallet/Private Key). Eingaben werden live validiert und nur im Arbeitsspeicher gespeichert. Beim Programmstart ist keine Exchange aktiv; Marktdaten werden aber bereits im Hintergrund geladen. Erst nach einer Auswahl werden die Zugangsdaten geprüft und der Status angezeigt.
-
-Nach dem Speichern prüft der Bot die gewählte Exchange und zeigt das Ergebnis mit Zeitstempel im Log an, z.B.:
-
-```
-[12:00:00] ✅ MEXC API OK – Live-Marktdaten werden empfangen
-[12:00:00] Aktive Exchanges: MEXC
-[12:00:00] Live-Marktdaten aktiv: ✅
-```
-
-Ohne gültige Zugangsdaten läuft der Bot nicht. Ein Simulations- oder Backtest-Modus ist nicht vorhanden – es werden ausschließlich Live-Marktdaten verwendet.
-
-### Preisfeeds & Endpunkte
-
-Für jede unterstützte Börse wird ein eigener Preisfeed-Endpunkt genutzt. Die eigentlichen
-Liveness-Checks erfolgen ausschließlich über einfache `/ping`- oder Zeit-Endpunkte.
-So bleiben Verbindungsprüfung und Marktdaten klar getrennt.
-
-| Exchange | Ping-Endpunkt | Preisfeed | Beispiel-Symbol |
-|---------|---------------|-----------|-----------------|
-| MEXC | `https://api.mexc.com/api/v3/ping` | `https://contract.mexc.com/api/v1/contract/ticker?symbol=BTC_USDT` | `BTC_USDT` |
-| BitMEX | `https://www.bitmex.com/api/v1/instrument` | `https://www.bitmex.com/api/v1/instrument?symbol=XBTUSD` | `XBTUSD` |
-| Binance | `https://api.binance.com/api/v3/ping` | `https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT` | `BTCUSDT` |
-| Bybit | `https://api.bybit.com/v2/public/time` | `https://api.bybit.com/v2/public/tickers?symbol=BTCUSDT` | `BTCUSDT` |
-| OKX | `https://www.okx.com/api/v5/public/time` | `https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT-SWAP` | `BTC-USDT-SWAP` |
-
-Fehlerhafte Symbole oder API-Antworten werden im Debug-Modus vollständig geloggt, damit
-Probleme schnell erkannt werden können.
+Im Repository ist keine Lizenzdatei enthalten.
