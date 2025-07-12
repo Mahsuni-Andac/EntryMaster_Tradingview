@@ -25,6 +25,9 @@ class APICredentialFrame(ttk.LabelFrame):
         self.wallet_var = tk.StringVar()
         self.priv_var = tk.StringVar()
 
+        # Statusanzeige für Credential-Checks
+        self.status_var = tk.StringVar(value="inaktiv")
+
         self.key_entry = ttk.Entry(self, textvariable=self.key_var, show="*", width=40)
         self.secret_entry = ttk.Entry(self, textvariable=self.secret_var, show="*", width=40)
         self.wallet_entry = ttk.Entry(self, textvariable=self.wallet_var, width=42)
@@ -33,6 +36,7 @@ class APICredentialFrame(ttk.LabelFrame):
         self._build_fields()
 
         ttk.Button(self, text="Speichern", command=self._save).grid(row=4, column=0, columnspan=2, pady=5)
+        ttk.Label(self, textvariable=self.status_var, foreground="blue").grid(row=5, column=0, columnspan=2, sticky="w")
 
     def _on_exchange_change(self, _event=None) -> None:
         self._build_fields()
@@ -83,6 +87,10 @@ class APICredentialFrame(ttk.LabelFrame):
             self.log_callback(msg)
         else:
             messagebox.showinfo("Status", msg)
+
+        # Status für GUI anzeigen
+        self.status_var.set("aktiv" if ok else f"Fehler: {msg}")
+
         # always re-check all credentials and show status
         check_all_credentials(SETTINGS)
 
@@ -91,3 +99,5 @@ class APICredentialFrame(ttk.LabelFrame):
             self.log_callback(f"⚠️ {msg}")
         else:
             messagebox.showwarning("Fehler", msg)
+        # Status aktualisieren
+        self.status_var.set(f"Fehler: {msg}")

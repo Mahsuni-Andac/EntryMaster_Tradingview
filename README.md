@@ -29,7 +29,7 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
   - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital)
   - Start/Stopp-Buttons für Bot & Simulation
   - Übersicht über Positionen und Log
-  - Wirksamkeits-Status aller Einstellungen (✅/❌)
+  - Wirksamkeits-Status aller Einstellungen (✅/❌) – Änderungen werden sofort geprüft
 - **Konfigurierbar:**  
   Fast alle Einstellungen können über die GUI angepasst und als **Profil gespeichert** werden.
 
