@@ -35,3 +35,19 @@ python main.py
 Die GUI fragt die BitMEX-Zugangsdaten ab und zeigt fortlaufend die Binance-Spot-
 Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter kann jederzeit vom Simulationsmodus in den Live-Betrieb gewechselt werden.
 
+## Trading-Modi: Paper vs. Live
+
+- **Einstieg & Ausstieg erfolgen immer anhand echter Binance BTCUSDT Marktdaten**
+- Die Handelsentscheidung basiert auf dem integrierten EntryMaster-Indikator
+- Zwei Modi:
+  - 🧪 **Paper Trading** (Standard):
+    - Trades werden simuliert
+    - PnL, Kapitalverlauf und Logik sind identisch zum Live-Modus
+    - Keine echte Orderausführung – auch bei gesetzten BitMEX-Keys
+  - 💼 **Live Trading**:
+    - Orderausführung über BitMEX (XBTUSD)
+    - Nur aktiv, wenn der Schalter umgelegt und gültige API-Keys vorhanden sind
+
+- In der GUI befindet sich ein klar gekennzeichneter Toggle-Switch zur Moduswahl
+- Das System ist **fehlertolerant** – im Paper-Modus sind echte Trades **technisch ausgeschlossen**
+

@@ -108,7 +108,10 @@ def run_bot_live(settings=None, app=None):
     start_capital = capital                  # <--- Startwert merken für Verlustlimit
     interval = gui_bridge.interval
     auto_multi = gui_bridge.auto_multiplier
-    live_trading = gui_bridge.live_trading and API_KEY and API_SECRET
+
+    live_requested = gui_bridge.live_trading and API_KEY and API_SECRET
+    paper_mode = settings.get("paper_mode", True)
+    live_trading = live_requested and not paper_mode
     settings["paper_mode"] = not live_trading
 
     leverage = multiplier
@@ -137,7 +140,7 @@ def run_bot_live(settings=None, app=None):
 
     TraderClass = import_trader(settings.get("trading_backend", "bitmex"))
     trader = None
-    if TraderClass:
+    if TraderClass and live_trading:
         trader = TraderClass(
             api_key=API_KEY,
             api_secret=API_SECRET
