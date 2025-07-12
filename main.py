@@ -8,6 +8,7 @@ from datetime import datetime
 
 import tkinter as tk
 from colorama import Fore, Style, init
+from central_logger import setup_logging
 
 from config import SETTINGS
 from exchange_manager import detect_available_exchanges
@@ -23,6 +24,7 @@ from realtime_runner import run_bot_live
 from global_state import entry_time_global, ema_trend_global, atr_value_global
 
 init(autoreset=True)
+setup_logging()
 
 class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
     """Kombiniert GUI und Logik für EntryMaster_Tradingview."""

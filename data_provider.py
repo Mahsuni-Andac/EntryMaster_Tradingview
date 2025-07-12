@@ -17,10 +17,6 @@ import requests
 from config import SETTINGS
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
 
 SIM_DATA_PATH: str = SETTINGS.get("sim_data_path", "sim_data.csv")
 

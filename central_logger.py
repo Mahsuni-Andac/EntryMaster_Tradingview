@@ -1,6 +1,23 @@
 import logging
+import sys
 import time
 from typing import List
+
+
+def setup_logging(level: int = logging.INFO, logfile: str = "bot.log") -> None:
+    """Configure root logger with file and console output."""
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(message)s",
+        handlers=[
+            logging.FileHandler(logfile),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+
+
+if not logging.getLogger().handlers:
+    setup_logging()
 
 # Simple deduplicating logger
 _last_msg: str | None = None
