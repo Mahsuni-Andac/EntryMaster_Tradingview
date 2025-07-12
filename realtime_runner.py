@@ -7,7 +7,6 @@
 # - Fixed max loss check to ignore non-positive limits
 
 import os
-import csv
 import time
 import traceback
 from datetime import datetime
@@ -35,7 +34,6 @@ from andac_entry_master import AndacEntryMaster, AndacSignal
 from adaptive_sl_manager import AdaptiveSLManager
 
 from risk_manager import RiskManager
-from partial_close_manager import PartialCloseManager
 from console_status import (
     print_start_banner,
     print_stop_banner,
@@ -103,7 +101,6 @@ def run_bot_live(settings=None, app=None):
 
     # --- HIER Manager initialisieren ---
     risk_manager = RiskManager(app, start_capital)
-    partial_close_manager = PartialCloseManager(app)
 
     # --- HIER: GUI/Bridge-Parameter einlesen ---
     multiplier = gui_bridge.multiplier
@@ -319,7 +316,6 @@ def run_bot_live(settings=None, app=None):
                         if position["amount"] <= 0:
                             position = None
                             entry_time_global = None
-                            partial_close_manager.stop()
                             app.log_event("✅ Position durch APC komplett geschlossen")
                             continue
                         time.sleep(apc_interval)
@@ -367,7 +363,6 @@ def run_bot_live(settings=None, app=None):
 
                 position = None
                 entry_time_global = None
-                partial_close_manager.stop()
 
             no_signal_printed = False
             continue  # Next Loop
@@ -412,7 +407,6 @@ def run_bot_live(settings=None, app=None):
                     app.log_event(
                         f"💸 Entry Fee {entry_fee:.2f}$ | Balance {old_cap:.2f} -> {capital:.2f}"
                     )
-                partial_close_manager.start(position)
                 position_global = position
                 entry_time_global = now
                 app.position = position

@@ -1,4 +1,4 @@
-"""Utilities for PnL calculations in simulations."""
+"""Utilities for PnL calculations."""
 
 import logging
 
