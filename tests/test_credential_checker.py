@@ -31,14 +31,14 @@ class CredentialCheckerTest(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIn('dydx', msg.lower())
 
-    @patch('credential_checker.requests.get')
+    @patch('mexc_api_utils.requests.get')
     def test_mexc_success(self, mock_get):
         mock_resp = MagicMock(status_code=200)
-        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {'success': True, 'data': {'foo': 'bar'}}
         mock_get.return_value = mock_resp
         ok, msg = check_exchange_credentials('MEXC', key='k' * 6, secret='s' * 6)
         self.assertTrue(ok)
-        self.assertIn('MEXC', msg)
+        self.assertIn('mexc', msg.lower())
 
     @patch('credential_checker.requests.get')
     def test_bybit_testnet(self, mock_get):
