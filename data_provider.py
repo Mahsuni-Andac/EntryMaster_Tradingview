@@ -42,20 +42,14 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         raise ValueError("Only Binance spot data supported")
 
     pair = _normalize_symbol(symbol or "BTCUSDT")
-    now = datetime.now().strftime("%H:%M:%S")
     try:
         data = _BINANCE.get_symbol_ticker(symbol=pair)
         price = float(data["price"])
+        logging.debug("Price update %s: %.2f", pair, price)
+        return price
     except Exception as exc:
-        msg = f"{pair}: -- ({now}) | ERROR: {exc}"
-        logging.error(msg)
-        print(msg)
+        logging.debug("Failed to fetch %s: %s", pair, exc)
         return None
-
-    msg = f"{pair}: {price:.2f} ({now})"
-    logging.info(msg)
-    print(msg)
-    return price
 
 def get_latest_candle_batch(
     symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100

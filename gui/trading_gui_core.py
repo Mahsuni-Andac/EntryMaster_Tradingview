@@ -530,10 +530,7 @@ class TradingGUI(TradingGUILogicMixin):
         for exch in [e.lower() for e in EXCHANGES]:
             try:
                 price = fetch_last_price(exch, symbol)
-            except ValueError as exc:
-                logging.error("%s", exc)
-                if hasattr(self, "log_event") and exch == active:
-                    self.log_event(f"API-Fehler: {exc}")
+            except ValueError:
                 price = None
             self.market_prices[exch] = price
             if exch == active:
@@ -544,12 +541,9 @@ class TradingGUI(TradingGUILogicMixin):
                 if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
                     self.api_frame.log_price(line, error=price is None)
                 if price is not None:
-                    msg = f"[{stamp}] Preis-Update: {symbol} = {price:.2f}"
-                    print(msg)
-                    self.log_event(msg)
+                    self.update_feed_status(True)
                 else:
-                    if hasattr(self, "log_event"):
-                        self.log_event("API-Fehler – Antwort unvollständig")
+                    self.update_feed_status(False, "Keine Marktdaten – bitte prüfen")
         self.root.after(self.market_interval_ms, self._update_market_monitor)
 
 
