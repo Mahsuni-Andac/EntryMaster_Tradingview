@@ -12,7 +12,7 @@ import time
 import traceback
 from datetime import datetime
 
-from data_provider import fetch_latest_candle
+from data_provider import fetch_latest_candle, fetch_last_price
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
 from status_block import print_entry_status
@@ -174,6 +174,7 @@ def run_bot_live(settings=None, app=None):
 
         try:
             candle = fetch_latest_candle(settings["symbol"], interval)
+            fetch_last_price(settings.get("trading_backend", "mexc"))
             if not candle:
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)

@@ -38,8 +38,47 @@ class Candle(TypedDict):
 
 _SESSION = requests.Session()
 
+# Mapping for simple ticker price retrieval per exchange
+PRICE_FEEDS = {
+    "mexc": {
+        "symbol": "BTC_USDT",
+        "url": "https://contract.mexc.com/api/v1/contract/ticker?symbol={symbol}",
+        "path": ["data", "lastPrice"],
+    },
+    "bitmex": {
+        "symbol": "XBTUSD",
+        "url": "https://www.bitmex.com/api/v1/instrument?symbol={symbol}",
+        "path": [0, "lastPrice"],
+    },
+}
+
+def fetch_last_price(exchange: str) -> Optional[float]:
+    """Return the latest price for *exchange* using the REST API.
+
+    Supported exchanges are defined in ``PRICE_FEEDS``.  The mapping includes
+    the default symbol, endpoint URL and JSON path to the ``lastPrice`` field.
+    """
+    info = PRICE_FEEDS.get(exchange.lower())
+    if not info:
+        raise ValueError(f"Unknown exchange '{exchange}'")
+
+    url = info["url"].format(symbol=info["symbol"])
+    try:
+        resp = _SESSION.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        val = data
+        for key in info["path"]:
+            val = val[key]
+        price = float(val)
+        logging.info("Marktdaten empfangen: %s %.2f", exchange.upper(), price)
+        return price
+    except Exception as exc:  # pragma: no cover - network failures
+        logging.error("%s Preisabruf fehlgeschlagen: %s", exchange.upper(), exc)
+        return None
+
 def get_latest_candle_batch(
-    symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100
+    symbol: str = "BTC_USDT", interval: str = "1m", limit: int = 100
 ) -> List[Candle]:
     """Return a batch of recent candles for *symbol* and *interval*."""
     if SETTINGS.get("test_mode"):
@@ -48,14 +87,15 @@ def get_latest_candle_batch(
 
 def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
     """Retrieve candles from public exchanges with failover."""
+    spot_symbol = symbol.replace("_", "")
     backends = [
         (
             "mexc",
-            f"https://api.mexc.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}",
+            f"https://api.mexc.com/api/v3/klines?symbol={spot_symbol}&interval={interval}&limit={limit}",
         ),
         (
             "binance",
-            f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}",
+            f"https://api.binance.com/api/v3/klines?symbol={spot_symbol}&interval={interval}&limit={limit}",
         ),
     ]
 
@@ -111,7 +151,7 @@ def get_simulated_candles(limit: int) -> List[Candle]:
         logging.error(f"❌ Fehler beim Lesen der Simulationsdaten: {e}")
         return []
 
-def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:
+def fetch_latest_candle(symbol: str = "BTC_USDT", interval: str = "1m") -> Optional[Candle]:
     """Convenience helper returning only the latest candle."""
     candles = get_latest_candle_batch(symbol, interval, 1)
     return candles[-1] if candles else None

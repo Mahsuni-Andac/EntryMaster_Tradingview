@@ -79,7 +79,7 @@ def handle_entry(
         # Statusobjekt zurückgeben
         position = {
             "active": True,
-            "symbol": settings.get("symbol", "BTCUSDT"),
+            "symbol": settings.get("symbol", "BTC_USDT"),
             "side": direction.upper(),
             "entry_price": entry_price,
             "stop_loss": stop_loss,

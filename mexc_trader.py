@@ -22,7 +22,7 @@ class MEXCTrader(ExchangeAdapter):
     def __init__(self, api_key: str, api_secret: str) -> None:
         self.api_key = api_key
         self.api_secret = api_secret
-        self.base_url = "https://api.mexc.com"
+        self.base_url = "https://contract.mexc.com/api/v1"
         self.session = requests.Session()
         self.headers = {
             "Content-Type": "application/json",
@@ -33,10 +33,10 @@ class MEXCTrader(ExchangeAdapter):
     def get_market_price(self, symbol: str) -> Optional[float]:
         """Return the latest market price for *symbol*."""
         try:
-            url = f"{self.base_url}/api/v3/ticker/price?symbol={symbol}"
+            url = f"{self.base_url}/contract/ticker?symbol={symbol}"
             response = self.session.get(url, timeout=TIMEOUT)
             response.raise_for_status()
-            return float(response.json()["price"])
+            return float(response.json()["data"]["lastPrice"])
         except Exception as exc:
             logging.error("Fehler beim Abrufen des Marktpreises: %s", exc)
             return None
@@ -57,7 +57,7 @@ class MEXCTrader(ExchangeAdapter):
                 "leverage": leverage,
             }
 
-            url = f"{self.base_url}/api/v1/private/order/submit"
+            url = f"{self.base_url}/private/order/submit"
             response = self.session.post(url, headers=self.headers, json=order_data, timeout=TIMEOUT)
             result = response.json()
 
@@ -90,7 +90,7 @@ class MEXCTrader(ExchangeAdapter):
         """Place stop-loss and take-profit orders for an open position."""
         try:
             opposite = "SELL" if side.upper() == "BUY" else "BUY"
-            url = f"{self.base_url}/api/v1/private/order/submit"
+            url = f"{self.base_url}/private/order/submit"
 
             tp_order = {
                 "symbol": symbol,
@@ -121,7 +121,7 @@ class MEXCTrader(ExchangeAdapter):
     def cancel_order(self, order_id: str, market: Optional[str] = None) -> Dict[str, Any]:
         """Cancel an existing order by its ID."""
         try:
-            url = f"{self.base_url}/api/v1/private/order/cancel"
+            url = f"{self.base_url}/private/order/cancel"
             payload = {"orderId": order_id}
             result = self.session.post(url, headers=self.headers, json=payload, timeout=TIMEOUT).json()
             logging.info("Order %s abgebrochen: %s", order_id, result)
@@ -140,7 +140,7 @@ class MEXCTrader(ExchangeAdapter):
                 "type": "MARKET",
                 "quantity": round(amount, 6),
             }
-            url = f"{self.base_url}/api/v1/private/order/submit"
+            url = f"{self.base_url}/private/order/submit"
             result = self.session.post(url, headers=self.headers, json=order_data, timeout=TIMEOUT).json()
             logging.info("Position geschlossen via MARKET: %s", result)
             return {"success": True, "result": result}
@@ -153,7 +153,7 @@ class MEXCTrader(ExchangeAdapter):
     def fetch_markets(self) -> Dict[str, Any]:
         """Return available futures markets."""
         try:
-            resp = self.session.get(f"{self.base_url}/api/v3/exchangeInfo", timeout=TIMEOUT)
+            resp = self.session.get(f"{self.base_url}/../api/v3/exchangeInfo", timeout=TIMEOUT)
             return resp.json()
         except Exception as exc:  # pragma: no cover - network failures
             logging.error("Fehler beim Abrufen der Marktdaten: %s", exc)
@@ -162,7 +162,7 @@ class MEXCTrader(ExchangeAdapter):
 
     def get_order_status(self, order_id: str, market: Optional[str] = None) -> Dict[str, Any]:
         try:
-            url = f"{self.base_url}/api/v1/private/order/query"
+            url = f"{self.base_url}/private/order/query"
             payload = {"orderId": order_id}
             result = self.session.get(url, headers=self.headers, params=payload, timeout=TIMEOUT).json()
             return result
@@ -172,7 +172,7 @@ class MEXCTrader(ExchangeAdapter):
 
     def fetch_positions(self) -> Dict[str, Any]:
         try:
-            url = f"{self.base_url}/api/v1/private/position/open_positions"
+            url = f"{self.base_url}/private/position/open_positions"
             result = self.session.get(url, headers=self.headers, timeout=TIMEOUT).json()
             return result
         except Exception as exc:
@@ -181,7 +181,7 @@ class MEXCTrader(ExchangeAdapter):
 
     def fetch_funding_rate(self, market: str) -> Dict[str, Any]:
         try:
-            url = f"{self.base_url}/api/v1/private/funding/prevFundingRate"
+            url = f"{self.base_url}/private/funding/prevFundingRate"
             result = self.session.get(url, headers=self.headers, params={"symbol": market}, timeout=TIMEOUT).json()
             return result
         except Exception as exc:  # pragma: no cover - network failures

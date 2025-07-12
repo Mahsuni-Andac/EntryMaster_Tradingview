@@ -22,6 +22,18 @@ class BitmexTrader(ExchangeAdapter):
         })
         logging.info("BitMEX Trader initialisiert")
 
+    def get_market_price(self, symbol: str = "XBTUSD") -> Optional[float]:
+        """Return the latest market price for *symbol*."""
+        try:
+            url = f"{self.base_url}/instrument?symbol={symbol}"
+            resp = self.session.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return float(data[0]["lastPrice"])
+        except Exception as exc:
+            logging.error("BitMEX Preisabruf fehlgeschlagen: %s", exc)
+            return None
+
     def _get(self, path: str, **params: Any) -> Dict[str, Any]:
         try:
             url = f"{self.base_url}{path}"
