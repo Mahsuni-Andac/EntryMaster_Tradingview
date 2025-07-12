@@ -10,16 +10,13 @@ class GUICredentialFrameTest(unittest.TestCase):
         except tk.TclError:
             self.skipTest("Tkinter not available")
         frame = APICredentialFrame(root, APICredentialManager())
-        mexc = frame.vars["MEXC"]
-        dydx = frame.vars["dYdX"]
+        bitmex = frame.vars["BitMEX"]
         # no exchange selected by default
-        self.assertEqual(mexc["entry1"].cget("state"), "disabled")
-        self.assertEqual(dydx["entry1"].cget("state"), "disabled")
-        # switch to dYdX
-        frame.active_exchange.set("dYdX")
+        self.assertEqual(bitmex["entry1"].cget("state"), "disabled")
+        # switch to BitMEX
+        frame.active_exchange.set("BitMEX")
         frame._on_select()
-        self.assertEqual(dydx["entry1"].cget("state"), "normal")
-        self.assertEqual(mexc["entry1"].cget("state"), "disabled")
+        self.assertEqual(bitmex["entry1"].cget("state"), "normal")
         root.destroy()
 
 if __name__ == '__main__':

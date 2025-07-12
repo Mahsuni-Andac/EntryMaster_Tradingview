@@ -49,7 +49,7 @@ API_SECRET = SETTINGS.get("api_secret", "")
 
 gui_bridge = None
 
-def live_partial_close_mexc(trader, symbol, side, qty):
+def live_partial_close(trader, symbol, side, qty):
     reduce_side = "SELL" if side == "long" else "BUY"
     try:
         trader.place_order(
@@ -133,7 +133,7 @@ def run_bot_live(settings=None, app=None):
     andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
 
-    TraderClass = import_trader(settings.get("trading_backend", "mexc"))
+    TraderClass = import_trader(settings.get("trading_backend", "bitmex"))
     trader = None
     if TraderClass:
         trader = TraderClass(
@@ -171,8 +171,7 @@ def run_bot_live(settings=None, app=None):
 
         try:
             candle = fetch_latest_candle(settings["symbol"], interval)
-            exchange = settings.get("trading_backend", "mexc")
-            price = fetch_last_price(exchange, settings["symbol"])
+            price = fetch_last_price("binance", settings["symbol"])
             stamp = datetime.now().strftime("%H:%M:%S")
             if price is not None and hasattr(app, "log_event"):
                 msg = f"[{stamp}] Preis-Update: {settings['symbol']} = {price:.2f}"
@@ -184,7 +183,7 @@ def run_bot_live(settings=None, app=None):
                     )
             elif price is None:
                 if hasattr(app, "log_event"):
-                    app.log_event(f"Keine Marktdaten – Exchange: {exchange.upper()}")
+                    app.log_event("Keine Marktdaten – Exchange: BINANCE")
                 if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
                     app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
             if not candle:
@@ -312,7 +311,7 @@ def run_bot_live(settings=None, app=None):
                         app.log_event(log_msg)
                         app.apc_status_label.config(text=log_msg, foreground="blue")
                         if trader:
-                            live_partial_close_mexc(trader, settings["symbol"], position["side"], to_close)
+                            live_partial_close(trader, settings["symbol"], position["side"], to_close)
                         if position["amount"] <= 0:
                             position = None
                             entry_time_global = None
