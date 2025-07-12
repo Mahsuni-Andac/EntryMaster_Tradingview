@@ -32,11 +32,20 @@ class MEXCTrader(ExchangeAdapter):
 
     def get_market_price(self, symbol: str) -> Optional[float]:
         """Return the latest market price for *symbol*."""
+        if not self.api_key or not self.api_secret:
+            logging.error("MEXC API-Key fehlt")
+            return None
         try:
             url = f"{self.base_url}/contract/ticker?symbol={symbol}"
             response = self.session.get(url, timeout=TIMEOUT)
             response.raise_for_status()
-            return float(response.json()["data"]["lastPrice"])
+            data = response.json()
+            if not data or "data" not in data or not data["data"]:
+                raise ValueError(f"Antwort ohne Marktdaten: {data}")
+            payload = data["data"]
+            if isinstance(payload, list):
+                payload = payload[0]
+            return float(payload["lastPrice"])
         except Exception as exc:
             logging.error("Fehler beim Abrufen des Marktpreises: %s", exc)
             return None

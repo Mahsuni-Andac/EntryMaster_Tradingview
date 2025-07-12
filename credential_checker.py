@@ -81,8 +81,12 @@ def check_exchange_credentials(
                 msg = "ℹ️ dYdX: Testnet Wallet erkannt, keine echten Trades möglich."
             return True, msg
         if ex in {"mexc", "binance", "bybit", "okx"}:
-            if not key or not secret:
-                return False, f"❌ {exchange} API ungültig: Key oder Secret fehlt"
+            if not key and not secret:
+                return False, f"❌ {exchange} API ungültig: API-Key und Secret fehlen"
+            if not key:
+                return False, f"❌ {exchange} API ungültig: API-Key fehlt"
+            if not secret:
+                return False, f"❌ {exchange} API ungültig: API-Secret fehlt"
             if len(key) < 5 or len(secret) < 5:
                 return False, f"❌ {exchange} API ungültig: Key/Secret zu kurz"
             endpoint = ENDPOINTS.get(ex)
@@ -96,8 +100,12 @@ def check_exchange_credentials(
                 msg = f"ℹ️ {exchange}: Testnet API erkannt, keine echten Trades möglich."
             return True, msg
         if ex == "bitmex":
-            if not key or not secret:
-                return False, "❌ BitMEX API ungültig: Key oder Secret fehlt"
+            if not key and not secret:
+                return False, "❌ BitMEX API ungültig: API-Key und Secret fehlen"
+            if not key:
+                return False, "❌ BitMEX API ungültig: API-Key fehlt"
+            if not secret:
+                return False, "❌ BitMEX API ungültig: API-Secret fehlt"
             if len(key) < 5 or len(secret) < 5:
                 return False, "❌ BitMEX API ungültig: Key/Secret zu kurz"
             url = "https://www.bitmex.com/api/v1/user"

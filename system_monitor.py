@@ -116,7 +116,11 @@ class SystemMonitor:
                 else:
                     self._handle_feed_up()
             except Exception as exc:
-                self._handle_feed_down(f"Systemmonitor Fehler: {exc}")
+                info = f"{type(exc).__name__}: {exc}"
+                if 'creds' in locals():
+                    info += f" | creds={creds!r}"
+                self._log(f"Systemmonitor Fehler: {info}")
+                self._handle_feed_down("API-Fehler – Antwort unvollständig")
             time.sleep(self.interval)
 
     # ---- State Handlers -------------------------------------------------

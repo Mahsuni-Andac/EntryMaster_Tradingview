@@ -4,14 +4,28 @@ import time
 from typing import List
 
 
+class SafeStreamHandler(logging.StreamHandler):
+    """StreamHandler that falls back to ASCII on encoding errors."""
+
+    def emit(self, record: logging.LogRecord) -> None:  # pragma: no cover - I/O
+        try:
+            super().emit(record)
+        except UnicodeEncodeError:
+            msg = self.format(record)
+            fallback = msg.encode("ascii", "replace").decode("ascii") + " [ASCII-Fallback]"
+            stream = self.stream
+            stream.write(fallback + self.terminator)
+            self.flush()
+
+
 def setup_logging(level: int = logging.INFO, logfile: str = "bot.log") -> None:
     """Configure root logger with file and console output."""
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(levelname)s %(message)s",
         handlers=[
-            logging.FileHandler(logfile),
-            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(logfile, encoding="utf-8"),
+            SafeStreamHandler(sys.stdout),
         ],
     )
 
