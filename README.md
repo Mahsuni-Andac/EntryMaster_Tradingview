@@ -24,11 +24,12 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 
 - **Technik:**  
   Die GUI basiert auf [Tkinter](https://docs.python.org/3/library/tkinter.html) (keine Zusatzinstallation nötig).
-- **Elemente:**  
+- **Elemente:**
   - Live-Status (Balance, PnL)
   - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital)
   - Start/Stopp-Buttons für Bot & Simulation
   - Übersicht über Positionen und Log
+  - Wirksamkeits-Status aller Einstellungen (✅/❌)
 - **Konfigurierbar:**  
   Fast alle Einstellungen können über die GUI angepasst und als **Profil gespeichert** werden.
 
