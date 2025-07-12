@@ -9,8 +9,22 @@ TUNING_FILE = "tuning_config.json"
 
 class TradingGUILogicMixin:
     def apply_recommendations(self):
+        """Aktiviert sinnvolle Filter-Kombinationen anhand der Marktlage."""
         try:
-            for var in [
+            from session_filter import SessionFilter
+            from global_state import ema_trend_global, atr_value_global
+            from config import SETTINGS
+
+            # --- Umfeld ermitteln ---
+            volatility = atr_value_global
+            session = SessionFilter().get_current_session()
+            performance = getattr(self, "live_pnl", 0.0)
+            trend = ema_trend_global
+
+            high_vol = volatility > 30
+            spike = volatility > 80
+
+            all_vars = [
                 self.andac_opt_rsi_ema,
                 self.andac_opt_safe_mode,
                 self.andac_opt_engulf,
@@ -20,10 +34,61 @@ class TradingGUILogicMixin:
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
                 self.andac_opt_session_filter,
+                self.use_doji_blocker,
                 self.use_time_filter,
-            ]:
+            ]
+            for var in all_vars:
+                var.set(False)
+
+            enable = []
+
+            if spike:
+                enable += [
+                    self.andac_opt_safe_mode,
+                    self.andac_opt_session_filter,
+                    self.use_doji_blocker,
+                    self.andac_opt_volumen_strong,
+                ]
+            elif high_vol:
+                enable += [
+                    self.andac_opt_engulf,
+                    self.andac_opt_engulf_bruch,
+                    self.andac_opt_volumen_strong,
+                ]
+            else:
+                enable += [self.andac_opt_rsi_ema, self.andac_opt_safe_mode]
+
+            if session in ("london", "new_york"):
+                enable += [self.andac_opt_confirm_delay, self.andac_opt_mtf_confirm]
+            else:
+                enable.append(self.andac_opt_safe_mode)
+
+            if performance < 0:
+                enable += [self.andac_opt_safe_mode, self.use_doji_blocker]
+            elif performance > 0:
+                enable.append(self.andac_opt_engulf)
+
+            if trend == "⬆️":
+                enable.append(self.andac_opt_engulf_big)
+            elif trend == "⬇️":
+                enable.append(self.andac_opt_engulf_bruch)
+
+            for var in set(enable):
                 var.set(True)
-            self.log_event("✅ Empfehlungen übernommen")
+
+            SETTINGS.update({
+                "opt_rsi_ema": self.andac_opt_rsi_ema.get(),
+                "opt_safe_mode": self.andac_opt_safe_mode.get(),
+                "opt_engulf": self.andac_opt_engulf.get(),
+                "opt_engulf_bruch": self.andac_opt_engulf_bruch.get(),
+                "opt_engulf_big": self.andac_opt_engulf_big.get(),
+                "opt_confirm_delay": self.andac_opt_confirm_delay.get(),
+                "opt_mtf_confirm": self.andac_opt_mtf_confirm.get(),
+                "opt_volumen_strong": self.andac_opt_volumen_strong.get(),
+                "opt_session_filter": self.andac_opt_session_filter.get(),
+            })
+
+            self.log_event("✅ Auto-Empfehlungen angewendet")
         except Exception as e:
             self.log_event(f"⚠️ Fehler beim Anwenden: {e}")
 

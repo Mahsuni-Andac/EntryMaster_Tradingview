@@ -67,7 +67,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.use_doji_blocker = tk.BooleanVar()
 
         self.interval = tk.StringVar(value="1m")
-        self.ema_length = tk.StringVar(value="20")
         self.use_time_filter = tk.BooleanVar()
         self.time_start = tk.StringVar(value="08:00")
         self.time_end = tk.StringVar(value="18:00")
@@ -119,14 +118,12 @@ class TradingGUI(TradingGUILogicMixin):
         extra.grid(row=0, column=3, padx=10, sticky="ne")
         andac.grid(row=0, column=4, padx=10, sticky="ne")
 
-        # --- Rechts: Optionen ---
-        ttk.Label(extra, text="⚙️ Optionen", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        # Entfernte Optionen (SL/TP Modus, Abstand, SmartCooldown, Score)
+        # --- Options-Überschrift über dem Intervall ---
+        ttk.Label(middle, text="⚙️ Optionen", font=("Arial", 11, "bold")).grid(row=0, column=0, columnspan=6, pady=(0, 5), sticky="w")
 
         # --- Middle ---
         ema_row = ttk.Frame(middle)
-        ema_row.grid(row=0, column=0, columnspan=6, pady=(0, 8), sticky="w")
-        ttk.Entry(ema_row, textvariable=self.ema_length, width=8).pack(side="left", padx=(4, 8))
+        ema_row.grid(row=1, column=0, columnspan=6, pady=(0, 8), sticky="w")
         ttk.Label(ema_row, text="Intervall:").pack(side="left")
         ttk.Combobox(
             ema_row,
@@ -140,7 +137,7 @@ class TradingGUI(TradingGUILogicMixin):
         ).pack(side="left", padx=(4,0))
 
         multi_row = ttk.Frame(middle)
-        multi_row.grid(row=1, column=0, columnspan=6, pady=(0, 8), sticky="w")
+        multi_row.grid(row=2, column=0, columnspan=6, pady=(0, 8), sticky="w")
         ttk.Label(multi_row, text="Multiplikator:").pack(side="left")
         self.multiplier_entry = ttk.Entry(multi_row, width=8, textvariable=self.multiplier_var)
         self.multiplier_entry.pack(side="left", padx=(4,8))
@@ -150,12 +147,12 @@ class TradingGUI(TradingGUILogicMixin):
         self.capital_entry.pack(side="left", padx=(4,0))
 
         time_filter_row = ttk.Frame(middle)
-        time_filter_row.grid(row=2, column=0, columnspan=6, pady=(0, 8), sticky="w")
+        time_filter_row.grid(row=3, column=0, columnspan=6, pady=(0, 8), sticky="w")
         ttk.Checkbutton(time_filter_row, text="Uhrzeit-Filter", variable=self.use_time_filter).pack(side="left")
 
         self.time_filters = []
         for i in range(4):
-            row = 3 + (i // 2)
+            row = 4 + (i // 2)
             col = i % 2
             label = ttk.Label(middle, text=f"Zeitfenster {i+1}")
             label.grid(row=row*2, column=col, padx=5, pady=(5, 0), sticky="w")
@@ -196,34 +193,32 @@ class TradingGUI(TradingGUILogicMixin):
 
     def _build_andac_options(self, parent):
         ttk.Label(parent, text="🤑 Entry-Master 🚀", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        self._add_entry_group(parent, "Lookback", [self.andac_lookback])
-        self._add_entry_group(parent, "Toleranz", [self.andac_puffer])
-        self._add_entry_group(parent, "Volumen-Faktor", [self.andac_vol_mult])
-
-        # Optionen zweispaltig aufteilen
+        # Zwei-Spalten-Layout: Links Checkboxen, rechts Parameter
         options_frame = ttk.Frame(parent)
         options_frame.pack()
         left_col = ttk.Frame(options_frame)
         right_col = ttk.Frame(options_frame)
-        left_col.grid(row=0, column=0, padx=5, sticky="nw")
-        right_col.grid(row=0, column=1, padx=5, sticky="nw")
+        left_col.pack(side="left", padx=5, anchor="n")
+        right_col.pack(side="left", padx=5, anchor="n")
 
+        # Checkbox-Optionen (linke Spalte)
         for text, var in [
             ("RSI/EMA", self.andac_opt_rsi_ema),
             ("🛡 Sicherheitsfilter", self.andac_opt_safe_mode),
             ("Engulfing", self.andac_opt_engulf),
             ("Engulfing + Breakout", self.andac_opt_engulf_bruch),
             ("Engulfing > ATR", self.andac_opt_engulf_big),
-        ]:
-            ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
-
-        for text, var in [
             ("Bestätigungskerze", self.andac_opt_confirm_delay),
             ("MTF Bestätigung", self.andac_opt_mtf_confirm),
             ("Starkes Volumen", self.andac_opt_volumen_strong),
             ("EU/NY Session", self.andac_opt_session_filter),
         ]:
-            ttk.Checkbutton(right_col, text=text, variable=var).pack(anchor="w")
+            ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
+
+        # Parameter-Eingaben (rechte Spalte)
+        self._add_entry_group(right_col, "Lookback", [self.andac_lookback])
+        self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
+        self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
@@ -235,7 +230,12 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Button(button_frame, text="❗️ Notausstieg", command=self.emergency_exit).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="🛑 Alles stoppen & sichern", command=self.stop_and_reset).grid(row=0, column=3, padx=5)
 
-        ttk.Checkbutton(button_frame, text="🔁 Auto-Empfehlungen", command=self.apply_recommendations).grid(row=1, column=0, padx=5)
+        ttk.Checkbutton(
+            button_frame,
+            text="🔁 Auto-Empfehlungen",
+            variable=self.auto_apply_recommendations,
+            command=self.update_auto_status,
+        ).grid(row=1, column=0, padx=5)
         ttk.Button(button_frame, text="✅ Empfehlungen übernehmen", command=self.apply_recommendations).grid(row=1, column=1, padx=5)
         ttk.Button(button_frame, text="🧹 Alles deaktivieren", command=self.disable_all_filters).grid(row=1, column=2, padx=5)
         ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file).grid(row=1, column=3, padx=5)
