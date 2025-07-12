@@ -185,6 +185,14 @@ class TradingGUILogicMixin:
             self.feed_status_label.config(foreground=color)
         self.feed_ok = ok
 
+    def update_exchange_status(self, exchange: str, ok: bool) -> None:
+        if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:
+            color = "green" if ok else "red"
+            text = f"{exchange} ✅" if ok else f"{exchange} ❌"
+            self.exchange_status_vars[exchange].set(text)
+            if exchange in self.exchange_status_labels:
+                self.exchange_status_labels[exchange].config(foreground=color)
+
     def update_pnl(self, pnl):
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
 

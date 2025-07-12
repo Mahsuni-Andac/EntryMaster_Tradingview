@@ -5,7 +5,7 @@ from tkinter import ttk
 from datetime import datetime
 
 from .trading_gui_logic import TradingGUILogicMixin
-from .api_credential_frame import APICredentialFrame
+from .api_credential_frame import APICredentialFrame, EXCHANGES
 from api_key_manager import APICredentialManager
 
 class TradingGUI(TradingGUILogicMixin):
@@ -104,6 +104,10 @@ class TradingGUI(TradingGUILogicMixin):
         # Track current connection states for the watchdog
         self.feed_ok = False
         self.api_ok = False
+
+        # Statusvariablen je Exchange
+        self.exchange_status_vars = {ex: tk.StringVar(value=f"{ex} ❌") for ex in EXCHANGES}
+        self.exchange_status_labels = {}
 
     def _build_gui(self):
         # --- Oberer Info-Bereich ---
@@ -285,6 +289,14 @@ class TradingGUI(TradingGUILogicMixin):
     def _build_api_credentials(self, parent):
         self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
         self.api_frame.pack(pady=(0, 10), fill="x")
+
+        status_frame = ttk.Frame(parent)
+        status_frame.pack(pady=(0, 5))
+        for exch in EXCHANGES:
+            var = self.exchange_status_vars[exch]
+            lbl = ttk.Label(status_frame, textvariable=var, foreground="grey", font=("Arial", 9, "bold"))
+            lbl.pack(side="left", padx=5)
+            self.exchange_status_labels[exch] = lbl
 
 
     # ---- Status Panel -------------------------------------------------
