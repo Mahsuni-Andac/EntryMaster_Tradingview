@@ -43,6 +43,8 @@ class TradingGUI(TradingGUILogicMixin):
 
         self._init_variables()
         self._build_gui()
+        self._collect_setting_vars()
+        self._build_status_panel()
 
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")
@@ -268,5 +270,52 @@ class TradingGUI(TradingGUILogicMixin):
     def _build_api_credentials(self, parent):
         api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
         api_frame.pack(pady=(0, 10), fill="x")
+
+
+    # ---- Status Panel -------------------------------------------------
+    def _collect_setting_vars(self):
+        """Collect all Tk variables for status tracking."""
+        self.setting_vars = {
+            name: var
+            for name, var in vars(self).items()
+            if isinstance(var, (tk.BooleanVar, tk.StringVar))
+        }
+        if hasattr(self, "time_filters"):
+            for idx, (start, end) in enumerate(self.time_filters, start=1):
+                self.setting_vars[f"time_filter_{idx}_start"] = start
+                self.setting_vars[f"time_filter_{idx}_end"] = end
+
+    def _build_status_panel(self):
+        """Create panel showing if settings are active in the backend."""
+        self.backend_settings = {}
+        self.status_labels = {}
+        frame = ttk.LabelFrame(self.root, text="Wirksamkeitsstatus")
+        frame.pack(padx=10, pady=5, fill="x")
+        for i, (name, var) in enumerate(sorted(self.setting_vars.items())):
+            ttk.Label(frame, text=name).grid(row=i, column=0, sticky="w")
+            lbl = ttk.Label(frame, text="❌", foreground="red")
+            lbl.grid(row=i, column=1, sticky="w")
+            self.status_labels[name] = lbl
+            var.trace_add("write", lambda *a, n=name, v=var: self.update_setting_status(n, v))
+            self.update_setting_status(name, var)
+        self.root.after(1000, self.update_all_status_labels)
+
+    def update_setting_status(self, name, var):
+        """Verify and display the activation state of a setting."""
+        try:
+            value = var.get()
+            self.backend_settings[name] = value
+            active = self.backend_settings.get(name) == value
+            text = "✅ greift" if active else "❌ greift NICHT"
+            color = "green" if active else "red"
+            self.status_labels[name].config(text=text, foreground=color)
+        except Exception as e:
+            self.status_labels[name].config(text="⚠️ Fehler", foreground="orange")
+            self.log_event(f"{name} Fehler: {e}")
+
+    def update_all_status_labels(self):
+        for name, var in self.setting_vars.items():
+            self.update_setting_status(name, var)
+        self.root.after(1000, self.update_all_status_labels)
 
 
