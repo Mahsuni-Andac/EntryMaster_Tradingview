@@ -69,7 +69,14 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
         data = resp.json()
         val = data
         for key in info["path"]:
-            val = val[key]
+            if isinstance(key, int):
+                if not isinstance(val, list) or len(val) <= key:
+                    raise ValueError(f"{exchange} Antwort unvollständig: {data}")
+                val = val[key]
+            else:
+                if key not in val:
+                    raise ValueError(f"{exchange} Antwort unvollständig: {data}")
+                val = val[key]
         price = float(val)
         logging.info("Marktdaten empfangen: %s %.2f", exchange.upper(), price)
         return price
@@ -106,14 +113,17 @@ def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
                 raise ValueError("Unerwartete API-Antwortstruktur")
             candles: List[Candle] = []
             for row in raw:
-                candles.append({
-                    "timestamp": int(row[0]),
-                    "open": float(row[1]),
-                    "high": float(row[2]),
-                    "low": float(row[3]),
-                    "close": float(row[4]),
-                    "volume": float(row[5])
-                })
+                try:
+                    candles.append({
+                        "timestamp": int(row[0]),
+                        "open": float(row[1]),
+                        "high": float(row[2]),
+                        "low": float(row[3]),
+                        "close": float(row[4]),
+                        "volume": float(row[5])
+                    })
+                except Exception as exc:
+                    raise ValueError(f"Row error {row}: {exc}") from exc
             return candles
         except Exception as e:
             logging.warning(f"[{name.upper()}] Fehler beim Abrufen von Candle-Daten: {e}")
