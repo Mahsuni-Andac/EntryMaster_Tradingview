@@ -1,10 +1,11 @@
 """Real-time system monitoring with auto-pause/resume.
 
 This watchdog checks exchange connectivity and incoming market data every
-few seconds.  If no fresh candles arrive within ``timeout`` seconds the bot
-is automatically paused and the GUI status switches to ``❌``.  As soon as the
-feed recovers the bot resumes trading and the status changes back to ``✅``.
-The logic is exchange agnostic and works for all supported backends.
+few seconds for the **active market only**.  Short interruptions are tolerated
+(``timeout`` defaults to 10s).  If no fresh candle is received within this
+period the bot is paused, an acoustic signal is emitted and the GUI status
+switches to ``❌``.  As soon as a new candle arrives the bot resumes and the
+status changes back to ``✅``.
 """
 
 from __future__ import annotations
@@ -30,12 +31,12 @@ def _beep() -> None:
 class SystemMonitor:
     """Background watchdog for API and market data integrity."""
 
-    def __init__(self, gui, interval: int = 2, timeout: int = 8) -> None:
-        """Create monitor with *interval* seconds and feed *timeout*.
+    def __init__(self, gui, interval: int = 2, timeout: int = 10) -> None:
+        """Create monitor with *interval* seconds and feed ``timeout``.
 
         ``interval`` controls how often the APIs are polled.  If no candle
-        update happens within ``timeout`` seconds the bot will be paused
-        automatically.
+        update happens within ``timeout`` seconds (default ``10``) the bot will
+        be paused automatically.
         """
         self.gui = gui
         self.interval = max(1, interval)
