@@ -7,7 +7,8 @@ from credential_checker import check_exchange_credentials
 from status_events import StatusDispatcher
 from config import SETTINGS
 
-EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "BitMEX"]
+# Order of exchanges in the selection box
+EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "OKX", "BitMEX"]
 
 class APICredentialFrame(ttk.LabelFrame):
     """GUI frame for managing multiple exchange credentials."""
@@ -18,7 +19,8 @@ class APICredentialFrame(ttk.LabelFrame):
         self.log_callback = log_callback
         self.select_callback = select_callback
 
-        self.active_exchange = tk.StringVar(value=EXCHANGES[0])
+        # no exchange active until the user selects one
+        self.active_exchange = tk.StringVar(value="")
 
         self.vars: Dict[str, Dict[str, tk.Variable]] = {}
         self.status_vars: Dict[str, tk.StringVar] = {}
@@ -27,7 +29,7 @@ class APICredentialFrame(ttk.LabelFrame):
         ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
         box = ttk.Combobox(self, state="readonly", values=EXCHANGES, textvariable=self.active_exchange, width=10)
         box.grid(row=0, column=1, sticky="w")
-        box.bind("<<ComboboxSelected>>", lambda _e: self._select_exchange(self.active_exchange.get()))
+        box.bind("<<ComboboxSelected>>", lambda _e: self._on_select())
 
         start_row = 1
         for idx, exch in enumerate(EXCHANGES):
@@ -61,9 +63,8 @@ class APICredentialFrame(ttk.LabelFrame):
 
         ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
 
-        self._select_exchange(self.active_exchange.get())
-        if self.select_callback:
-            self.select_callback(self.active_exchange.get())
+        # disable all fields until user actively chooses an exchange
+        self._select_exchange("")
 
         # Mini price monitor
         term_frame = tk.Frame(self, bg="black")
@@ -73,6 +74,7 @@ class APICredentialFrame(ttk.LabelFrame):
 
     # ------------------------------------------------------------------
     def _select_exchange(self, exch: str) -> None:
+        """Enable entry fields for *exch* and reset others."""
         for name in EXCHANGES:
             data = self.vars[name]
             state = "normal" if name == exch else "disabled"
@@ -81,6 +83,10 @@ class APICredentialFrame(ttk.LabelFrame):
             if name != exch:
                 self.status_vars[name].set("⚪")
                 self.status_labels[name].config(foreground="grey")
+
+    def _on_select(self) -> None:
+        exch = self.active_exchange.get()
+        self._select_exchange(exch)
         if self.select_callback:
             self.select_callback(exch)
 
@@ -97,6 +103,12 @@ class APICredentialFrame(ttk.LabelFrame):
     # ------------------------------------------------------------------
     def _save(self) -> None:
         exch = self.active_exchange.get()
+        if not exch:
+            if self.log_callback:
+                self.log_callback("Keine Exchange gewählt")
+            else:
+                messagebox.showinfo("Status", "Bitte Exchange wählen")
+            return
         data = self.vars[exch]
         if exch == "dYdX":
             wallet = data["wallet"].get().strip()

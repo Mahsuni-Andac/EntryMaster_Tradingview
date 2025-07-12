@@ -12,12 +12,12 @@ class GUICredentialFrameTest(unittest.TestCase):
         frame = APICredentialFrame(root, APICredentialManager())
         mexc = frame.vars["MEXC"]
         dydx = frame.vars["dYdX"]
-        # default should enable MEXC
-        self.assertEqual(mexc["entry1"].cget("state"), "normal")
+        # no exchange selected by default
+        self.assertEqual(mexc["entry1"].cget("state"), "disabled")
         self.assertEqual(dydx["entry1"].cget("state"), "disabled")
         # switch to dYdX
         frame.active_exchange.set("dYdX")
-        frame._select_exchange("dYdX")
+        frame._on_select()
         self.assertEqual(dydx["entry1"].cget("state"), "normal")
         self.assertEqual(mexc["entry1"].cget("state"), "disabled")
         root.destroy()

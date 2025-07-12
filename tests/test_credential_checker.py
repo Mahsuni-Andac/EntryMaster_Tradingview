@@ -57,6 +57,15 @@ class CredentialCheckerTest(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIn('BitMEX', msg)
 
+    @patch('credential_checker.requests.get')
+    def test_okx_success(self, mock_get):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.raise_for_status.return_value = None
+        mock_get.return_value = mock_resp
+        ok, msg = check_exchange_credentials('OKX', key='abcd1', secret='xyzt1')
+        self.assertTrue(ok)
+        self.assertIn('OKX', msg)
+
 
 if __name__ == '__main__':
     unittest.main()
