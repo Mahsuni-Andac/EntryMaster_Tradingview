@@ -174,7 +174,16 @@ def run_bot_live(settings=None, app=None):
 
         try:
             candle = fetch_latest_candle(settings["symbol"], interval)
-            fetch_last_price(settings.get("trading_backend", "mexc"))
+            price = fetch_last_price(settings.get("trading_backend", "mexc"))
+            stamp = datetime.now().strftime("%H:%M:%S")
+            if price is not None and hasattr(app, "log_event"):
+                msg = f"[{stamp}] Preis-Update: {settings['symbol']} = {price:.2f}"
+                print(msg)
+                app.log_event(msg)
+                if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
+                    app.api_frame.log_price(f"{settings['symbol'].replace('_','')}: {price:.2f} ({stamp})")
+            elif price is None and hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
+                app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
             if not candle:
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
@@ -223,6 +232,15 @@ def run_bot_live(settings=None, app=None):
 
         andac_signal: AndacSignal = andac_indicator.evaluate(candle)
         entry_type = andac_signal.signal
+        stamp = datetime.now().strftime("%H:%M:%S")
+        if entry_type:
+            log_msg = (
+                f"[{stamp}] Signal erkannt: {entry_type.upper()} "
+                f"({settings['symbol']} @ {close_price:.2f})"
+            )
+            print(log_msg)
+            if hasattr(app, "log_event"):
+                app.log_event(log_msg)
 
         # --- POSITION HANDLING ---
         if position:
@@ -422,6 +440,14 @@ def run_bot_live(settings=None, app=None):
                 app.position = position
                 last_signal = entry_type
                 last_signal_time = now
+
+                stamp = datetime.now().strftime("%H:%M:%S")
+                trade_msg = (
+                    f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry:.2f})"
+                )
+                print(trade_msg)
+                if hasattr(app, "log_event"):
+                    app.log_event(trade_msg)
 
                 print(f"{'🟢' if entry_type == 'long' else '🔴'} {entry_type.upper()} Entry erkannt! Simuliere Trade...")
                 print_entry_status(position, capital, app, leverage, settings)

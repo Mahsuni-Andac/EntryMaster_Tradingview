@@ -50,6 +50,10 @@ class TradingGUI(TradingGUILogicMixin):
         StatusDispatcher.on_api_status(self.update_api_status)
         StatusDispatcher.on_feed_status(self.update_feed_status)
 
+        # MARKTDATEN-MONITOR starten
+        self.market_interval_ms = 1000
+        self._update_market_monitor()
+
         # Reduce overall window height by 10% after layout is built
         self.root.update_idletasks()
         width = self.root.winfo_width()
@@ -429,5 +433,24 @@ class TradingGUI(TradingGUILogicMixin):
             self.all_ok_label.config(text="✅ Alle Systeme laufen fehlerfrei")
             if not self.all_ok_label.winfo_ismapped():
                 self.all_ok_label.grid()
+
+    # MARKTDATEN-MONITOR -------------------------------------------------
+    def _update_market_monitor(self) -> None:
+        """Fetch market price and update mini terminal."""
+        from data_provider import fetch_last_price
+        from config import SETTINGS
+
+        symbol = SETTINGS.get("symbol", "BTC_USDT")
+        exch = SETTINGS.get("trading_backend", "mexc")
+        price = fetch_last_price(exch)
+        stamp = datetime.now().strftime("%H:%M:%S")
+        line = f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: -- ({stamp})"
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
+            self.api_frame.log_price(line, error=price is None)
+        if price is not None:
+            msg = f"[{stamp}] Preis-Update: {symbol} = {price:.2f}"
+            print(msg)
+            self.log_event(msg)
+        self.root.after(self.market_interval_ms, self._update_market_monitor)
 
 
