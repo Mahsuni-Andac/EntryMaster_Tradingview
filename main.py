@@ -47,7 +47,9 @@ def bot_control(gui):
         if cmd == "start":
             if not gui.running:
                 load_settings_from_file()
-                print("🚀 Bot gestartet: LIVE-MODUS")
+                SETTINGS["paper_mode"] = not gui.live_trading.get()
+                mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
+                print(f"🚀 Bot gestartet: {mode_text}")
                 gui.running = True
                 threading.Thread(target=run_bot_live, args=(SETTINGS, gui), daemon=True).start()
             else:
@@ -102,7 +104,7 @@ def bot_control(gui):
                 status = (
                     f"{farbe} Aktueller PnL: ${pnl:.1f} | Laufzeit: {laufzeit}s | ⏰ {uhrzeit} | 📅 {datum}\n"
                     f"💼 Kapital: ${capital:.2f} | 📊 Lev: x{leverage} | 📍 Trade: {trade_info}\n"
-                    f"📉 ATR: ${atr_value_global:.1f} | 📈 EMA: {ema_trend_global} | 🚀 Modus: LIVE\n"
+                    f"📉 ATR: ${atr_value_global:.1f} | 📈 EMA: {ema_trend_global} | 🚀 Modus: {'LIVE' if gui.live_trading.get() else 'SIMULATION'}\n"
                     f"{filter_line}"
                 )
                 print(status + Style.RESET_ALL)
@@ -122,7 +124,9 @@ def on_gui_start(gui):
         return
     load_settings_from_file()
     SETTINGS["interval"] = gui.interval.get()
-    print("🚀 Bot gestartet: LIVE-MODUS")
+    SETTINGS["paper_mode"] = not gui.live_trading.get()
+    mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
+    print(f"🚀 Bot gestartet: {mode_text}")
     gui.running = True
     threading.Thread(target=run_bot_live, args=(SETTINGS, gui), daemon=True).start()
 

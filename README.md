@@ -11,6 +11,7 @@ Handelsergebnisse.
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
+* Umschaltbarer Live-Trading-Modus über die GUI
 * Keine Unterstützung für andere Börsen
 
 ## Installation
@@ -32,5 +33,5 @@ hinterlegt sind.
 python main.py
 ```
 Die GUI fragt die BitMEX-Zugangsdaten ab und zeigt fortlaufend die Binance-Spot-
-Preise sowie die Entwicklung des Paper-Trading-Kontos an.
+Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter kann jederzeit vom Simulationsmodus in den Live-Betrieb gewechselt werden.
 

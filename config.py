@@ -13,4 +13,5 @@ SETTINGS = {
     "auto_multiplier": False,
     "capital": 1000,
     "version": "V10.4_Pro",
+    "paper_mode": True,
 }

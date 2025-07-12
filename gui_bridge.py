@@ -76,6 +76,15 @@ class GUIBridge:
                 return SETTINGS.get("interval", "15m")
         return SETTINGS.get("interval", "15m")
 
+    @property
+    def live_trading(self):
+        if self.gui and hasattr(self.gui, "live_trading"):
+            try:
+                return bool(self.gui.live_trading.get())
+            except Exception:
+                return not SETTINGS.get("paper_mode", True)
+        return not SETTINGS.get("paper_mode", True)
+
 
 
     def update_live_pnl(self, pnl):
