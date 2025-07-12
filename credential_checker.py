@@ -9,6 +9,8 @@ from datetime import datetime
 
 import requests
 from dydx_api_utils import check_dydx_api
+from mexc_api_utils import check_mexc_api
+from config import SETTINGS
 
 ENDPOINTS = {
     "mexc": "https://api.mexc.com/api/v3/ping",
@@ -80,7 +82,12 @@ def check_exchange_credentials(
             if _detect_testnet(wallet):
                 msg = "ℹ️ dYdX: Testnet Wallet erkannt, keine echten Trades möglich."
             return True, msg
-        if ex in {"mexc", "binance", "bybit", "okx"}:
+        if ex == "mexc":
+            ok, msg = check_mexc_api(key, secret, SETTINGS.get("symbol", "BTC_USDT"))
+            if ok and _detect_testnet(key):
+                msg = "ℹ️ MEXC: Testnet API erkannt, keine echten Trades möglich."
+            return ok, msg
+        if ex in {"binance", "bybit", "okx"}:
             if not key and not secret:
                 return False, f"❌ {exchange} API ungültig: API-Key und Secret fehlen"
             if not key:
