@@ -158,8 +158,15 @@ def run_bot_live(settings=None, app=None):
     last_printed_price = None
 
     no_signal_printed = False
+    first_feed = False
 
-    while app.running and capital > 0:
+    while capital > 0 and not getattr(app, "force_exit", False):
+        if not getattr(app, "running", False):
+            time.sleep(1)
+            continue
+        if not getattr(app, "feed_ok", True):
+            time.sleep(1)
+            continue
         risk_manager.update_capital(capital)
         # --- Schutzmechanismen ---
         if risk_manager.check_loss_limit() or risk_manager.check_drawdown_limit():
@@ -172,6 +179,11 @@ def run_bot_live(settings=None, app=None):
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
                 continue
+
+            if not first_feed:
+                first_feed = True
+                if hasattr(app, "log_event"):
+                    app.log_event("✅ Erster Marktdaten-Feed empfangen")
 
             candles.append(candle)
             if len(candles) > 100:

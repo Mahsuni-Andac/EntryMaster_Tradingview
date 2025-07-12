@@ -174,6 +174,7 @@ class TradingGUILogicMixin:
             self.api_status_var.set(text)
         if hasattr(self, "api_status_label"):
             self.api_status_label.config(foreground=color)
+        self.api_ok = ok
 
     def update_feed_status(self, ok: bool) -> None:
         color = "green" if ok else "red"
@@ -182,6 +183,7 @@ class TradingGUILogicMixin:
             self.feed_status_var.set(text)
         if hasattr(self, "feed_status_label"):
             self.feed_status_label.config(foreground=color)
+        self.feed_ok = ok
 
     def update_pnl(self, pnl):
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")

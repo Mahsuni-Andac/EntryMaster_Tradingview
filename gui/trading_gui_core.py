@@ -101,6 +101,9 @@ class TradingGUI(TradingGUILogicMixin):
         self.feed_status_var = tk.StringVar(value="Feed ❌")
         self.api_status_label = None
         self.feed_status_label = None
+        # Track current connection states for the watchdog
+        self.feed_ok = False
+        self.api_ok = False
 
     def _build_gui(self):
         # --- Oberer Info-Bereich ---
