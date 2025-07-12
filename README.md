@@ -7,7 +7,7 @@ Handelslogik basiert auf einem TradingView-Indikator und läuft wahlweise im Liv
 Handelsergebnisse.
 
 ## Eigenschaften
-* Preisfeed über **python-binance** (BTCUSDT)
+* Preisfeed über **python-binance** (BTCUSDT) – direkte Anzeige im GUI-Monitor
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung

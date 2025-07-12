@@ -522,34 +522,34 @@ class TradingGUI(TradingGUILogicMixin):
         from config import SETTINGS
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")
-        active = SETTINGS.get("trading_backend", "bitmex")
 
         if not hasattr(self, "market_prices"):
             self.market_prices = {}
 
-        for exch in [e.lower() for e in EXCHANGES]:
-            try:
-                price = fetch_last_price(exch, symbol)
-            except ValueError as exc:
-                logging.error("%s", exc)
-                if hasattr(self, "log_event") and exch == active:
-                    self.log_event(f"API-Fehler: {exc}")
-                price = None
-            self.market_prices[exch] = price
-            if exch == active:
-                stamp = datetime.now().strftime("%H:%M:%S")
-                line = (
-                    f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: -- ({stamp})"
-                )
-                if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
-                    self.api_frame.log_price(line, error=price is None)
-                if price is not None:
-                    msg = f"[{stamp}] Preis-Update: {symbol} = {price:.2f}"
-                    print(msg)
-                    self.log_event(msg)
-                else:
-                    if hasattr(self, "log_event"):
-                        self.log_event("API-Fehler – Antwort unvollständig")
+        try:
+            price = fetch_last_price("binance", symbol)
+        except ValueError as exc:
+            logging.error("%s", exc)
+            if hasattr(self, "log_event"):
+                self.log_event(f"API-Fehler: {exc}")
+            price = None
+
+        self.market_prices["binance"] = price
+        stamp = datetime.now().strftime("%H:%M:%S")
+        line = (
+            f"{symbol.replace('_','')}: {price:.2f} ({stamp})"
+            if price is not None
+            else f"{symbol}: -- ({stamp})"
+        )
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
+            self.api_frame.log_price(line, error=price is None)
+        if price is not None:
+            msg = f"[{stamp}] Preis-Update: {symbol} = {price:.2f}"
+            print(msg)
+            self.log_event(msg)
+        else:
+            if hasattr(self, "log_event"):
+                self.log_event("API-Fehler – Antwort unvollständig")
         self.root.after(self.market_interval_ms, self._update_market_monitor)
 
 
