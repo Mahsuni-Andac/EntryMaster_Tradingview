@@ -86,4 +86,4 @@ Nach jedem Speichern und beim Bot-Start erfolgt automatisch eine Prüfung aller 
 [12:00:00] Live-Marktdaten aktiv: ✅
 ```
 
-Ohne gültige Zugangsdaten läuft der Bot ausschließli
+Ohne gültige Zugangsdaten läuft der Bot nicht. Ein Simulations- oder Backtest-Modus ist nicht vorhanden – es werden ausschließlich Live-Marktdaten verwendet.
