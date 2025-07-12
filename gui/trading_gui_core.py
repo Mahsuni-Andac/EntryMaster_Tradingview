@@ -128,16 +128,20 @@ class TradingGUI(TradingGUILogicMixin):
         # --- Hauptcontainer ---
         container = ttk.Frame(self.root)
         container.pack(padx=10, pady=5)
+        risk = ttk.Frame(container)
         left = ttk.Frame(container)
         right = ttk.Frame(container)
         middle = ttk.Frame(container)
         extra = ttk.Frame(container)
         andac = ttk.Frame(container)
-        left.grid(row=0, column=0, padx=10, sticky="nw")
-        right.grid(row=0, column=1, padx=10, sticky="ne")
-        middle.grid(row=0, column=2, padx=10, sticky="n")
-        extra.grid(row=0, column=3, padx=10, sticky="ne")
-        andac.grid(row=0, column=4, padx=10, sticky="ne")
+
+        # Neue Spalte für Risikomanagement ganz links
+        risk.grid(row=0, column=0, padx=10, sticky="nw")
+        left.grid(row=0, column=1, padx=10, sticky="ne")
+        right.grid(row=0, column=2, padx=10, sticky="ne")
+        middle.grid(row=0, column=3, padx=10, sticky="n")
+        extra.grid(row=0, column=4, padx=10, sticky="ne")
+        andac.grid(row=0, column=5, padx=10, sticky="ne")
 
         # --- Options-Überschrift über dem Intervall ---
         ttk.Label(middle, text="⚙️ Optionen", font=("Arial", 11, "bold")).grid(row=0, column=0, columnspan=6, pady=(0, 5), sticky="w")
@@ -183,15 +187,11 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
             self.time_filters.append((start, end))
 
-        self._build_andac_options(andac)
-        self._build_controls(self.root)
+        # --- Risikomanagement-Spalte ---
+        ttk.Label(risk, text="⚠️ Risikomanagement", font=("Arial", 11, "bold")).grid(row=0, column=0, pady=(0, 5), sticky="w")
 
-        # --- Unten: Auto Partial Close und Verlust-Limit ---
-        bottom_frame = ttk.Frame(self.root)
-        bottom_frame.pack(pady=10)
-
-        apc_frame = ttk.LabelFrame(bottom_frame, text="Auto Partial Close")
-        apc_frame.grid(row=0, column=0, padx=15, sticky="n")
+        apc_frame = ttk.LabelFrame(risk, text="Auto Partial Close")
+        apc_frame.grid(row=1, column=0, padx=5, sticky="nw")
         ttk.Checkbutton(apc_frame, text="Aktivieren", variable=self.apc_enabled).grid(row=0, column=0, columnspan=2, sticky="w")
         ttk.Label(apc_frame, text="Teilverkaufsrate [%/Intervall]:").grid(row=1, column=0, sticky="w")
         ttk.Entry(apc_frame, textvariable=self.apc_rate, width=6).grid(row=1, column=1)
@@ -202,13 +202,16 @@ class TradingGUI(TradingGUILogicMixin):
         self.apc_status_label = ttk.Label(apc_frame, text="", foreground="blue")
         self.apc_status_label.grid(row=4, column=0, columnspan=2, sticky="w")
 
-        loss_frame = ttk.LabelFrame(bottom_frame, text="Verlust-Limit / Auto-Pause")
-        loss_frame.grid(row=0, column=1, padx=15, sticky="n")
+        loss_frame = ttk.LabelFrame(risk, text="Verlust-Limit / Auto-Pause")
+        loss_frame.grid(row=2, column=0, padx=5, pady=(10, 0), sticky="nw")
         ttk.Checkbutton(loss_frame, text="Aktivieren", variable=self.max_loss_enabled).grid(row=0, column=0, columnspan=2, sticky="w")
         ttk.Label(loss_frame, text="Maximaler Verlust bis Pause [$]:").grid(row=1, column=0, sticky="w")
         ttk.Entry(loss_frame, textvariable=self.max_loss_value, width=8).grid(row=1, column=1)
         self.max_loss_status_label = ttk.Label(loss_frame, text="", foreground="red")
         self.max_loss_status_label.grid(row=3, column=0, columnspan=2, sticky="w")
+
+        self._build_andac_options(andac)
+        self._build_controls(self.root)
 
 
 
