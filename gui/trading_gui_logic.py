@@ -179,6 +179,8 @@ class TradingGUILogicMixin:
                 self.api_status_label.pack_forget()
             if hasattr(self, "api_status_var"):
                 self.api_status_var.set("")
+            if hasattr(self, "neon_panel"):
+                self.neon_panel.set_status("api", "green", "API OK")
         else:
             stamp = datetime.now().strftime("%H:%M:%S")
             text = f"API ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
@@ -188,6 +190,8 @@ class TradingGUILogicMixin:
                 self.api_status_label.config(foreground="red")
                 if not self.api_status_label.winfo_ismapped():
                     self.api_status_label.pack(side="left", padx=10)
+            if hasattr(self, "neon_panel"):
+                self.neon_panel.set_status("api", "red", text)
 
     def update_feed_status(self, ok: bool, reason: str | None = None) -> None:
         """Update feed status label only when changed."""
@@ -200,6 +204,8 @@ class TradingGUILogicMixin:
                 self.feed_status_label.pack_forget()
             if hasattr(self, "feed_status_var"):
                 self.feed_status_var.set("")
+            if hasattr(self, "neon_panel"):
+                self.neon_panel.set_status("feed", "green", "Feed OK")
         else:
             stamp = datetime.now().strftime("%H:%M:%S")
             text = f"Feed ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
@@ -209,6 +215,8 @@ class TradingGUILogicMixin:
                 self.feed_status_label.config(foreground="red")
                 if not self.feed_status_label.winfo_ismapped():
                     self.feed_status_label.pack(side="left", padx=10)
+            if hasattr(self, "neon_panel"):
+                self.neon_panel.set_status("feed", "red", text)
 
     def update_exchange_status(self, exchange: str, ok: bool) -> None:
         if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:

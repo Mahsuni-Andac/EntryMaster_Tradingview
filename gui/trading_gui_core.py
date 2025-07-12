@@ -7,6 +7,7 @@ import logging
 
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame, EXCHANGES
+from .neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 
@@ -46,6 +47,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         self._init_variables()
         self._build_gui()
+        self._init_neon_panel()
         self._collect_setting_vars()
         self._build_status_panel()
         StatusDispatcher.on_api_status(self.update_api_status)
@@ -60,6 +62,35 @@ class TradingGUI(TradingGUILogicMixin):
         width = self.root.winfo_width()
         height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
+
+    # ---- Neon Status Panel -------------------------------------------
+    def _init_neon_panel(self):
+        self.neon_panel = NeonStatusPanel(self.root)
+        self.neon_panel.frame.pack(side="right", fill="y", padx=(0, 5))
+
+        mapping = {
+            "api": ("API Status", None),
+            "feed": ("Datenfeed", None),
+            "apc": ("Auto Partial Close", self.apc_enabled),
+            "loss": ("Verlustlimit", self.max_loss_enabled),
+            "auto_rec": ("Auto Empfehlungen", self.auto_apply_recommendations),
+            "auto_multi": ("Auto Multiplikator", self.auto_multiplier),
+            "safe": ("Sicherheitsfilter", self.andac_opt_safe_mode),
+            "vol": ("Volumenfilter", self.andac_opt_volumen_strong),
+            "session": ("Session Filter", self.andac_opt_session_filter),
+        }
+
+        self._neon_vars = {}
+        for key, (desc, var) in mapping.items():
+            self.neon_panel.register(key, desc)
+            if isinstance(var, tk.BooleanVar):
+                self._neon_vars[key] = var
+                var.trace_add("write", lambda *a, k=key, v=var: self._update_neon_var(k, v))
+                self._update_neon_var(key, var)
+
+    def _update_neon_var(self, key, var):
+        color = "green" if var.get() else "blue"
+        self.neon_panel.set_status(key, color)
 
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")
@@ -124,8 +155,12 @@ class TradingGUI(TradingGUILogicMixin):
         self.exchange_status_labels = {}
 
     def _build_gui(self):
+        # wrapper for main content to allow side panels
+        self.main_frame = ttk.Frame(self.root)
+        self.main_frame.pack(side="left", fill="both", expand=True)
+
         # --- Oberer Info-Bereich ---
-        top_info = ttk.Frame(self.root)
+        top_info = ttk.Frame(self.main_frame)
         top_info.pack(pady=5)
         self._build_api_credentials(top_info)
         self.capital_value = ttk.Label(top_info, text="💰 Kapital: $0", foreground="green", font=("Arial", 11, "bold"))
@@ -140,7 +175,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.feed_status_label.pack(side="left", padx=10)
 
         # --- Hauptcontainer ---
-        container = ttk.Frame(self.root)
+        container = ttk.Frame(self.main_frame)
         container.pack(padx=10, pady=5)
         risk = ttk.Frame(container)
         left = ttk.Frame(container)
@@ -225,7 +260,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.max_loss_status_label.grid(row=3, column=0, columnspan=2, sticky="w")
 
         self._build_andac_options(andac)
-        self._build_controls(self.root)
+        self._build_controls(self.main_frame)
 
 
 
