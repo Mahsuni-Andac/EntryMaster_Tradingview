@@ -127,8 +127,7 @@ def check_exchange_credentials(
 def check_all_credentials(settings: Dict[str, str]) -> Dict[str, tuple]:
     """Check all supported exchanges and print status messages.
 
-    Adds ``active`` and ``live`` keys to the result dict and toggles
-    ``settings['test_mode']`` if no exchange is active.
+    Adds ``active`` and ``live`` keys to the result dict.
     """
     global _last_statuses, _last_active, _last_live
 
@@ -159,8 +158,7 @@ def check_all_credentials(settings: Dict[str, str]) -> Dict[str, tuple]:
     if _last_live is None or live != _last_live:
         print(f"{_timestamp()} Live-Marktdaten aktiv: " + ("✅" if live else "❌"))
         if not live:
-            print(f"{_timestamp()} Kein Live-Feed aktiv – nur Simulation!")
-            settings["test_mode"] = True
+            print(f"{_timestamp()} API nicht erreichbar – Bot pausiert")
         _last_live = live
     results["active"] = active
     results["live"] = live

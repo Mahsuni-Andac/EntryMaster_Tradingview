@@ -40,8 +40,6 @@ def print_full_filter_overview(settings):
         ("ReEntry", settings.get("reentry_filter", False)),
         ("SL-Intelligenz", settings.get("sl_intel", False)),
         ("CapitalSafe", settings.get("capital_safe", False)),
-        ("LiveMode", not settings.get("test_mode", True)),
-        ("SimMode", settings.get("test_mode", False)),
         ("SessionBlock", settings.get("session_block", False)),
         ("EntryMaster", settings.get("entry_master", False)),
         ("AdaptiveSL", settings.get("adaptive_sl", False)),
@@ -62,7 +60,7 @@ def options_snapshot(settings):
         "rsi_filter", "volume_filter", "ema_filter", "trailing_sl",
         "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
         "breakout_filter", "time_filter", "atr_filter", "momentum_filter", "wick_filter",
-        "rejection_filter", "reentry_filter", "sl_intel", "capital_safe", "test_mode",
+        "rejection_filter", "reentry_filter", "sl_intel", "capital_safe",
         "session_block", "entry_master", "adaptive_sl"
     )
     return tuple(settings.get(k) for k in keys)
@@ -92,8 +90,6 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     filter_status.append("ReEntry✅" if settings.get("reentry_filter", False) else "ReEntry❌")
     filter_status.append("SL-Intelligenz✅" if settings.get("sl_intel", False) else "SL-Intelligenz❌")
     filter_status.append("CapitalSafe✅" if settings.get("capital_safe", False) else "CapitalSafe❌")
-    filter_status.append("LiveMode✅" if not settings.get("test_mode", True) else "LiveMode❌")
-    filter_status.append("SimMode✅" if settings.get("test_mode", False) else "SimMode❌")
     filter_status.append("SessionBlock✅" if settings.get("session_block", False) else "SessionBlock❌")
     filter_status.append("EntryMaster✅" if settings.get("entry_master", False) else "EntryMaster❌")
     filter_status.append("AdaptiveSL✅" if settings.get("adaptive_sl", False) else "AdaptiveSL❌")
@@ -172,11 +168,13 @@ def print_info(msg):
     print(f"ℹ️ {msg}")
     print("")
 
-def print_start_banner(mode, start_balance, saved_profit=None):
+def print_start_banner(start_balance, saved_profit=None):
     nowstr = datetime.now().strftime("[%H:%M:%S]")
-    print(f"{nowstr} 🚀 Bot gestartet im {'Live' if mode=='live' else 'Sim'}-Modus")
-    print(f"🧾 Startkapital: ${start_balance:.2f}" +
-          (f" | 💎 Gespart: {saved_profit}" if saved_profit else ""))
+    print(f"{nowstr} 🚀 Bot gestartet")
+    print(
+        f"🧾 Startkapital: ${start_balance:.2f}"
+        + (f" | 💎 Gespart: {saved_profit}" if saved_profit else "")
+    )
     print("")
 
 def print_stop_banner(reason: str | None = None) -> None:

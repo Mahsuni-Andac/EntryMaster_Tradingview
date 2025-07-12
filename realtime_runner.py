@@ -94,7 +94,7 @@ def run_bot_live(settings=None, app=None):
     capital = SETTINGS.get("starting_capital", 1000)
     start_capital = capital
 
-    print_start_banner('sim' if settings.get("test_mode") else 'live', capital)
+    print_start_banner(capital)
 
     if app:
         settings["log_event"] = app.log_event
@@ -136,9 +136,9 @@ def run_bot_live(settings=None, app=None):
     andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
 
-    TraderClass = import_trader(settings.get("trading_backend", "sim"))
+    TraderClass = import_trader(settings.get("trading_backend", "mexc"))
     trader = None
-    if TraderClass and not settings.get("test_mode"):
+    if TraderClass:
         trader = TraderClass(
             api_key=API_KEY,
             api_secret=API_SECRET
@@ -187,10 +187,7 @@ def run_bot_live(settings=None, app=None):
                     )
             elif price is None:
                 if hasattr(app, "log_event"):
-                    if exchange == "sim":
-                        app.log_event("Sim-Modus – Marktdaten werden nicht geladen")
-                    else:
-                        app.log_event(f"Keine Marktdaten – Exchange: {exchange.upper()}")
+                    app.log_event(f"Keine Marktdaten – Exchange: {exchange.upper()}")
                 if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
                     app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
             if not candle:
@@ -276,7 +273,7 @@ def run_bot_live(settings=None, app=None):
                 abs(current - last_printed_price) > 1.0
             ):
                 print(f"⏳ Position offen ({position['side']}) | Entry: {entry:.2f} | Now: {current:.2f}")
-                print(f"💰 Aktuelles Balance (Sim): ${capital:.2f}")
+                print(f"💰 Aktuelles Balance: ${capital:.2f}")
                 print(f"🎯 SL: {position['sl']:.2f} | TP: {position['tp']:.2f} | PnL: {pnl_live:.2f}")
                 last_printed_pnl = pnl_live
                 last_printed_price = current
@@ -317,25 +314,7 @@ def run_bot_live(settings=None, app=None):
                         )
                         app.log_event(log_msg)
                         app.apc_status_label.config(text=log_msg, foreground="blue")
-                        try:
-                            with open("tradelog_sim.csv", "a", newline="") as f:
-                                writer = csv.writer(f)
-                                writer.writerow([
-                                    datetime.now(),
-                                    "PARTIAL",
-                                    position["side"].upper(),
-                                    entry,
-                                    current,
-                                    to_close,
-                                    realized,
-                                    old_cap,
-                                    capital,
-                                    position["amount"],
-                                ])
-                        except Exception as e:
-                            print(f"⚠️ Fehler beim Schreiben in Trade-Log: {e}")
-
-                        if not settings.get("test_mode") and trader:
+                        if trader:
                             live_partial_close_mexc(trader, settings["symbol"], position["side"], to_close)
                         if position["amount"] <= 0:
                             position = None
@@ -369,23 +348,7 @@ def run_bot_live(settings=None, app=None):
                 # Risk-Manager informieren
                 risk_manager.update_loss(pnl)
 
-                try:
-                    with open("tradelog_sim.csv", "a", newline="") as f:
-                        writer = csv.writer(f)
-                        writer.writerow([
-                            datetime.now(),
-                            "EXIT",
-                            position["side"].upper(),
-                            entry,
-                            current,
-                            position["amount"],
-                            pnl,
-                            old_cap,
-                            capital,
-                            0.0,
-                        ])
-                except Exception as e:
-                    print(f"⚠️ Fehler beim Schreiben in Trade-Log: {e}")
+                
 
                 app.update_pnl(pnl)
                 app.update_capital(capital)
@@ -394,7 +357,7 @@ def run_bot_live(settings=None, app=None):
                 )
                 print(log_msg)
                 app.log_event(log_msg)
-                print(f"💰 Aktuelles Balance (Sim): ${capital:.2f}")
+                print(f"💰 Aktuelles Balance: ${capital:.2f}")
 
                 app.update_live_trade_pnl(0.0)
                 app.live_pnl = 0.0
@@ -464,20 +427,12 @@ def run_bot_live(settings=None, app=None):
                 if hasattr(app, "log_event"):
                     app.log_event(trade_msg)
 
-                print(f"{'🟢' if entry_type == 'long' else '🔴'} {entry_type.upper()} Entry erkannt! Simuliere Trade...")
+                print(f"{'🟢' if entry_type == 'long' else '🔴'} {entry_type.upper()} Entry erkannt!")
                 print_entry_status(position, capital, app, leverage, settings)
 
-                try:
-                    with open("tradelog_sim.csv", "a", newline='') as f:
-                        writer = csv.writer(f)
-                        writer.writerow([
-                            datetime.now(), "ENTRY", entry_type.upper(), entry, "", "",
-                            capital
-                        ])
-                except Exception as e:
-                    print(f"⚠️ Fehler beim Schreiben ins Entry-Log: {e}")
 
-                if not settings.get("test_mode") and amount > 0:
+
+                if amount > 0:
                     try:
                         direction = "BUY" if entry_type == "long" else "SELL"
                         trader.place_order(

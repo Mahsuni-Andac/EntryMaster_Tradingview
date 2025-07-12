@@ -34,7 +34,7 @@ def place_order(
     if entry_price is None or entry_price == 0:
         raise ValueError("entry_price muss gesetzt und > 0 sein!")
 
-    # Slippage, Spread, Fee simulieren (nur im Sim-Modus)
+    # Slippage, Spread und Gebühren berücksichtigen
     slippage = random.uniform(-0.0005, 0.0005)  # ±0.05%
     spread = 0.0003  # 0.03%
     fee = 0.0002     # 0.02%
@@ -68,9 +68,6 @@ def open_position(position):
     Im Testmodus: Log-Ausgabe.
     Im Live-Modus: MEXC MARKET-Order.
     """
-    if SETTINGS["test_mode"]:
-        print(f"🧪 [TEST] Öffne {position['direction'].upper()} | Entry: {position['entry']} | SL: {position['sl']} | TP: {position['tp']} | Size: {position['size']}")
-        return
 
     side = "BUY" if position["direction"] == "long" else "SELL"
     quantity = position["size"]
@@ -101,15 +98,11 @@ def open_position(position):
 def close_position(position, exit_price):
     """
     Schliesst eine aktive Position.
-    Im Testmodus: simulierte Schließung.
     """
     direction = position['direction'].upper()
     pnl = calculate_pnl(position, exit_price)
 
-    if SETTINGS["test_mode"]:
-        print(f"🧪 [TEST] Schliesse {direction} | Exit: {exit_price} | Gewinn/Verlust: {pnl:.2f}")
-    else:
-        print(f"🛑 [LIVE] Position {direction} soll geschlossen werden – Logik für Exit-Orders muss ggf. ergänzt werden.")
+    print(f"🛑 [LIVE] Position {direction} soll geschlossen werden – Logik für Exit-Orders muss ggf. ergänzt werden.")
         # Option: `reduceOnly` MARKET-Order senden, z. B. via /order
 
 def calculate_pnl(position, exit_price):
@@ -141,7 +134,7 @@ def calculate_pnl(position, exit_price):
     return pnl
 
 if __name__ == "__main__":
-    # --- Beispiel-Aufruf für Sim-Modus / Live-Modus ---
+    # --- Beispiel-Aufruf ---
     # Sicherstellen, dass take_profit korrekt übergeben wird!
     tp = trade.get("tp") or trade.get("take_profit") or 0
     sl = trade.get("sl") or trade.get("stop_loss") or 0

@@ -28,7 +28,7 @@ class EntryMasterEngine:
 
     def __init__(self, config: Dict[str, Any], mode: str = "live") -> None:
         self.config = config
-        self.mode = mode  # "live" oder "sim"
+        self.mode = mode  # nur "live"
         self.last_entry_type: Optional[str] = None
         self.last_sl_type: Optional[str] = None
         self.cooldown: int = 0
