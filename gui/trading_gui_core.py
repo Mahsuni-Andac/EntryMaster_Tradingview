@@ -444,15 +444,6 @@ class TradingGUI(TradingGUILogicMixin):
         symbol = SETTINGS.get("symbol", "BTC_USDT")
         exch = SETTINGS.get("trading_backend", "mexc")
 
-        if exch == "sim":
-            line = "Simulation: Keine Live-Marktdaten"
-            if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
-                self.api_frame.log_price(line, error=True)
-            if hasattr(self, "log_event"):
-                self.log_event("Sim-Modus – Marktdaten werden nicht geladen")
-            self.root.after(self.market_interval_ms, self._update_market_monitor)
-            return
-
         try:
             price = fetch_last_price(exch, symbol)
         except ValueError as exc:

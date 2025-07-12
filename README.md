@@ -1,7 +1,7 @@
 # EntryMaster_Tradingview
 
 **EntryMaster_Tradingview** ist ein professioneller, aber einsteigerfreundlicher Bitcoin-Bot mit intelligenter Entry-Logik, risikoadaptivem Management und moderner, übersichtlicher GUI.  
-Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-Trading einfach und transparent steuern möchten.
+Entwickelt für Einsteiger und Profis, die Live-Trading einfach und transparent steuern möchten.
 
 ---
 
@@ -12,9 +12,6 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 - **Risikomanagement:**  
   - Dynamisches Stop-Loss/Take-Profit (ATR-basiert)
   - Maximalverlust pro Trade/Kapital-Schutz
-  - Simulationsmodus ("Paper Trading") **und** echter Exchange-Modus (z.B. für MEXC)
-- **Simulationsdaten:**  
-  Inklusive Beispieldaten für sofortigen Start im Backtest/Sim-Modus.
 - **Modular und erweiterbar:**  
   Saubere Trennung von Logik, Daten und GUI – einfach neue Strategien/Filter hinzufügen.
 
@@ -27,7 +24,7 @@ Entwickelt für Einsteiger und Profis, die Backtesting, Simulation **und** Live-
 - **Elemente:**
   - Live-Status (Balance, PnL)
   - Steuerung von Trading-Parametern (Symbol, Intervall, Multiplikator, Kapital)
-  - Start/Stopp-Buttons für Bot & Simulation
+  - Start/Stopp-Button für den Bot
   - Übersicht über Positionen und Log
   - Wirksamkeits-Status aller Einstellungen (✅/❌) – Änderungen werden sofort geprüft
 - **Konfigurierbar:**  

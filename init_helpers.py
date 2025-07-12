@@ -7,9 +7,6 @@ def import_trader(backend):
         if backend == "mexc":
             from mexc_trader import MEXCTrader
             return MEXCTrader
-        elif backend == "sim":
-            from sim_trader import SimTrader
-            return SimTrader
         elif backend == "andac":
             from andac_trader import AndacTrader
             return AndacTrader

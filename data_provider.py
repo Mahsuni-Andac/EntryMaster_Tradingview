@@ -7,18 +7,12 @@
 
 from __future__ import annotations
 
-import csv
 import logging
-import os
 from typing import Iterable, List, Optional, TypedDict
 
 import requests
 
 from config import SETTINGS
-
-
-
-SIM_DATA_PATH: str = SETTINGS.get("sim_data_path", "sim_data.csv")
 
 
 class Candle(TypedDict):
@@ -56,13 +50,6 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
     When *symbol* is given it overrides the default symbol.  For BitMEX the
     value is converted via :func:`bitmex_symbol`.
     """
-    if exchange.lower() == "sim":
-        price = fetch_simulated_price()
-        if price is not None:
-            logging.info("Sim-Modus aktiv: Marktdaten aus Datei '%s' geladen", SIM_DATA_PATH)
-        else:
-            logging.warning("Warnung: Keine Simulationsdaten gefunden!")
-        return price
     info = PRICE_FEEDS.get(exchange.lower())
     if not info:
         raise ValueError(f"Unknown exchange '{exchange}'")
@@ -94,8 +81,6 @@ def get_latest_candle_batch(
     symbol: str = "BTC_USDT", interval: str = "1m", limit: int = 100
 ) -> List[Candle]:
     """Return a batch of recent candles for *symbol* and *interval*."""
-    if SETTINGS.get("test_mode"):
-        return get_simulated_candles(limit)
     return get_live_candles(symbol, interval, limit)
 
 def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
@@ -136,40 +121,6 @@ def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
     logging.error("❌ Beide Anbieter (MEXC & Binance) fehlgeschlagen.")
     return []
 
-def get_simulated_candles(limit: int) -> List[Candle]:
-    """Read candles from the simulation CSV file."""
-    if not os.path.exists(SIM_DATA_PATH):
-        logging.error("❌ Simulationsdatei '%s' nicht gefunden.", SIM_DATA_PATH)
-        return []
-
-    candles: List[Candle] = []
-    try:
-        with open(SIM_DATA_PATH, "r", newline="") as file:
-            reader = list(csv.DictReader(file))
-            if not reader:
-                logging.warning("❌ Keine Simulationsdaten gefunden.")
-                return []
-            rows = reader[-limit:] if len(reader) >= limit else reader
-            for row in rows:
-                candles.append({
-                    "timestamp": int(row["timestamp"]),
-                    "open": float(row["open"]),
-                    "high": float(row["high"]),
-                    "low": float(row["low"]),
-                    "close": float(row["close"]),
-                    "volume": float(row["volume"])
-                })
-        return candles
-    except Exception as e:
-        logging.error(f"❌ Fehler beim Lesen der Simulationsdaten: {e}")
-        return []
-
-def fetch_simulated_price() -> Optional[float]:
-    """Return the latest close price from the simulation data."""
-    candles = get_simulated_candles(1)
-    if not candles:
-        return None
-    return candles[-1]["close"]
 
 def fetch_latest_candle(symbol: str = "BTC_USDT", interval: str = "1m") -> Optional[Candle]:
     """Convenience helper returning only the latest candle."""

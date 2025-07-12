@@ -21,7 +21,7 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
     entry_price = float(position["entry"])
     atr = float(atr_value_global) if atr_value_global is not None else 0.0
     ema_trend = ema_trend_global  # Verwende die globale ema_trend_global-Variable
-    modus = "🧪 Modus: TEST" if settings.get("test_mode") else "🚀 Modus: LIVE"
+    modus = "🚀 Modus: LIVE"
     trade_info = f"{side.upper()} @ {entry_price:.2f}"
     pnl = 0.0  # Platzhalter
 

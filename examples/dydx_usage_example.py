@@ -7,7 +7,7 @@ from init_helpers import import_trader
 # Annahme: SETTINGS enthält 'trading_backend' = 'dydx'
 
 if __name__ == "__main__":
-    Trader = import_trader(SETTINGS.get("trading_backend", "sim"))
+    Trader = import_trader(SETTINGS.get("trading_backend", "dydx"))
     trader = Trader(os.getenv("DYDX_PRIVATE_KEY") or SETTINGS.get("dydx_private_key"))
 
     markets = trader.fetch_markets()

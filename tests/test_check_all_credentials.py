@@ -7,7 +7,7 @@ from credential_checker import check_all_credentials
 class AllCredentialCheckTest(unittest.TestCase):
     @patch('credential_checker.requests.get')
     @patch('dydx_api_utils.requests.get')
-    def test_no_credentials_switches_to_test(self, mock_dydx, mock_get):
+    def test_no_credentials(self, mock_dydx, mock_get):
         mock_resp = MagicMock(status_code=200)
         mock_resp.raise_for_status.return_value = None
         mock_get.return_value = mock_resp
@@ -15,7 +15,6 @@ class AllCredentialCheckTest(unittest.TestCase):
         settings = {}
         res = check_all_credentials(settings)
         self.assertFalse(res['live'])
-        self.assertTrue(settings['test_mode'])
 
     @patch('credential_checker.requests.get')
     @patch('dydx_api_utils.requests.get')
