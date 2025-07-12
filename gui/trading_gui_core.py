@@ -442,7 +442,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = SETTINGS.get("symbol", "BTC_USDT")
         exch = SETTINGS.get("trading_backend", "mexc")
-        price = fetch_last_price(exch)
+        price = fetch_last_price(exch, symbol)
         stamp = datetime.now().strftime("%H:%M:%S")
         line = f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: -- ({stamp})"
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):

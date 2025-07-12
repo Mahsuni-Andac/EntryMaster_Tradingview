@@ -174,7 +174,9 @@ def run_bot_live(settings=None, app=None):
 
         try:
             candle = fetch_latest_candle(settings["symbol"], interval)
-            price = fetch_last_price(settings.get("trading_backend", "mexc"))
+            price = fetch_last_price(
+                settings.get("trading_backend", "mexc"), settings["symbol"]
+            )
             stamp = datetime.now().strftime("%H:%M:%S")
             if price is not None and hasattr(app, "log_event"):
                 msg = f"[{stamp}] Preis-Update: {settings['symbol']} = {price:.2f}"
