@@ -151,7 +151,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.api_ok = False
 
         # Statusvariablen je Exchange
-        self.exchange_status_vars = {ex: tk.StringVar(value=f"{ex} ❌") for ex in EXCHANGES}
+        self.exchange_status_vars = {ex: tk.StringVar(value="⚪") for ex in EXCHANGES}
         self.exchange_status_labels = {}
 
     def _build_gui(self):
@@ -341,14 +341,9 @@ class TradingGUI(TradingGUILogicMixin):
     def _build_api_credentials(self, parent):
         self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
         self.api_frame.pack(pady=(0, 10), fill="x")
-
-        status_frame = ttk.Frame(parent)
-        status_frame.pack(pady=(0, 5))
         for exch in EXCHANGES:
-            var = self.exchange_status_vars[exch]
-            lbl = ttk.Label(status_frame, textvariable=var, foreground="grey", font=("Arial", 9, "bold"))
-            lbl.pack(side="left", padx=5)
-            self.exchange_status_labels[exch] = lbl
+            self.exchange_status_vars[exch] = self.api_frame.status_vars[exch]
+            self.exchange_status_labels[exch] = self.api_frame.status_labels[exch]
 
 
     # ---- Status Panel -------------------------------------------------
@@ -360,9 +355,12 @@ class TradingGUI(TradingGUILogicMixin):
             if isinstance(var, (tk.BooleanVar, tk.StringVar))
         }
         if hasattr(self, "api_frame"):
-            for name in ("exchange_var", "key_var", "secret_var", "wallet_var", "priv_var", "status_var"):
-                if hasattr(self.api_frame, name):
-                    self.setting_vars[f"api_{name}"] = getattr(self.api_frame, name)
+            for ex, data in self.api_frame.vars.items():
+                for key, var in data.items():
+                    if isinstance(var, tk.Variable):
+                        self.setting_vars[f"api_{ex}_{key}"] = var
+            for ex, var in self.api_frame.status_vars.items():
+                self.setting_vars[f"api_{ex}_status"] = var
         if hasattr(self, "time_filters"):
             for idx, (start, end) in enumerate(self.time_filters, start=1):
                 self.setting_vars[f"time_filter_{idx}_start"] = start

@@ -132,16 +132,20 @@ def check_exchange_credentials(
     except Exception as e:  # pragma: no cover - safety
         return False, f"Fehler: {e}"
 
-def check_all_credentials(settings: Dict[str, str]) -> Dict[str, tuple]:
-    """Check all supported exchanges and print status messages.
+def check_all_credentials(settings: Dict[str, str], enabled: list[str] | None = None) -> Dict[str, tuple]:
+    """Check credentials for the given exchanges.
 
-    Adds ``active`` and ``live`` keys to the result dict.
+    If *enabled* is ``None`` all known exchanges are checked. The result dict
+    contains an ``active`` list and ``live`` flag.
     """
     global _last_statuses, _last_active, _last_live
 
     results: Dict[str, tuple] = {}
     active: List[str] = []
-    for exch in ["mexc", "dydx", "binance", "bybit", "okx", "bitmex"]:
+    exchanges = ["mexc", "dydx", "binance", "bybit", "okx", "bitmex"]
+    if enabled is not None:
+        exchanges = [ex for ex in exchanges if ex in enabled]
+    for exch in exchanges:
         key = settings.get(f"{exch}_key") or os.getenv(f"{exch.upper()}_API_KEY")
         secret = settings.get(f"{exch}_secret") or os.getenv(f"{exch.upper()}_API_SECRET")
         wallet = None
