@@ -117,9 +117,10 @@ class SystemMonitor:
     def _handle_api_down(self) -> None:
         if self._api_ok:
             _beep()
-            self._log("API nicht erreichbar – Bot pausiert")
+            reason = "API nicht erreichbar"
+            self._log(f"{reason} – Bot pausiert")
             if hasattr(self.gui, "update_api_status"):
-                self.gui.update_api_status(False)
+                self.gui.update_api_status(False, reason)
             if getattr(self.gui, "running", False):
                 self.gui.running = False
                 self._pause_reason = "api"
@@ -127,7 +128,6 @@ class SystemMonitor:
 
     def _handle_api_up(self) -> None:
         if not self._api_ok:
-            self._log("✅ API wieder erreichbar – Bot läuft weiter")
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(True)
             if not getattr(self.gui, "running", False) and self._pause_reason == "api":
@@ -143,7 +143,7 @@ class SystemMonitor:
             _beep()
             self._log(f"{reason} – Bot pausiert")
             if hasattr(self.gui, "update_feed_status"):
-                self.gui.update_feed_status(False)
+                self.gui.update_feed_status(False, reason)
             if getattr(self.gui, "running", False):
                 self.gui.running = False
                 self._pause_reason = "feed"
@@ -151,7 +151,6 @@ class SystemMonitor:
 
     def _handle_feed_up(self) -> None:
         if not self._feed_ok:
-            self._log("✅ Marktdaten-Feed wieder aktiv – Bot läuft weiter")
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(True)
             if not getattr(self.gui, "running", False) and self._pause_reason == "feed":
