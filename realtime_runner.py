@@ -250,6 +250,12 @@ def run_bot_live(settings=None, app=None):
             print(log_msg)
             if hasattr(app, "log_event"):
                 app.log_event(log_msg)
+        elif andac_signal.reasons:
+            reason_msg = ", ".join(andac_signal.reasons)
+            log_msg = f"[{stamp}] Signal verworfen: {reason_msg}"
+            print(log_msg)
+            if hasattr(app, "log_event"):
+                app.log_event(log_msg)
 
         # --- POSITION HANDLING ---
         if position:

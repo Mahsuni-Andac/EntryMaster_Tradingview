@@ -11,7 +11,7 @@ können bei der Instanziierung angepasst werden.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -26,6 +26,7 @@ class AndacSignal:
     rsi: float
     vol_spike: bool
     engulfing: bool
+    reasons: List[str] = field(default_factory=list)
 
 
 class AndacEntryMaster:
@@ -171,37 +172,61 @@ class AndacEntryMaster:
             not self.opt_engulf_big or big_candle
         )
 
-        long_tpsl = (
-            bruch_oben
-            and vol_spike
-            and (not self.opt_rsi_ema or rsi > 50)
-            and (not self.opt_safe_mode or rsi > 30)
-        )
-        short_tpsl = (
-            bruch_unten
-            and vol_spike
-            and (not self.opt_safe_mode or rsi < 70)
-        )
+        # --- Filterentscheidungen sammeln ---
+        reasons_long: List[str] = []
+        reasons_short: List[str] = []
 
-        bull_signal = long_tpsl and (not self.opt_engulf or eng_long_ok) and session_ok and mtf_ok
-        bear_signal = short_tpsl and (not self.opt_engulf or eng_short_ok) and session_ok and mtf_ok
+        candidate_long = bruch_oben and vol_spike
+        candidate_short = bruch_unten and vol_spike
 
-        if self.opt_confirm_delay:
-            bull_final = self.prev_bull_signal and candle["close"] > candle["open"]
-            bear_final = self.prev_bear_signal and candle["close"] < candle["open"]
-        else:
-            bull_final = bull_signal
-            bear_final = bear_signal
+        if candidate_long:
+            if self.opt_rsi_ema and rsi <= 50:
+                reasons_long.append(f"RSI {rsi:.1f} <= 50")
+            if self.opt_safe_mode and rsi <= 30:
+                reasons_long.append(f"RSI {rsi:.1f} <= 30 (Safe)")
+            if self.opt_engulf and not eng_long_ok:
+                reasons_long.append("Engulfing")
+            if self.opt_session_filter and not session_ok:
+                reasons_long.append("Session")
+            if self.opt_mtf_confirm and not mtf_ok:
+                reasons_long.append("MTF")
+            if self.opt_confirm_delay and not (
+                self.prev_bull_signal and candle["close"] > candle["open"]
+            ):
+                reasons_long.append("Confirm")
 
-        self.prev_bull_signal = bull_signal
-        self.prev_bear_signal = bear_signal
+        if candidate_short:
+            if self.opt_safe_mode and rsi >= 70:
+                reasons_short.append(f"RSI {rsi:.1f} >= 70 (Safe)")
+            if self.opt_engulf and not eng_short_ok:
+                reasons_short.append("Engulfing")
+            if self.opt_session_filter and not session_ok:
+                reasons_short.append("Session")
+            if self.opt_mtf_confirm and not mtf_ok:
+                reasons_short.append("MTF")
+            if self.opt_confirm_delay and not (
+                self.prev_bear_signal and candle["close"] < candle["open"]
+            ):
+                reasons_short.append("Confirm")
+
+        bull_final = candidate_long and not reasons_long
+        bear_final = candidate_short and not reasons_short
+
+        self.prev_bull_signal = candidate_long
+        self.prev_bear_signal = candidate_short
 
         signal = None
+        reasons: List[str] = []
         if bull_final:
             signal = "long"
         elif bear_final:
             signal = "short"
+        else:
+            if candidate_long:
+                reasons = reasons_long
+            elif candidate_short:
+                reasons = reasons_short
 
         engulfing = bull_eng if signal == "long" else bear_eng if signal == "short" else False
-        return AndacSignal(signal, rsi, vol_spike, engulfing)
+        return AndacSignal(signal, rsi, vol_spike, engulfing, reasons)
 
