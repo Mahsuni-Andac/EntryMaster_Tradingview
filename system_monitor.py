@@ -13,7 +13,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Callable, List
 
 from config import SETTINGS
 from credential_checker import check_all_credentials
@@ -55,6 +55,7 @@ class SystemMonitor:
         self._feed_ok = True
         self._api_ok = True
         self._pause_reason: Optional[str] = None
+        self._callbacks: List[Callable[[str, bool], None]] = []
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -65,6 +66,8 @@ class SystemMonitor:
             self.gui.update_api_status(True)
         if hasattr(self.gui, "update_feed_status"):
             self.gui.update_feed_status(True)
+        self._notify("api", True)
+        self._notify("feed", True)
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -74,6 +77,26 @@ class SystemMonitor:
         if self._thread:
             self._thread.join(timeout=1)
             self._thread = None
+
+    def force_check(self) -> None:
+        """Trigger an immediate status check."""
+        self._check_once()
+
+    # ---- Callback handling ---------------------------------------------
+    def register_callback(self, func: Callable[[str, bool], None]) -> None:
+        if func not in self._callbacks:
+            self._callbacks.append(func)
+
+    def unregister_callback(self, func: Callable[[str, bool], None]) -> None:
+        if func in self._callbacks:
+            self._callbacks.remove(func)
+
+    def _notify(self, kind: str, state: bool) -> None:
+        for cb in list(self._callbacks):
+            try:
+                cb(kind, state)
+            except Exception:
+                pass
 
     # ---- Internals -----------------------------------------------------
     def _log(self, msg: str) -> None:
@@ -86,32 +109,34 @@ class SystemMonitor:
 
     def _run(self) -> None:
         while self._running:
-            try:
-                creds = check_all_credentials(SETTINGS)
-                if hasattr(self.gui, "update_exchange_status"):
-                    for ex, (ok, _msg) in creds.items():
-                        if ex in {"active", "live"}:
-                            continue
-                        disp = DISPLAY_NAMES.get(ex, ex)
-                        self.gui.update_exchange_status(disp, ok)
-
-                if creds.get("live"):
-                    self._handle_api_up()
-                else:
-                    self._handle_api_down()
-                    time.sleep(self.interval)
-                    continue
-
-                ts = global_state.last_feed_time
-                if ts is None:
-                    self._handle_feed_down("Keine Marktdaten empfangen")
-                elif time.time() - ts > self.timeout:
-                    self._handle_feed_down("Marktdaten aktualisieren sich nicht")
-                else:
-                    self._handle_feed_up()
-            except Exception as exc:
-                self._handle_feed_down(f"Systemmonitor Fehler: {exc}")
+            self._check_once()
             time.sleep(self.interval)
+
+    def _check_once(self) -> None:
+        try:
+            creds = check_all_credentials(SETTINGS)
+            if hasattr(self.gui, "update_exchange_status"):
+                for ex, (ok, _msg) in creds.items():
+                    if ex in {"active", "live"}:
+                        continue
+                    disp = DISPLAY_NAMES.get(ex, ex)
+                    self.gui.update_exchange_status(disp, ok)
+
+            if creds.get("live"):
+                self._handle_api_up()
+            else:
+                self._handle_api_down()
+                return
+
+            ts = global_state.last_feed_time
+            if ts is None:
+                self._handle_feed_down("Keine Marktdaten empfangen")
+            elif time.time() - ts > self.timeout:
+                self._handle_feed_down("Marktdaten aktualisieren sich nicht")
+            else:
+                self._handle_feed_up()
+        except Exception as exc:
+            self._handle_feed_down(f"Systemmonitor Fehler: {exc}")
 
     # ---- State Handlers -------------------------------------------------
     def _handle_api_down(self) -> None:
@@ -124,10 +149,11 @@ class SystemMonitor:
                 self.gui.running = False
                 self._pause_reason = "api"
         self._api_ok = False
+        self._notify("api", False)
 
     def _handle_api_up(self) -> None:
         if not self._api_ok:
-            self._log("✅ API wieder erreichbar – Bot läuft weiter")
+            self._log("✅ API OK – Live-Marktdaten werden empfangen")
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(True)
             if not getattr(self.gui, "running", False) and self._pause_reason == "api":
@@ -137,6 +163,7 @@ class SystemMonitor:
             if hasattr(self.gui, "update_api_status"):
                 self.gui.update_api_status(True)
         self._api_ok = True
+        self._notify("api", True)
 
     def _handle_feed_down(self, reason: str) -> None:
         if self._feed_ok:
@@ -148,6 +175,7 @@ class SystemMonitor:
                 self.gui.running = False
                 self._pause_reason = "feed"
         self._feed_ok = False
+        self._notify("feed", False)
 
     def _handle_feed_up(self) -> None:
         if not self._feed_ok:
@@ -161,3 +189,4 @@ class SystemMonitor:
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(True)
         self._feed_ok = True
+        self._notify("feed", True)

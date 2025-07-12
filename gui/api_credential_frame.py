@@ -9,10 +9,12 @@ EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "BitMEX"]
 class APICredentialFrame(ttk.LabelFrame):
     """GUI-Frame zur Eingabe von API-Zugangsdaten."""
 
-    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None) -> None:
+    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None, monitor=None) -> None:
         super().__init__(master, text="Exchange API")
         self.cred_manager = cred_manager
         self.log_callback = log_callback
+        # optionaler SystemMonitor für Sofort-Checks
+        self.monitor = monitor
 
         ttk.Label(self, text="Börse:").grid(row=0, column=0, sticky="w")
         self.exchange_var = tk.StringVar(value=EXCHANGES[0])
@@ -90,6 +92,13 @@ class APICredentialFrame(ttk.LabelFrame):
 
         # Status für GUI anzeigen
         self.status_var.set("aktiv" if ok else f"Fehler: {msg}")
+
+        # Sofortige Status-Prüfung auslösen
+        if ok and self.monitor:
+            try:
+                self.monitor.force_check()
+            except Exception:
+                pass
 
     def _err(self, msg: str) -> None:
         if self.log_callback:

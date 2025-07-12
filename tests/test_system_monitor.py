@@ -30,5 +30,20 @@ class SystemMonitorStateTest(unittest.TestCase):
         self.assertTrue(mon._feed_ok)
         self.assertEqual(gui.feed_status, True)
 
+    def test_callbacks(self):
+        gui = DummyGUI()
+        mon = SystemMonitor(gui)
+        events = []
+
+        def cb(kind, state):
+            events.append((kind, state))
+
+        mon.register_callback(cb)
+        mon._handle_api_down()
+        mon._handle_api_up()
+        self.assertIn(("api", False), events)
+        self.assertIn(("api", True), events)
+        mon.unregister_callback(cb)
+
 if __name__ == '__main__':
     unittest.main()

@@ -137,6 +137,7 @@ def main():
     gui.auto_recommender = AutoRecommender(gui)
     gui.auto_recommender.start()
     gui.system_monitor = SystemMonitor(gui)
+    gui.api_frame.monitor = gui.system_monitor
     gui.system_monitor.start()
 
     threading.Thread(target=bot_control, args=(gui,), daemon=True).start()

@@ -287,7 +287,8 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(parent, textvariable=var).pack()
 
     def _build_api_credentials(self, parent):
-        self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
+        monitor = getattr(self, "system_monitor", None)
+        self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event, monitor=monitor)
         self.api_frame.pack(pady=(0, 10), fill="x")
 
         status_frame = ttk.Frame(parent)
