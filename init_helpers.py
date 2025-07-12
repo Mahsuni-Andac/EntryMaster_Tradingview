@@ -29,5 +29,5 @@ def calculate_ema(values, length):
 
 
 def normalize_symbol(symbol):
-    """🔤 Entfernt Sonderzeichen aus Symbolnamen, z. B. BTC/USDT → BTC_USDT."""
+    """🔤 Entfernt Sonderzeichen aus Symbolnamen, z. B. BTC/USDT → BTCUSDT."""
     return symbol.replace("/", "").upper()

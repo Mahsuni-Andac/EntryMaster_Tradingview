@@ -1,12 +1,17 @@
 # EntryMaster Trading Bot
 
-Dieser Bot nutzt ausschließlich **Binance Spot** als Preisfeed für `BTCUSDT` und führt alle Trades über **BitMEX** (`XBTUSD`) aus. Die Handelslogik basiert auf einem TradingView-Indikator und wird über eine einfache Tkinter-GUI konfiguriert.
+EntryMaster ist ein vereinfachter Trading-Bot, der Binance Spot als einzige Quelle
+für Marktdaten nutzt und alle Aufträge ausschließlich über BitMEX ausführt. Die
+Handelslogik basiert auf einem TradingView-Indikator und läuft wahlweise im Live-
+ oder Paper-Modus. Eine kleine Tkinter-GUI dient zur Konfiguration und Anzeige der
+Handelsergebnisse.
 
 ## Eigenschaften
-- Preisabfrage über `python-binance`
-- Orderausführung über die vorhandene `BitmexTrader`-Klasse
-- Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
-- Keine Unterstützung für andere Börsen
+* Preisfeed über **python-binance** (BTCUSDT)
+* Orderausführung über die vorhandene **BitmexTrader**-Klasse
+* Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
+* Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
+* Keine Unterstützung für andere Börsen
 
 ## Installation
 1. Python 3.10 oder neuer installieren
@@ -14,13 +19,18 @@ Dieser Bot nutzt ausschließlich **Binance Spot** als Preisfeed für `BTCUSDT` u
    ```bash
    pip install python-binance websocket-client
    ```
-3. API-Schlüssel für BitMEX setzen (Umgebungsvariablen `BITMEX_API_KEY` und `BITMEX_API_SECRET`)
+3. BitMEX API-Schlüssel als Umgebungsvariablen setzen:
+   `BITMEX_API_KEY` und `BITMEX_API_SECRET`
+
+## Beispielkonfiguration
+Die Datei `config.py` enthält alle wichtigen Parameter. Standardmäßig wird mit
+`BTCUSDT` gehandelt und der Paper-Modus ist aktiv, solange keine API-Schlüssel
+hinterlegt sind.
 
 ## Starten
 ```bash
 python main.py
 ```
-Die GUI erlaubt das Hinterlegen der BitMEX-Zugangsdaten und startet anschließend den Bot. Marktpreise werden live von Binance abgefragt.
+Die GUI fragt die BitMEX-Zugangsdaten ab und zeigt fortlaufend die Binance-Spot-
+Preise sowie die Entwicklung des Paper-Trading-Kontos an.
 
-## Symbolmapping
-Für BitMEX wird `BTCUSDT` automatisch zu `XBTUSD` gemappt. Die Hilfsfunktion `bitmex_symbol()` übernimmt diese Umwandlung.

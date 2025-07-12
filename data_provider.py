@@ -58,7 +58,7 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
     return price
 
 def get_latest_candle_batch(
-    symbol: str = "BTC_USDT", interval: str = "1m", limit: int = 100
+    symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100
 ) -> List[Candle]:
     """Return a batch of recent candles for *symbol* and *interval*."""
     return get_live_candles(symbol, interval, limit)
@@ -84,7 +84,7 @@ def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
         return []
 
 
-def fetch_latest_candle(symbol: str = "BTC_USDT", interval: str = "1m") -> Optional[Candle]:
+def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:
     """Convenience helper returning only the latest candle."""
     candles = get_latest_candle_batch(symbol, interval, 1)
     return candles[-1] if candles else None
