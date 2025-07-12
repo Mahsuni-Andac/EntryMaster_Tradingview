@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
 
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame
@@ -268,8 +269,8 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(parent, textvariable=var).pack()
 
     def _build_api_credentials(self, parent):
-        api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
-        api_frame.pack(pady=(0, 10), fill="x")
+        self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
+        self.api_frame.pack(pady=(0, 10), fill="x")
 
 
     # ---- Status Panel -------------------------------------------------
@@ -280,6 +281,10 @@ class TradingGUI(TradingGUILogicMixin):
             for name, var in vars(self).items()
             if isinstance(var, (tk.BooleanVar, tk.StringVar))
         }
+        if hasattr(self, "api_frame"):
+            for name in ("exchange_var", "key_var", "secret_var", "wallet_var", "priv_var", "status_var"):
+                if hasattr(self.api_frame, name):
+                    self.setting_vars[f"api_{name}"] = getattr(self.api_frame, name)
         if hasattr(self, "time_filters"):
             for idx, (start, end) in enumerate(self.time_filters, start=1):
                 self.setting_vars[f"time_filter_{idx}_start"] = start
@@ -301,16 +306,32 @@ class TradingGUI(TradingGUILogicMixin):
         self.root.after(1000, self.update_all_status_labels)
 
     def update_setting_status(self, name, var):
-        """Verify and display the activation state of a setting."""
+        """Verify and display the activation state of a setting.
+
+        Bei ungültigen Werten wird der Fehler angezeigt und das
+        Backend-Setting nicht überschrieben.
+        """
         try:
             value = var.get()
-            self.backend_settings[name] = value
-            active = self.backend_settings.get(name) == value
-            text = "✅ greift" if active else "❌ greift NICHT"
+            parsed = value
+            if isinstance(var, tk.BooleanVar):
+                parsed = bool(value)
+            elif name.startswith("time_filter") or name in {"time_start", "time_end"}:
+                datetime.strptime(value, "%H:%M")
+            elif isinstance(value, str) and value.replace(".", "", 1).isdigit():
+                parsed = float(value) if "." in value else int(value)
+
+            current = self.backend_settings.get(name)
+            if parsed != current:
+                self.backend_settings[name] = parsed
+            active = self.backend_settings.get(name) == parsed
+            text = "aktiv" if active else "inaktiv"
             color = "green" if active else "red"
             self.status_labels[name].config(text=text, foreground=color)
+            if not active:
+                self.log_event(f"⚠️ {name} greift nicht")
         except Exception as e:
-            self.status_labels[name].config(text="⚠️ Fehler", foreground="orange")
+            self.status_labels[name].config(text=f"Fehler: {e}", foreground="orange")
             self.log_event(f"{name} Fehler: {e}")
 
     def update_all_status_labels(self):
