@@ -45,6 +45,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.log_box = None
         self.auto_status_label = None
         self.live_trading = tk.BooleanVar(value=False)
+        self.trading_mode = tk.StringVar(value="paper")
         self.mode_label = None
 
         self._init_variables()
@@ -96,13 +97,17 @@ class TradingGUI(TradingGUILogicMixin):
 
     def _update_mode_label(self):
         if self.live_trading.get():
-            text = "Live-Modus"
+            text = "Live Trading"
             color = "red"
         else:
-            text = "Simulationsmodus"
+            text = "Paper Trading"
             color = "blue"
         if self.mode_label is not None:
             self.mode_label.config(text=text, foreground=color)
+
+    def _on_mode_toggle(self):
+        self.live_trading.set(self.trading_mode.get() == "live")
+        self._update_mode_label()
 
     def _init_variables(self):
         self.multiplier_var = tk.StringVar(value="20")
@@ -186,10 +191,26 @@ class TradingGUI(TradingGUILogicMixin):
         self.api_status_label.pack(side="left", padx=10)
         self.feed_status_label = ttk.Label(top_info, textvariable=self.feed_status_var, foreground="red", font=("Arial", 11, "bold"))
         self.feed_status_label.pack(side="left", padx=10)
-        self.mode_label = ttk.Label(top_info, text="Simulationsmodus", foreground="blue", font=("Arial", 11, "bold"))
+        self.mode_label = ttk.Label(top_info, text="Paper Trading", foreground="blue", font=("Arial", 11, "bold"))
         self.mode_label.pack(side="left", padx=10)
-        ttk.Checkbutton(top_info, text="Live-Trading", variable=self.live_trading, command=self._update_mode_label).pack(side="left")
-        self._update_mode_label()
+
+        mode_frame = ttk.Frame(top_info)
+        mode_frame.pack(side="left")
+        ttk.Radiobutton(
+            mode_frame,
+            text="Paper Trading",
+            variable=self.trading_mode,
+            value="paper",
+            command=self._on_mode_toggle,
+        ).pack(side="left")
+        ttk.Radiobutton(
+            mode_frame,
+            text="Live Trading",
+            variable=self.trading_mode,
+            value="live",
+            command=self._on_mode_toggle,
+        ).pack(side="left")
+        self._on_mode_toggle()
 
         # --- Hauptcontainer ---
         container = ttk.Frame(self.main_frame)
