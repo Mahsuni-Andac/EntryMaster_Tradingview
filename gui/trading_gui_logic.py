@@ -167,31 +167,57 @@ class TradingGUILogicMixin:
     def update_capital(self, capital):
         self.capital_value.config(text=f"💰 Kapital: ${capital:.2f}")
 
-    def update_api_status(self, ok: bool) -> None:
-        color = "green" if ok else "red"
-        text = "API ✅" if ok else "API ❌"
-        if hasattr(self, "api_status_var"):
-            self.api_status_var.set(text)
-        if hasattr(self, "api_status_label"):
-            self.api_status_label.config(foreground=color)
+    def update_api_status(self, ok: bool, reason: str | None = None) -> None:
+        """Display API problems only."""
         self.api_ok = ok
+        if ok:
+            if hasattr(self, "api_status_label") and self.api_status_label.winfo_ismapped():
+                self.api_status_label.pack_forget()
+            if hasattr(self, "api_status_var"):
+                self.api_status_var.set("")
+        else:
+            stamp = datetime.now().strftime("%H:%M:%S")
+            text = f"API ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
+            if hasattr(self, "api_status_var"):
+                self.api_status_var.set(text)
+            if hasattr(self, "api_status_label"):
+                self.api_status_label.config(foreground="red")
+                if not self.api_status_label.winfo_ismapped():
+                    self.api_status_label.pack(side="left", padx=10)
 
-    def update_feed_status(self, ok: bool) -> None:
-        color = "green" if ok else "red"
-        text = "Feed ✅" if ok else "Feed ❌"
-        if hasattr(self, "feed_status_var"):
-            self.feed_status_var.set(text)
-        if hasattr(self, "feed_status_label"):
-            self.feed_status_label.config(foreground=color)
+    def update_feed_status(self, ok: bool, reason: str | None = None) -> None:
+        """Display feed problems only."""
         self.feed_ok = ok
+        if ok:
+            if hasattr(self, "feed_status_label") and self.feed_status_label.winfo_ismapped():
+                self.feed_status_label.pack_forget()
+            if hasattr(self, "feed_status_var"):
+                self.feed_status_var.set("")
+        else:
+            stamp = datetime.now().strftime("%H:%M:%S")
+            text = f"Feed ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
+            if hasattr(self, "feed_status_var"):
+                self.feed_status_var.set(text)
+            if hasattr(self, "feed_status_label"):
+                self.feed_status_label.config(foreground="red")
+                if not self.feed_status_label.winfo_ismapped():
+                    self.feed_status_label.pack(side="left", padx=10)
 
     def update_exchange_status(self, exchange: str, ok: bool) -> None:
         if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:
-            color = "green" if ok else "red"
-            text = f"{exchange} ✅" if ok else f"{exchange} ❌"
-            self.exchange_status_vars[exchange].set(text)
-            if exchange in self.exchange_status_labels:
-                self.exchange_status_labels[exchange].config(foreground=color)
+            lbl = self.exchange_status_labels.get(exchange)
+            if ok:
+                if lbl and lbl.winfo_ismapped():
+                    lbl.pack_forget()
+                self.exchange_status_vars[exchange].set("")
+            else:
+                stamp = datetime.now().strftime("%H:%M:%S")
+                text = f"{exchange} ❌ ({stamp})"
+                self.exchange_status_vars[exchange].set(text)
+                if lbl:
+                    lbl.config(foreground="red")
+                    if not lbl.winfo_ismapped():
+                        lbl.pack(side="left", padx=5)
 
     def update_pnl(self, pnl):
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")

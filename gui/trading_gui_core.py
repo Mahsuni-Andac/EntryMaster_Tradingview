@@ -320,6 +320,7 @@ class TradingGUI(TradingGUILogicMixin):
         """Create panel showing if settings are active in the backend."""
         self.backend_settings = {}
         self.status_labels = {}
+        self.status_rows = {}
         frame = ttk.LabelFrame(self.root, text="Wirksamkeitsstatus")
         frame.pack(padx=10, pady=5, fill="both", expand=True)
 
@@ -345,16 +346,24 @@ class TradingGUI(TradingGUILogicMixin):
         inner.bind("<Configure>", _on_config)
         self.root.bind("<Configure>", _on_config)
 
-        for i, (name, var) in enumerate(sorted(self.setting_vars.items())):
-            ttk.Label(inner, text=name).grid(row=i, column=0, sticky="w")
-            lbl = ttk.Label(inner, text="❌", foreground="red")
-            lbl.grid(row=i, column=1, sticky="w")
+        self.all_ok_label = ttk.Label(inner, text="", foreground="green")
+        self.all_ok_label.grid(row=0, column=0, sticky="w")
+        row_index = 1
+        for name, var in sorted(self.setting_vars.items()):
+            row = ttk.Frame(inner)
+            row.grid(row=row_index, column=0, columnspan=2, sticky="w")
+            ttk.Label(row, text=name).pack(side="left")
+            lbl = ttk.Label(row, text="", foreground="red")
+            lbl.pack(side="left", padx=5)
+            self.status_rows[name] = row
             self.status_labels[name] = lbl
             var.trace_add("write", lambda *a, n=name, v=var: self.update_setting_status(n, v))
             self.update_setting_status(name, var)
+            row_index += 1
 
         _on_config()
         self.root.after(1000, self.update_all_status_labels)
+        self._update_all_ok_label()
 
     def update_setting_status(self, name, var):
         """Verify and display the activation state of a setting.
@@ -376,18 +385,37 @@ class TradingGUI(TradingGUILogicMixin):
             if parsed != current:
                 self.backend_settings[name] = parsed
             active = self.backend_settings.get(name) == parsed
-            text = "aktiv" if active else "inaktiv"
-            color = "green" if active else "red"
-            self.status_labels[name].config(text=text, foreground=color)
-            if not active:
+            row = self.status_rows[name]
+            label = self.status_labels[name]
+            if active:
+                row.grid_remove()
+            else:
+                label.config(text="inaktiv", foreground="red")
+                if not row.winfo_ismapped():
+                    row.grid()
                 self.log_event(f"⚠️ {name} greift nicht")
         except Exception as e:
+            row = self.status_rows[name]
             self.status_labels[name].config(text=f"Fehler: {e}", foreground="orange")
+            if not row.winfo_ismapped():
+                row.grid()
             self.log_event(f"{name} Fehler: {e}")
+        self._update_all_ok_label()
 
     def update_all_status_labels(self):
         for name, var in self.setting_vars.items():
             self.update_setting_status(name, var)
         self.root.after(1000, self.update_all_status_labels)
+        self._update_all_ok_label()
+
+    def _update_all_ok_label(self):
+        any_visible = any(row.winfo_ismapped() for row in self.status_rows.values())
+        if any_visible:
+            if self.all_ok_label.winfo_ismapped():
+                self.all_ok_label.grid_remove()
+        else:
+            self.all_ok_label.config(text="✅ Alle Systeme laufen fehlerfrei")
+            if not self.all_ok_label.winfo_ismapped():
+                self.all_ok_label.grid()
 
 

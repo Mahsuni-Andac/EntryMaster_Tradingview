@@ -6,10 +6,10 @@ class DummyGUI:
         self.running = True
         self.feed_status = None
 
-    def update_feed_status(self, ok: bool) -> None:
+    def update_feed_status(self, ok: bool, reason=None) -> None:
         self.feed_status = ok
 
-    def update_api_status(self, ok: bool) -> None:
+    def update_api_status(self, ok: bool, reason=None) -> None:
         pass
 
     def log_event(self, msg: str) -> None:
