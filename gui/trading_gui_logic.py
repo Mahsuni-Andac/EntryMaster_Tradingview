@@ -224,7 +224,11 @@ class TradingGUILogicMixin:
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
 
     def log_event(self, msg):
+        # ENTRY-DEBUG: Limit Log auf 30 Zeilen
         self.log_box.insert("end", f"{msg}\n")
+        lines = self.log_box.get("1.0", "end-1c").splitlines()
+        if len(lines) > 30:
+            self.log_box.delete("1.0", f"{len(lines)-30 + 1}.0")
         self.log_box.see("end")
 
     def save_to_file(self, filename=TUNING_FILE):

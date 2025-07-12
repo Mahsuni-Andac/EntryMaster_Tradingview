@@ -39,6 +39,30 @@ class APICredentialFrame(ttk.LabelFrame):
         ttk.Button(self, text="Speichern", command=self._save).grid(row=4, column=0, columnspan=2, pady=5)
         ttk.Label(self, textvariable=self.status_var, foreground="blue").grid(row=5, column=0, columnspan=2, sticky="w")
 
+        # MARKTDATEN-MONITOR: Mini-Terminal für aktuelle Preise
+        term_frame = tk.Frame(self, bg="black")
+        term_frame.grid(row=0, column=2, rowspan=6, padx=5, sticky="ne")
+        self.price_terminal = tk.Text(
+            term_frame,
+            height=6,
+            width=24,
+            bg="black",
+            fg="green",
+            state="disabled",
+        )
+        self.price_terminal.pack()
+
+    def log_price(self, text: str, error: bool = False) -> None:
+        """Append *text* to the price terminal."""
+        color = "red" if error else "green"
+        self.price_terminal.config(state="normal", fg=color)
+        self.price_terminal.insert("end", text + "\n")
+        lines = self.price_terminal.get("1.0", "end-1c").splitlines()
+        if len(lines) > 30:
+            self.price_terminal.delete("1.0", f"{len(lines)-30 + 1}.0")
+        self.price_terminal.see("end")
+        self.price_terminal.config(state="disabled")
+
     def _on_exchange_change(self, _event=None) -> None:
         self._build_fields()
 
