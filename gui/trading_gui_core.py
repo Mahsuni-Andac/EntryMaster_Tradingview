@@ -309,14 +309,39 @@ class TradingGUI(TradingGUILogicMixin):
         self.backend_settings = {}
         self.status_labels = {}
         frame = ttk.LabelFrame(self.root, text="Wirksamkeitsstatus")
-        frame.pack(padx=10, pady=5, fill="x")
+        frame.pack(padx=10, pady=5, fill="both", expand=True)
+
+        # Canvas für Scrollfunktion
+        canvas = tk.Canvas(frame, highlightthickness=0)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+
+        inner = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+
+        def _on_config(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            if inner.winfo_reqheight() > canvas.winfo_height():
+                if not scrollbar.winfo_ismapped():
+                    scrollbar.pack(side="right", fill="y")
+            else:
+                if scrollbar.winfo_ismapped():
+                    scrollbar.pack_forget()
+
+        inner.bind("<Configure>", _on_config)
+        self.root.bind("<Configure>", _on_config)
+
         for i, (name, var) in enumerate(sorted(self.setting_vars.items())):
-            ttk.Label(frame, text=name).grid(row=i, column=0, sticky="w")
-            lbl = ttk.Label(frame, text="❌", foreground="red")
+            ttk.Label(inner, text=name).grid(row=i, column=0, sticky="w")
+            lbl = ttk.Label(inner, text="❌", foreground="red")
             lbl.grid(row=i, column=1, sticky="w")
             self.status_labels[name] = lbl
             var.trace_add("write", lambda *a, n=name, v=var: self.update_setting_status(n, v))
             self.update_setting_status(name, var)
+
+        _on_config()
         self.root.after(1000, self.update_all_status_labels)
 
     def update_setting_status(self, name, var):
