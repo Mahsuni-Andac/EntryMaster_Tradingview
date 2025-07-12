@@ -61,8 +61,12 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
     value is converted via :func:`bitmex_symbol`.
     """
     if exchange.lower() == "sim":
-        logging.info("Sim-Modus – Marktdaten werden nicht geladen")
-        return None
+        price = fetch_simulated_price()
+        if price is not None:
+            logging.info("Sim-Modus aktiv: Marktdaten aus Datei '%s' geladen", SIM_DATA_PATH)
+        else:
+            logging.warning("Warnung: Keine Simulationsdaten gefunden!")
+        return price
     info = PRICE_FEEDS.get(exchange.lower())
     if not info:
         raise ValueError(f"Unknown exchange '{exchange}'")
@@ -163,6 +167,13 @@ def get_simulated_candles(limit: int) -> List[Candle]:
     except Exception as e:
         logging.error(f"❌ Fehler beim Lesen der Simulationsdaten: {e}")
         return []
+
+def fetch_simulated_price() -> Optional[float]:
+    """Return the latest close price from the simulation data."""
+    candles = get_simulated_candles(1)
+    if not candles:
+        return None
+    return candles[-1]["close"]
 
 def fetch_latest_candle(symbol: str = "BTC_USDT", interval: str = "1m") -> Optional[Candle]:
     """Convenience helper returning only the latest candle."""
