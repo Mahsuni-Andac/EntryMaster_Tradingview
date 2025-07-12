@@ -167,6 +167,22 @@ class TradingGUILogicMixin:
     def update_capital(self, capital):
         self.capital_value.config(text=f"💰 Kapital: ${capital:.2f}")
 
+    def update_api_status(self, ok: bool) -> None:
+        color = "green" if ok else "red"
+        text = "API ✅" if ok else "API ❌"
+        if hasattr(self, "api_status_var"):
+            self.api_status_var.set(text)
+        if hasattr(self, "api_status_label"):
+            self.api_status_label.config(foreground=color)
+
+    def update_feed_status(self, ok: bool) -> None:
+        color = "green" if ok else "red"
+        text = "Feed ✅" if ok else "Feed ❌"
+        if hasattr(self, "feed_status_var"):
+            self.feed_status_var.set(text)
+        if hasattr(self, "feed_status_label"):
+            self.feed_status_label.config(foreground=color)
+
     def update_pnl(self, pnl):
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
 
