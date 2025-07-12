@@ -206,6 +206,8 @@ class TradingGUILogicMixin:
                 self.feed_status_var.set("")
             if hasattr(self, "neon_panel"):
                 self.neon_panel.set_status("feed", "green", "Feed OK")
+            if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
+                self.api_frame.update_market_status(True)
         else:
             stamp = datetime.now().strftime("%H:%M:%S")
             text = f"Feed ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
@@ -217,6 +219,8 @@ class TradingGUILogicMixin:
                     self.feed_status_label.pack(side="left", padx=10)
             if hasattr(self, "neon_panel"):
                 self.neon_panel.set_status("feed", "red", text)
+            if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
+                self.api_frame.update_market_status(False)
 
     def update_exchange_status(self, exchange: str, ok: bool) -> None:
         if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:

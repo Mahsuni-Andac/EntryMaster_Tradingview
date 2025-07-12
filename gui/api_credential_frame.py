@@ -6,6 +6,7 @@ from api_key_manager import APICredentialManager
 from credential_checker import check_exchange_credentials
 from status_events import StatusDispatcher
 from config import SETTINGS
+from binance.client import Client
 
 # Order of exchanges in the selection box
 EXCHANGES = ["BitMEX"]
@@ -59,6 +60,10 @@ class APICredentialFrame(ttk.LabelFrame):
 
         ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
 
+        self.market_status = tk.StringVar(value="")
+        self.market_status_label = ttk.Label(self, textvariable=self.market_status, foreground="red")
+        self.market_status_label.grid(row=start_row + len(EXCHANGES) + 1, column=0, columnspan=3, sticky="w")
+
         # disable all fields until user actively chooses an exchange
         self._select_exchange("")
 
@@ -67,6 +72,8 @@ class APICredentialFrame(ttk.LabelFrame):
         term_frame.grid(row=0, column=4, rowspan=len(EXCHANGES)+1, padx=5, sticky="ne")
         self.price_terminal = tk.Text(term_frame, height=6, width=24, bg="black", fg="green", state="disabled")
         self.price_terminal.pack()
+
+        self.check_market_feed()
 
     # ------------------------------------------------------------------
     def _select_exchange(self, exch: str) -> None:
@@ -89,6 +96,7 @@ class APICredentialFrame(ttk.LabelFrame):
         SETTINGS.pop("trading_backend", None)
         if self.select_callback:
             self.select_callback(exch)
+        self.check_market_feed()
 
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
@@ -99,6 +107,20 @@ class APICredentialFrame(ttk.LabelFrame):
             self.price_terminal.delete("1.0", f"{len(lines)-30 + 1}.0")
         self.price_terminal.see("end")
         self.price_terminal.config(state="disabled")
+
+    def update_market_status(self, ok: bool) -> None:
+        text = "✅ Marktdaten kommen an" if ok else "❌ Keine Marktdaten – bitte prüfen"
+        color = "green" if ok else "red"
+        self.market_status.set(text)
+        self.market_status_label.config(foreground=color)
+
+    def check_market_feed(self) -> None:
+        try:
+            Client().get_symbol_ticker(symbol="BTCUSDT")
+            ok = True
+        except Exception:
+            ok = False
+        self.update_market_status(ok)
 
     # ------------------------------------------------------------------
     def _save(self) -> None:
@@ -137,4 +159,5 @@ class APICredentialFrame(ttk.LabelFrame):
             SETTINGS.pop("trading_backend", None)
             SETTINGS["enabled_exchanges"] = [exch.lower()]
         StatusDispatcher.dispatch("api", ok, None if ok else "Keine API aktiv")
+        self.check_market_feed()
 

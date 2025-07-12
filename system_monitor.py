@@ -18,6 +18,7 @@ from typing import Optional
 from config import SETTINGS
 from credential_checker import check_all_credentials
 from status_events import StatusDispatcher
+import logging
 import global_state
 
 DISPLAY_NAMES = {
@@ -77,7 +78,7 @@ class SystemMonitor:
             if hasattr(self.gui, "log_event"):
                 self.gui.log_event(full)
             else:
-                print(full)
+                logging.getLogger(__name__).info(full)
 
     def _run(self) -> None:
         while self._running:
