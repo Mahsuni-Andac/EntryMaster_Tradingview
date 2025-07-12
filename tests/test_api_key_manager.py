@@ -13,16 +13,16 @@ class CredentialManagerTest(unittest.TestCase):
         self.assertIsNone(mgr.get_secret())
 
     def test_load_from_env(self):
-        os.environ["MEXC_API_KEY"] = "env_key"
-        os.environ["MEXC_API_SECRET"] = "env_secret"
+        os.environ["BITMEX_API_KEY"] = "env_key"
+        os.environ["BITMEX_API_SECRET"] = "env_secret"
         mgr = APICredentialManager()
         loaded = mgr.load_from_env()
         self.assertTrue(loaded)
         self.assertEqual(mgr.get_key(), "env_key")
         self.assertEqual(mgr.get_secret(), "env_secret")
         mgr.clear()
-        del os.environ["MEXC_API_KEY"]
-        del os.environ["MEXC_API_SECRET"]
+        del os.environ["BITMEX_API_KEY"]
+        del os.environ["BITMEX_API_SECRET"]
 
 if __name__ == '__main__':
     unittest.main()

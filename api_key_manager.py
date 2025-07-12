@@ -32,11 +32,11 @@ class APICredentialManager:
     def load_from_env(self) -> bool:
         """Lädt Zugangsdaten aus Umgebungsvariablen.
 
-        Erwartet ``MEXC_API_KEY`` und ``MEXC_API_SECRET``. Gibt ``True`` zurück,
+        Erwartet ``BITMEX_API_KEY`` und ``BITMEX_API_SECRET``. Gibt ``True`` zurück,
         wenn beide Werte gefunden wurden.
         """
-        key = os.getenv("MEXC_API_KEY")
-        secret = os.getenv("MEXC_API_SECRET")
+        key = os.getenv("BITMEX_API_KEY")
+        secret = os.getenv("BITMEX_API_SECRET")
         if key and secret:
             self.set_credentials(key, secret)
             return True

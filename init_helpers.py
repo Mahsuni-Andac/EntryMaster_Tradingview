@@ -4,23 +4,9 @@ from config import SETTINGS
 def import_trader(backend):
     """🔁 Gibt die passende Trader-Klasse für das angegebene Backend zurück."""
     try:
-        if backend == "mexc":
-            from mexc_trader import MEXCTrader
-            return MEXCTrader
-        elif backend == "andac":
-            from andac_trader import AndacTrader
-            return AndacTrader
-        elif backend == "dydx":
-            from dydx_trader import DYDXTrader, is_dydx_configured
-            if not is_dydx_configured(SETTINGS):
-                raise ValueError("dYdX nicht konfiguriert")
-            return DYDXTrader
-        elif backend == "binance":
-            from binance_trader import BinanceTrader
-            return BinanceTrader
-        elif backend == "bybit":
-            from bybit_trader import BybitTrader
-            return BybitTrader
+        if backend == "bitmex":
+            from bitmex_trader import BitmexTrader
+            return BitmexTrader
         else:
             raise ValueError
     except ImportError as e:

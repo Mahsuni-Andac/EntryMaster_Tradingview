@@ -485,7 +485,7 @@ class TradingGUI(TradingGUILogicMixin):
         from config import SETTINGS
 
         symbol = SETTINGS.get("symbol", "BTC_USDT")
-        active = SETTINGS.get("trading_backend", "mexc")
+        active = SETTINGS.get("trading_backend", "bitmex")
 
         if not hasattr(self, "market_prices"):
             self.market_prices = {}

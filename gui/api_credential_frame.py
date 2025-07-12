@@ -8,7 +8,7 @@ from status_events import StatusDispatcher
 from config import SETTINGS
 
 # Order of exchanges in the selection box
-EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "OKX", "BitMEX"]
+EXCHANGES = ["BitMEX"]
 
 class APICredentialFrame(ttk.LabelFrame):
     """GUI frame for managing multiple exchange credentials."""
@@ -47,12 +47,8 @@ class APICredentialFrame(ttk.LabelFrame):
                 "priv": priv,
             }
             ttk.Label(self, text=f"API {exch}").grid(row=row, column=0, sticky="w")
-            if exch == "dYdX":
-                entry1 = ttk.Entry(self, textvariable=wallet, width=20)
-                entry2 = ttk.Entry(self, textvariable=priv, width=34, show="*")
-            else:
-                entry1 = ttk.Entry(self, textvariable=key, width=20, show="*")
-                entry2 = ttk.Entry(self, textvariable=secret, width=20, show="*")
+            entry1 = ttk.Entry(self, textvariable=key, width=20, show="*")
+            entry2 = ttk.Entry(self, textvariable=secret, width=20, show="*")
             entry1.grid(row=row, column=1, padx=2)
             entry2.grid(row=row, column=2, padx=2)
             lbl = ttk.Label(self, textvariable=status, foreground="grey")
@@ -114,29 +110,18 @@ class APICredentialFrame(ttk.LabelFrame):
                 messagebox.showinfo("Status", "Bitte Exchange wählen")
             return
         data = self.vars[exch]
-        if exch == "dYdX":
-            wallet = data["wallet"].get().strip()
-            priv = data["priv"].get().strip()
-            ok, msg = check_exchange_credentials(exch, wallet=wallet, private_key=priv)
-            if ok:
-                SETTINGS["dydx_wallet"] = wallet
-                SETTINGS["dydx_private_key"] = priv
-            else:
-                SETTINGS.pop("dydx_wallet", None)
-                SETTINGS.pop("dydx_private_key", None)
+        key = data["key"].get().strip()
+        secret = data["secret"].get().strip()
+        if not key or not secret:
+            ok, msg = False, "API Key und Secret erforderlich"
         else:
-            key = data["key"].get().strip()
-            secret = data["secret"].get().strip()
-            if not key or not secret:
-                ok, msg = False, "API Key und Secret erforderlich"
-            else:
-                ok, msg = check_exchange_credentials(exch, key=key, secret=secret)
-            if ok:
-                SETTINGS[f"{exch.lower()}_key"] = key
-                SETTINGS[f"{exch.lower()}_secret"] = secret
-            else:
-                SETTINGS.pop(f"{exch.lower()}_key", None)
-                SETTINGS.pop(f"{exch.lower()}_secret", None)
+            ok, msg = check_exchange_credentials(exch, key=key, secret=secret)
+        if ok:
+            SETTINGS[f"{exch.lower()}_key"] = key
+            SETTINGS[f"{exch.lower()}_secret"] = secret
+        else:
+            SETTINGS.pop(f"{exch.lower()}_key", None)
+            SETTINGS.pop(f"{exch.lower()}_secret", None)
 
         self.status_vars[exch].set("✅" if ok else "❌")
         self.status_labels[exch].config(foreground="green" if ok else "red")

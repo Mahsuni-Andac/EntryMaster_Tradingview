@@ -21,11 +21,6 @@ from status_events import StatusDispatcher
 import global_state
 
 DISPLAY_NAMES = {
-    "mexc": "MEXC",
-    "dydx": "dYdX",
-    "binance": "Binance",
-    "bybit": "Bybit",
-    "okx": "OKX",
     "bitmex": "BitMEX",
 }
 
