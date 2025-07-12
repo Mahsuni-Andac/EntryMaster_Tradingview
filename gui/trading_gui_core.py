@@ -528,10 +528,13 @@ class TradingGUI(TradingGUILogicMixin):
             self.market_prices = {}
 
         for exch in [e.lower() for e in EXCHANGES]:
-            try:
-                price = fetch_last_price(exch, symbol)
-            except ValueError:
-                price = None
+            if exch == "bitmex":
+                key = self.cred_manager.get_key() if hasattr(self, "cred_manager") else None
+                secret = self.cred_manager.get_secret() if hasattr(self, "cred_manager") else None
+                if not (key and secret):
+                    self.market_prices[exch] = None
+                    continue
+            price = fetch_last_price(exch, symbol)
             self.market_prices[exch] = price
             if exch == active:
                 stamp = datetime.now().strftime("%H:%M:%S")
