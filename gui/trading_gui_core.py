@@ -484,7 +484,7 @@ class TradingGUI(TradingGUILogicMixin):
         from data_provider import fetch_last_price
         from config import SETTINGS
 
-        symbol = SETTINGS.get("symbol", "BTC_USDT")
+        symbol = SETTINGS.get("symbol", "BTCUSDT")
         active = SETTINGS.get("trading_backend", "bitmex")
 
         if not hasattr(self, "market_prices"):
