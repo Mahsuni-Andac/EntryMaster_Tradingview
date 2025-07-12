@@ -76,10 +76,7 @@ class GUIBridge:
                 return SETTINGS.get("interval", "15m")
         return SETTINGS.get("interval", "15m")
 
-    def update_score_display(self, score, symbol, allowed=True, reason=None):
-        if self.gui and hasattr(self.gui, "score_display"):
-            self.gui.score_display.update_score(score, symbol, allowed, reason)
-        self.update_filter_feedback(score)
+
 
     def update_live_pnl(self, pnl):
         if self.gui:
