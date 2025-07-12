@@ -11,7 +11,6 @@ from colorama import Fore, Style, init
 
 from config import SETTINGS
 from exchange_manager import detect_available_exchanges
-from credential_checker import check_all_credentials
 from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
 from gui import (
@@ -46,7 +45,6 @@ def bot_control(gui):
         if cmd == "start":
             if not gui.running:
                 load_settings_from_file()
-                check_all_credentials(SETTINGS)
                 print("🚀 Bot gestartet: TEST-MODUS" if SETTINGS.get("test_mode") else "🚀 Bot gestartet: LIVE-MODUS")
                 gui.running = True
                 threading.Thread(target=run_bot_live, args=(SETTINGS, gui), daemon=True).start()
@@ -122,7 +120,6 @@ def on_gui_start(gui):
         print("⚠️ Bot läuft bereits (GUI-Schutz)")
         return
     load_settings_from_file()
-    check_all_credentials(SETTINGS)
     SETTINGS["interval"] = gui.interval.get()
     print("🚀 Bot gestartet: TEST-MODUS" if SETTINGS.get("test_mode") else "🚀 Bot gestartet: LIVE-MODUS")
     gui.running = True
@@ -131,7 +128,6 @@ def on_gui_start(gui):
 def main():
     load_settings_from_file()
     detect_available_exchanges(SETTINGS)
-    check_all_credentials(SETTINGS)
     root = tk.Tk()
     cred_manager = APICredentialManager()
     gui = EntryMasterGUI(root, cred_manager=cred_manager)

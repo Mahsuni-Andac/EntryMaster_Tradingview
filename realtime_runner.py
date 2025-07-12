@@ -363,18 +363,6 @@ def run_bot_live(settings=None, app=None):
                 app.log_event(log_msg)
                 print(f"💰 Aktuelles Balance (Sim): ${capital:.2f}")
 
-                # Verlust-Limit/Auto-Pause
-                if hasattr(app, "max_loss_enabled") and app.max_loss_enabled.get():
-                    try:
-                        max_loss = float(app.max_loss_value.get())
-                        if max_loss > 0 and capital <= (start_capital - max_loss):
-                            app.max_loss_status_label.config(text="Handel gestoppt: Max. Verlust erreicht!", foreground="red")
-                            app.running = False
-                            if hasattr(app, "log_event"):
-                                app.log_event("🛑 Handel gestoppt: Maximaler Verlust erreicht! Manuelles Neustarten erforderlich.")
-                    except Exception as e:
-                        print("❌ Fehler bei Verlust-Limit/Auto-Pause:", e)
-
                 app.update_live_trade_pnl(0.0)
                 app.live_pnl = 0.0
 
