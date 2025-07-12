@@ -51,3 +51,10 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 - In der GUI befindet sich ein klar gekennzeichneter Toggle-Switch zur Moduswahl
 - Das System ist **fehlertolerant** – im Paper-Modus sind echte Trades **technisch ausgeschlossen**
 
+## 📡 Live-Marktdaten-Anzeige (BTCUSDT)
+
+- Der Bot verwendet echte Binance Spot-Marktdaten (BTCUSDT) zur Berechnung aller Entry/Exit-Signale.
+- In der GUI wird der aktuelle BTCUSDT-Preis in Echtzeit angezeigt – aktualisiert alle 1–2 Sekunden.
+- Diese Anzeige dient als Live-Status zur Preisreferenz für Nutzer und zur Verifikation des Systemzustands.
+- Bei Verbindungsproblemen wird "❌" angezeigt.
+
