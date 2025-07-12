@@ -18,15 +18,14 @@ from session_filter import SessionFilter
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from gui import TradingGUI, TradingGUILogicMixin
-from global_state import atr_value_global
-
 from config import SETTINGS
 from global_state import (
     entry_time_global,
     ema_trend_global,
     atr_value_global,
-    position_global
+    position_global,
 )
+import global_state
 
 from init_helpers import import_trader
 from indicator_utils import calculate_ema, calculate_atr
@@ -179,6 +178,9 @@ def run_bot_live(settings=None, app=None):
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
                 continue
+
+            # Update global timestamp for feed watchdog
+            global_state.last_feed_time = time.time()
 
             if not first_feed:
                 first_feed = True

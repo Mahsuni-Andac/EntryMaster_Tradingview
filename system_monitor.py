@@ -1,11 +1,11 @@
 """Real-time system monitoring with auto-pause/resume.
 
-This watchdog checks exchange connectivity and incoming market data every
-few seconds for the **active market only**.  Short interruptions are tolerated
-(``timeout`` defaults to 10s).  If no fresh candle is received within this
-period the bot is paused, an acoustic signal is emitted and the GUI status
-switches to ``❌``.  As soon as a new candle arrives the bot resumes and the
-status changes back to ``✅``.
+The monitor inspects the ``global_state.last_feed_time`` timestamp every
+few seconds for the **active market only**.  Short interruptions are
+tolerated (``timeout`` defaults to 10s).  If the timestamp becomes older
+than ``timeout`` seconds, the bot is paused, an acoustic signal is emitted
+and the GUI status switches to ``❌``.  As soon as a fresh tick updates the
+timestamp the bot resumes and the status changes back to ``✅``.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Optional
 
 from config import SETTINGS
 from credential_checker import check_all_credentials
-from data_provider import fetch_latest_candle
+import global_state
 
 
 def _beep() -> None:
@@ -43,8 +43,6 @@ class SystemMonitor:
         self.timeout = timeout
         self._thread: Optional[threading.Thread] = None
         self._running = False
-        self._last_candle_ts: Optional[int] = None
-        self._last_update = time.time()
         self._feed_ok = True
         self._api_ok = True
         self._pause_reason: Optional[str] = None
@@ -52,6 +50,8 @@ class SystemMonitor:
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
+        if global_state.last_feed_time is None:
+            global_state.last_feed_time = time.time()
         if hasattr(self.gui, "update_api_status"):
             self.gui.update_api_status(True)
         if hasattr(self.gui, "update_feed_status"):
@@ -86,21 +86,10 @@ class SystemMonitor:
                     time.sleep(self.interval)
                     continue
 
-                candle = fetch_latest_candle(
-                    SETTINGS.get("symbol", "BTCUSDT"),
-                    SETTINGS.get("interval", "1m"),
-                )
-                if not candle:
+                ts = global_state.last_feed_time
+                if ts is None:
                     self._handle_feed_down("Keine Marktdaten empfangen")
-                    time.sleep(self.interval)
-                    continue
-
-                ts = candle.get("timestamp")
-                if ts != self._last_candle_ts:
-                    self._last_candle_ts = ts
-                    self._last_update = time.time()
-                    self._handle_feed_up()
-                elif time.time() - self._last_update > self.timeout:
+                elif time.time() - ts > self.timeout:
                     self._handle_feed_down("Marktdaten aktualisieren sich nicht")
                 else:
                     self._handle_feed_up()
