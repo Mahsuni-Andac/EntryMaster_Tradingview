@@ -41,7 +41,7 @@ class PaperTradingEngine:
 
     def __init__(
         self,
-        symbol: str = "BTCUSDT",
+        symbol: str = "BTC_USDT",
         leverage: int = 20,
         balance: float = 1000.0,
         db_path: str = "trades.sqlite",

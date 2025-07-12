@@ -114,7 +114,7 @@ class AndacEntryMaster:
         return max(0.0, min(100.0, rsi))
 
     # ---- Kernlogik -------------------------------------------------------
-    def evaluate(self, candle: Dict[str, float], symbol: str = "BTCUSDT") -> AndacSignal:
+    def evaluate(self, candle: Dict[str, float], symbol: str = "BTC_USDT") -> AndacSignal:
         """Analysiert die übergebene Kerze und gibt ggf. ein Entry-Signal zurück."""
 
         self.candles.append(candle)

@@ -1,7 +1,7 @@
 # config.py
 
 SETTINGS = {
-    "symbol": "BTCUSDT",
+    "symbol": "BTC_USDT",
     "interval": "1m",
     "starting_balance": 1000,
     "leverage": 20,
