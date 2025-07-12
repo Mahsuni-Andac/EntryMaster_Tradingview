@@ -1,5 +1,5 @@
 import os
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict, List
 import hashlib
 import hmac
 import time
@@ -17,6 +17,11 @@ ENDPOINTS = {
     "okx": "https://www.okx.com/api/v5/public/time",
     "bitmex": "https://www.bitmex.com/api/v1/instrument",
 }
+
+# Cache of last credential check results to avoid log spam
+_last_statuses: Dict[str, Tuple[bool, str]] = {}
+_last_active: List[str] = []
+_last_live: Optional[bool] = None
 
 def _timestamp() -> str:
     """Return current time string."""
@@ -125,8 +130,10 @@ def check_all_credentials(settings: Dict[str, str]) -> Dict[str, tuple]:
     Adds ``active`` and ``live`` keys to the result dict and toggles
     ``settings['test_mode']`` if no exchange is active.
     """
+    global _last_statuses, _last_active, _last_live
+
     results: Dict[str, tuple] = {}
-    active = []
+    active: List[str] = []
     for exch in ["mexc", "dydx", "binance", "bybit", "okx", "bitmex"]:
         key = settings.get(f"{exch}_key") or os.getenv(f"{exch.upper()}_API_KEY")
         secret = settings.get(f"{exch}_secret") or os.getenv(f"{exch.upper()}_API_SECRET")
@@ -137,15 +144,24 @@ def check_all_credentials(settings: Dict[str, str]) -> Dict[str, tuple]:
             priv = settings.get("dydx_private_key") or os.getenv("DYDX_PRIVATE_KEY")
         ok, msg = check_exchange_credentials(exch.capitalize(), key, secret, wallet, private_key=priv)
         results[exch] = (ok, msg)
-        print(f"{_timestamp()} {msg}")
+
+        if _last_statuses.get(exch) != (ok, msg):
+            print(f"{_timestamp()} {msg}")
+            _last_statuses[exch] = (ok, msg)
         if ok:
             active.append(exch)
-    print(f"{_timestamp()} Aktive Exchanges: " + (", ".join(active) if active else "keine"))
+
+    if active != _last_active:
+        print(f"{_timestamp()} Aktive Exchanges: " + (", ".join(active) if active else "keine"))
+        _last_active = active[:]
+
     live = any(ok for ok, _ in results.values())
-    print(f"{_timestamp()} Live-Marktdaten aktiv: " + ("✅" if live else "❌"))
-    if not live:
-        print(f"{_timestamp()} Kein Live-Feed aktiv – nur Simulation!")
-        settings["test_mode"] = True
+    if _last_live is None or live != _last_live:
+        print(f"{_timestamp()} Live-Marktdaten aktiv: " + ("✅" if live else "❌"))
+        if not live:
+            print(f"{_timestamp()} Kein Live-Feed aktiv – nur Simulation!")
+            settings["test_mode"] = True
+        _last_live = live
     results["active"] = active
     results["live"] = live
     return results

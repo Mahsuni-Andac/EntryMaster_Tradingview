@@ -19,6 +19,15 @@ from config import SETTINGS
 from credential_checker import check_all_credentials
 import global_state
 
+DISPLAY_NAMES = {
+    "mexc": "MEXC",
+    "dydx": "dYdX",
+    "binance": "Binance",
+    "bybit": "Bybit",
+    "okx": "OKX",
+    "bitmex": "BitMEX",
+}
+
 
 def _beep() -> None:
     """Trigger a simple beep sound in the console."""
@@ -79,6 +88,13 @@ class SystemMonitor:
         while self._running:
             try:
                 creds = check_all_credentials(SETTINGS)
+                if hasattr(self.gui, "update_exchange_status"):
+                    for ex, (ok, _msg) in creds.items():
+                        if ex in {"active", "live"}:
+                            continue
+                        disp = DISPLAY_NAMES.get(ex, ex)
+                        self.gui.update_exchange_status(disp, ok)
+
                 if creds.get("live"):
                     self._handle_api_up()
                 else:
