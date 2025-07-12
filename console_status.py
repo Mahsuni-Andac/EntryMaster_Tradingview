@@ -43,7 +43,6 @@ def print_full_filter_overview(settings):
         ("LiveMode", not settings.get("test_mode", True)),
         ("SimMode", settings.get("test_mode", False)),
         ("SessionBlock", settings.get("session_block", False)),
-        ("SignalEngine", settings.get("signal_engine", False)),
         ("EntryMaster", settings.get("entry_master", False)),
         ("AdaptiveSL", settings.get("adaptive_sl", False)),
     ]
@@ -64,7 +63,7 @@ def options_snapshot(settings):
         "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
         "breakout_filter", "time_filter", "atr_filter", "momentum_filter", "wick_filter",
         "rejection_filter", "reentry_filter", "sl_intel", "capital_safe", "test_mode",
-        "session_block", "signal_engine", "entry_master", "adaptive_sl"
+        "session_block", "entry_master", "adaptive_sl"
     )
     return tuple(settings.get(k) for k in keys)
 
@@ -96,7 +95,6 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     filter_status.append("LiveMode✅" if not settings.get("test_mode", True) else "LiveMode❌")
     filter_status.append("SimMode✅" if settings.get("test_mode", False) else "SimMode❌")
     filter_status.append("SessionBlock✅" if settings.get("session_block", False) else "SessionBlock❌")
-    filter_status.append("SignalEngine✅" if settings.get("signal_engine", False) else "SignalEngine❌")
     filter_status.append("EntryMaster✅" if settings.get("entry_master", False) else "EntryMaster❌")
     filter_status.append("AdaptiveSL✅" if settings.get("adaptive_sl", False) else "AdaptiveSL❌")
 

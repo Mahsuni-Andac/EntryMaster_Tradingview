@@ -3,7 +3,6 @@
 import tkinter as tk
 from tkinter import ttk
 
-from .trading_gui_score_display import ScoreDisplay
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame
 from api_key_manager import APICredentialManager
@@ -39,7 +38,6 @@ class TradingGUI(TradingGUILogicMixin):
         # --- Controls & Vars ---
         self.multiplier_entry = None
         self.capital_entry = None
-        self.score_display = None
         self.log_box = None
         self.auto_status_label = None
 
@@ -194,8 +192,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.max_loss_status_label = ttk.Label(loss_frame, text="", foreground="red")
         self.max_loss_status_label.grid(row=3, column=0, columnspan=2, sticky="w")
 
-        self.score_display = ScoreDisplay(self.root)
-        self.score_display.pack(pady=(8, 4))
 
 
     def _build_andac_options(self, parent):
