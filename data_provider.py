@@ -7,7 +7,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime
 from typing import Iterable, List, Optional, TypedDict
 
 import requests
@@ -63,26 +65,73 @@ def fetch_last_price(exchange: str, symbol: Optional[str] = None) -> Optional[fl
             query_symbol = bitmex_symbol(query_symbol)
 
     url = info["url"].format(symbol=query_symbol)
+    now = datetime.now().strftime("%H:%M:%S")
     try:
         resp = _SESSION.get(url, timeout=10)
         resp.raise_for_status()
+    except Exception as exc:  # pragma: no cover - network failures
+        msg = f"{query_symbol}: -- ({now}) | ERROR: Request failed: {exc}"
+        logging.error(msg)
+        print(msg)
+        return None
+
+    try:
         data = resp.json()
-        val = data
+    except Exception as exc:
+        msg = f"{query_symbol}: -- ({now}) | ERROR: Response not JSON: {exc}"
+        logging.error(msg)
+        print(msg)
+        return None
+
+    json_dump = json.dumps(data, ensure_ascii=False)
+    logging.info("%s FULL RESPONSE: %s", exchange.upper(), json_dump)
+    print(json_dump)
+
+    if isinstance(data, dict) and data.get("success") is False:
+        code = data.get("code", "?")
+        err = data.get("message", "Unknown error")
+        msg = f"{query_symbol}: -- ({now}) | ERROR: [code: {code}] {err}"
+        logging.error(msg)
+        print(msg)
+        if exchange.lower() == "mexc":
+            print("👉 Verfügbare Symbole: https://contract.mexc.com/api/v1/contract/detail")
+        return None
+
+    if isinstance(data, dict) and "data" not in data:
+        msg = f"{query_symbol}: -- ({now}) | ERROR: 'data' fehlt in Antwort"
+        logging.error(msg)
+        print(msg)
+        if exchange.lower() == "mexc":
+            print("👉 Verfügbare Symbole: https://contract.mexc.com/api/v1/contract/detail")
+        return None
+
+    val = data
+    try:
         for key in info["path"]:
             if isinstance(key, int):
                 if not isinstance(val, list) or len(val) <= key:
-                    raise ValueError(f"{exchange} Antwort unvollständig: {data}")
+                    raise KeyError(key)
                 val = val[key]
             else:
-                if key not in val:
-                    raise ValueError(f"{exchange} Antwort unvollständig: {data}")
+                if not isinstance(val, dict) or key not in val:
+                    raise KeyError(key)
                 val = val[key]
         price = float(val)
-        logging.info("Marktdaten empfangen: %s %.2f", exchange.upper(), price)
-        return price
-    except Exception as exc:  # pragma: no cover - network failures
-        logging.error("%s Preisabruf fehlgeschlagen: %s", exchange.upper(), exc)
+    except KeyError as exc:
+        msg = f"{query_symbol}: -- ({now}) | ERROR: Key '{exc.args[0]}' fehlt"
+        logging.error(msg)
+        print(msg)
         return None
+    except Exception as exc:
+        msg = f"{query_symbol}: -- ({now}) | ERROR: {exc}"
+        logging.error(msg)
+        print(msg)
+        return None
+
+    msg = f"{query_symbol}: {price:.2f} ({now})"
+    logging.info(msg)
+    print(msg)
+    return price
 
 def get_latest_candle_batch(
     symbol: str = "BTC_USDT", interval: str = "1m", limit: int = 100
