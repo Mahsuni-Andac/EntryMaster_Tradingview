@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
+import logging
 
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame, EXCHANGES
@@ -442,7 +443,11 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = SETTINGS.get("symbol", "BTC_USDT")
         exch = SETTINGS.get("trading_backend", "mexc")
-        price = fetch_last_price(exch, symbol)
+        try:
+            price = fetch_last_price(exch, symbol)
+        except ValueError as exc:
+            logging.error("%s", exc)
+            price = None
         stamp = datetime.now().strftime("%H:%M:%S")
         line = f"{symbol.replace('_','')}: {price:.2f} ({stamp})" if price is not None else f"{symbol}: -- ({stamp})"
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "log_price"):
