@@ -113,8 +113,8 @@ class SystemMonitor:
                 info = f"{type(exc).__name__}: {exc}"
                 if 'creds' in locals():
                     info += f" | creds={creds!r}"
-                self._log(f"Systemmonitor Fehler: {info}")
-                self._handle_feed_down("API-Fehler – Antwort unvollständig")
+                logging.debug("Systemmonitor exception: %s", info)
+                self._handle_feed_down("API-Fehler – Antwort unvollständig", log=False)
             time.sleep(self.interval)
 
     # ---- State Handlers -------------------------------------------------
@@ -145,10 +145,11 @@ class SystemMonitor:
             StatusDispatcher.dispatch("api", True)
         self._api_ok = True
 
-    def _handle_feed_down(self, reason: str) -> None:
+    def _handle_feed_down(self, reason: str, *, log: bool = True) -> None:
         if self._feed_ok:
             _beep()
-            self._log(f"{reason} – Bot pausiert")
+            if log:
+                self._log(f"{reason} – Bot pausiert")
             if hasattr(self.gui, "update_feed_status"):
                 self.gui.update_feed_status(False, reason)
             StatusDispatcher.dispatch("feed", False, reason)

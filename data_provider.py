@@ -37,9 +37,13 @@ class Candle(TypedDict):
 
 
 def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) -> Optional[float]:
-    """Return the latest price from Binance Spot."""
+    """Return the latest price from Binance Spot.
+
+    For unsupported exchanges ``None`` is returned silently.
+    """
     if exchange.lower() != "binance":
-        raise ValueError("Only Binance spot data supported")
+        logging.debug("Ignoring price request for unsupported exchange %s", exchange)
+        return None
 
     pair = _normalize_symbol(symbol or "BTCUSDT")
     try:
