@@ -153,6 +153,7 @@ class TradingGUI(TradingGUILogicMixin):
         # Statusvariablen je Exchange
         self.exchange_status_vars = {ex: tk.StringVar(value="⚪") for ex in EXCHANGES}
         self.exchange_status_labels = {}
+        self.exchange_status_cache = {}
 
     def _build_gui(self):
         # wrapper for main content to allow side panels
@@ -339,11 +340,20 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(parent, textvariable=var).pack()
 
     def _build_api_credentials(self, parent):
-        self.api_frame = APICredentialFrame(parent, self.cred_manager, log_callback=self.log_event)
+        self.api_frame = APICredentialFrame(
+            parent,
+            self.cred_manager,
+            log_callback=self.log_event,
+            select_callback=self._on_exchange_select,
+        )
         self.api_frame.pack(pady=(0, 10), fill="x")
         for exch in EXCHANGES:
             self.exchange_status_vars[exch] = self.api_frame.status_vars[exch]
             self.exchange_status_labels[exch] = self.api_frame.status_labels[exch]
+
+    def _on_exchange_select(self, exch: str) -> None:
+        if hasattr(self, "on_exchange_select"):
+            self.on_exchange_select(exch)
 
 
     # ---- Status Panel -------------------------------------------------

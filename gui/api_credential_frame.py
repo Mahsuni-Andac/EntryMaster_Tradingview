@@ -12,10 +12,11 @@ EXCHANGES = ["MEXC", "dYdX", "Binance", "Bybit", "BitMEX"]
 class APICredentialFrame(ttk.LabelFrame):
     """GUI frame for managing multiple exchange credentials."""
 
-    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None) -> None:
+    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None, select_callback=None) -> None:
         super().__init__(master, text="Exchange API")
         self.cred_manager = cred_manager
         self.log_callback = log_callback
+        self.select_callback = select_callback
 
         self.active_exchange = tk.StringVar(value=EXCHANGES[0])
 
@@ -61,6 +62,8 @@ class APICredentialFrame(ttk.LabelFrame):
         ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
 
         self._select_exchange(self.active_exchange.get())
+        if self.select_callback:
+            self.select_callback(self.active_exchange.get())
 
         # Mini price monitor
         term_frame = tk.Frame(self, bg="black")
@@ -78,6 +81,8 @@ class APICredentialFrame(ttk.LabelFrame):
             if name != exch:
                 self.status_vars[name].set("⚪")
                 self.status_labels[name].config(foreground="grey")
+        if self.select_callback:
+            self.select_callback(exch)
 
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
