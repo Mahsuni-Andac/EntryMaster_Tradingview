@@ -16,6 +16,8 @@ from data_provider import (
     get_live_candles,
     start_candle_websocket,
 )
+from entry_handler import open_position
+from exit_handler import close_position
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
 from status_block import print_entry_status
@@ -44,7 +46,7 @@ def update_indicators(candles):
     return atr, ema
 
 
-def handle_existing_position(position, candle, app, capital, trader, live_trading,
+def handle_existing_position(position, candle, app, capital, live_trading,
                              cooldown, risk_manager, last_printed_pnl,
                              last_printed_price, settings, now):
     current = candle["close"]
@@ -113,8 +115,8 @@ def handle_existing_position(position, candle, app, capital, trader, live_tradin
                 )
                 app.log_event(log_msg)
                 app.apc_status_label.config(text=log_msg, foreground="blue")
-                if trader and live_trading:
-                    live_partial_close(trader, settings["symbol"], position["side"], to_close)
+                if live_trading:
+                    live_partial_close(position["side"], to_close)
                 if position["amount"] <= 0:
                     position = None
                     entry_time_global = None
@@ -151,6 +153,8 @@ def handle_existing_position(position, candle, app, capital, trader, live_tradin
         )
         logging.info(log_msg)
         app.log_event(log_msg)
+        if live_trading:
+            close_position()
 
         app.update_live_trade_pnl(0.0)
         app.live_pnl = 0.0
@@ -174,24 +178,15 @@ from pnl_utils import calculate_futures_pnl, check_plausibility
 
 FEE_RATE = 0.0004
 
-API_KEY = SETTINGS.get("api_key", "")
-API_SECRET = SETTINGS.get("api_secret", "")
-
 gui_bridge = None
 
-def live_partial_close(trader, symbol, side, qty):
+def live_partial_close(side: str, qty: float) -> None:
     reduce_side = "SELL" if side == "long" else "BUY"
-    try:
-        trader.place_order(
-            symbol,
-            reduce_side,
-            qty,
-            reduce_only=True,
-            order_type="MARKET"
-        )
+    res = open_position(reduce_side, qty, reduce_only=True)
+    if res is not None:
         print(f"⚡️ LIVE-Teilschließung: {qty} {reduce_side} via Reduce Only Market")
-    except Exception as e:
-        print(f"❌ Fehler beim Live-Teilverkauf: {e}")
+    else:
+        print("❌ Fehler beim Live-Teilverkauf")
 
 def set_gui_bridge(gui_instance):
     global gui_bridge
@@ -300,7 +295,7 @@ def run_bot_live(settings=None, app=None):
     else:
         gui_bridge.update_status("✅ Bereit")
 
-    live_requested = gui_bridge.live_trading and API_KEY and API_SECRET
+    live_requested = gui_bridge.live_trading
     paper_mode = settings.get("paper_mode", True)
     live_trading = live_requested and not paper_mode
     settings["paper_mode"] = not live_trading
@@ -326,8 +321,6 @@ def run_bot_live(settings=None, app=None):
     }
     andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
-
-    trader = None
 
     candles = []
     position = None
@@ -441,7 +434,6 @@ def run_bot_live(settings=None, app=None):
                 candle,
                 app,
                 capital,
-                trader,
                 live_trading,
                 cooldown,
                 risk_manager,
@@ -552,25 +544,12 @@ def run_bot_live(settings=None, app=None):
 
 
 
-                if amount > 0 and trader and live_trading:
+                if amount > 0 and live_trading:
                     try:
                         direction = "BUY" if entry_type == "long" else "SELL"
-                        trader.place_order(
-                            settings["symbol"],
-                            direction,
-                            amount,
-                            entry,
-                            sl,
-                            tp
-                        )
-                        trader.place_sl_tp_orders(
-                            settings["symbol"],
-                            direction,
-                            entry,
-                            sl,
-                            tp,
-                            amount
-                        )
+                        res = open_position(direction, amount)
+                        if res is None:
+                            raise RuntimeError("Order placement failed")
                     except Exception as e:
                         print(f"❌ Fehler bei Orderplatzierung: {e}")
             else:

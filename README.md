@@ -1,6 +1,6 @@
 # EntryMaster Trading Bot
 
-**EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot, der ausschließlich auf **Binance Spot** Live-Marktdaten per **WebSocket** basiert. Er kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
+**EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot. Die Marktanalyse nutzt ausschließlich **Binance Spot** Live-Marktdaten per **WebSocket**, während alle echten Trades über **BitMEX** ausgeführt werden. Der Bot kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
 
 Dieses Repository folgt drei Prinzipien:
 - Alle Dateien liegen direkt im Hauptordner
@@ -91,9 +91,9 @@ python main.py
 1. API-Key + Secret in GUI eintragen
 2. Toggle `LIVE TRADING` aktivieren
 3. Die Statusanzeige wechselt auf LIVE
-4. Trades werden nun real über Binance Spot platziert
+4. Trades werden nun real über BitMEX (XBTUSD) platziert
 
-**Hinweis:** Kein REST → Es werden nur Market Orders + SL/TP via Reduce Only gesetzt.
+**Hinweis:** Market Orders werden via BitMEX REST-API ausgeführt.
 
 ---
 
