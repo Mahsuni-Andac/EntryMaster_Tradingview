@@ -9,6 +9,8 @@ Handelsergebnisse.
 ## Eigenschaften
 * Preisfeed über **python-binance** (BTCUSDT)
 * Wählbare Marktdatenquelle: REST, WebSocket oder Auto
+* Im **Auto-Modus** wird zuerst der WebSocket-Stream verwendet und bei Problemen
+  automatisch auf REST umgeschaltet
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
@@ -35,6 +37,14 @@ python main.py
 ```
 Die GUI fragt die BitMEX-Zugangsdaten ab und zeigt fortlaufend die Binance-Spot-
 Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter kann jederzeit vom Simulationsmodus in den Live-Betrieb gewechselt werden.
+
+## Datenquellen & Modus
+
+Der Bot kann Binance-Marktdaten über einen WebSocket-Stream oder per REST-API beziehen.
+In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** auswählen.
+Im Auto-Modus versucht der Bot zunächst den WebSocket-Stream und schaltet bei
+Problemen automatisch auf REST um. Der aktuell verwendete Modus ist in der GUI
+jederzeit sichtbar.
 
 ## Trading-Modi: Paper vs. Live
 

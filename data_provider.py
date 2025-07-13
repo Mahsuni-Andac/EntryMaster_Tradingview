@@ -22,11 +22,17 @@ _BINANCE = Client("", "")
 # set to ``websocket`` or ``auto``.
 _WS_MANAGER: ThreadedWebsocketManager | None = None
 _WS_PRICE: dict[str, float] = {}
+_WS_ACTIVE: bool = False
+
+
+def websocket_active() -> bool:
+    """Return ``True`` if a websocket stream is delivering prices."""
+    return _WS_MANAGER is not None and _WS_ACTIVE
 
 
 def _init_websocket(symbol: str) -> None:
     """Start a websocket price feed for *symbol* if not running."""
-    global _WS_MANAGER
+    global _WS_MANAGER, _WS_ACTIVE
     if _WS_MANAGER is not None:
         return
     try:
@@ -34,11 +40,14 @@ def _init_websocket(symbol: str) -> None:
         _WS_MANAGER.start()
 
         def handle(msg):
+            global _WS_ACTIVE
             if msg.get("e") == "error":
+                _WS_ACTIVE = False
                 return
             price = msg.get("c") or msg.get("p")
             if price is not None:
                 _WS_PRICE[symbol] = float(price)
+                _WS_ACTIVE = True
 
         _WS_MANAGER.start_symbol_ticker_socket(symbol.lower(), handle)
     except Exception as exc:
@@ -48,9 +57,15 @@ def _init_websocket(symbol: str) -> None:
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
     """Return latest price from websocket if available."""
+    global _WS_ACTIVE
     if _WS_MANAGER is None:
         _init_websocket(symbol)
-    return _WS_PRICE.get(symbol)
+    price = _WS_PRICE.get(symbol)
+    if price is not None:
+        _WS_ACTIVE = True
+    else:
+        _WS_ACTIVE = False
+    return price
 
 def _normalize_symbol(symbol: str) -> str:
     """Return API-compatible symbol name for Binance."""

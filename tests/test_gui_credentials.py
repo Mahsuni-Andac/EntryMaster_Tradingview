@@ -25,7 +25,7 @@ class GUICredentialFrameTest(unittest.TestCase):
         except tk.TclError:
             self.skipTest("Tkinter not available")
         frame = APICredentialFrame(root, APICredentialManager())
-        self.assertEqual(frame.data_source_mode.get(), "rest")
+        self.assertEqual(frame.data_source_mode.get(), "auto")
         root.destroy()
 
 if __name__ == '__main__':

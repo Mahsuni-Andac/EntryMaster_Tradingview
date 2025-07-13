@@ -4,7 +4,6 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 import logging
-from binance.client import Client
 
 from .trading_gui_logic import TradingGUILogicMixin
 from .api_credential_frame import APICredentialFrame, EXCHANGES
@@ -58,8 +57,6 @@ class TradingGUI(TradingGUILogicMixin):
         StatusDispatcher.on_api_status(self.update_api_status)
         StatusDispatcher.on_feed_status(self.update_feed_status)
 
-        # Binance REST client für Preisabfragen
-        self.binance_client = Client()
 
         from config import SETTINGS
         mode = SETTINGS.get("data_source_mode", "auto").lower()
@@ -536,11 +533,10 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")
 
-        try:
-            ticker = self.binance_client.get_symbol_ticker(symbol=symbol)
-            price = float(ticker["price"])
-        except Exception:
-            price = None
+        from data_provider import fetch_last_price, websocket_active
+
+        price = fetch_last_price("binance", symbol)
+        self.websocket_active = websocket_active()
 
         stamp = datetime.now().strftime("%H:%M:%S")
         line = (
