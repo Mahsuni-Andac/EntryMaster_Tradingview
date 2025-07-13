@@ -3,12 +3,11 @@ from tkinter import ttk, messagebox
 from typing import Dict
 
 from api_key_manager import APICredentialManager
-from credential_checker import check_exchange_credentials
 from status_events import StatusDispatcher
 from config import SETTINGS
 
 # Order of exchanges in the selection box
-EXCHANGES = ["BitMEX"]
+EXCHANGES = ["Binance"]
 
 class APICredentialFrame(ttk.LabelFrame):
     """GUI frame for managing multiple exchange credentials."""
@@ -108,10 +107,6 @@ class APICredentialFrame(ttk.LabelFrame):
     def _on_select(self) -> None:
         exch = self.active_exchange.get()
         self._select_exchange(exch)
-        # limit credential checks to the selected exchange
-        from config import SETTINGS
-        SETTINGS["enabled_exchanges"] = [exch.lower()] if exch else []
-        SETTINGS.pop("trading_backend", None)
         if self.select_callback:
             self.select_callback(exch)
         self.check_market_feed()
@@ -154,7 +149,7 @@ class APICredentialFrame(ttk.LabelFrame):
         if not key or not secret:
             ok, msg = False, "API Key und Secret erforderlich"
         else:
-            ok, msg = check_exchange_credentials(exch, key=key, secret=secret)
+            ok, msg = True, "API Daten gespeichert"
         if ok:
             SETTINGS[f"{exch.lower()}_key"] = key
             SETTINGS[f"{exch.lower()}_secret"] = secret
@@ -170,12 +165,6 @@ class APICredentialFrame(ttk.LabelFrame):
         else:
             messagebox.showinfo("Status", msg)
 
-        if ok:
-            SETTINGS["trading_backend"] = exch.lower()
-            SETTINGS["enabled_exchanges"] = [exch.lower()]
-        else:
-            SETTINGS.pop("trading_backend", None)
-            SETTINGS["enabled_exchanges"] = [exch.lower()]
         StatusDispatcher.dispatch("api", ok, None if ok else "Keine API aktiv")
         self.check_market_feed()
 

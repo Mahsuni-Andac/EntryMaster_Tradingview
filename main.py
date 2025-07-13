@@ -11,7 +11,6 @@ from colorama import Fore, Style, init
 from central_logger import setup_logging
 
 from config import SETTINGS
-from exchange_manager import detect_available_exchanges
 from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
 from gui import (
@@ -139,7 +138,6 @@ def on_gui_start(gui):
 
 def main():
     load_settings_from_file()
-    detect_available_exchanges(SETTINGS)
 
     def update_price(p):
         try:

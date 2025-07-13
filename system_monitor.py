@@ -15,15 +15,9 @@ import threading
 import time
 from typing import Optional
 
-from config import SETTINGS
-from credential_checker import check_all_credentials
 from status_events import StatusDispatcher
 import logging
 import global_state
-
-DISPLAY_NAMES = {
-    "bitmex": "BitMEX",
-}
 
 
 def _beep() -> None:
@@ -50,7 +44,6 @@ class SystemMonitor:
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._feed_ok = True
-        self._api_ok = True
         self._pause_reason: Optional[str] = None
 
     def start(self) -> None:
@@ -83,25 +76,6 @@ class SystemMonitor:
     def _run(self) -> None:
         while self._running:
             try:
-                enabled = SETTINGS.get("enabled_exchanges") or []
-                if not enabled:
-                    time.sleep(self.interval)
-                    continue
-                creds = check_all_credentials(SETTINGS, enabled)
-                if hasattr(self.gui, "update_exchange_status"):
-                    for ex, (ok, _msg) in creds.items():
-                        if ex in {"active", "live"}:
-                            continue
-                        disp = DISPLAY_NAMES.get(ex, ex)
-                        self.gui.update_exchange_status(disp, ok)
-
-                if creds.get("live"):
-                    self._handle_api_up()
-                else:
-                    self._handle_api_down()
-                    time.sleep(self.interval)
-                    continue
-
                 ts = global_state.last_feed_time
                 if ts is None:
                     self._handle_feed_down("Keine Marktdaten empfangen")
@@ -111,39 +85,11 @@ class SystemMonitor:
                     self._handle_feed_up()
             except Exception as exc:
                 info = f"{type(exc).__name__}: {exc}"
-                if 'creds' in locals():
-                    info += f" | creds={creds!r}"
                 logging.debug("Systemmonitor exception: %s", info)
                 self._handle_feed_down("API-Fehler – Antwort unvollständig", log=False)
             time.sleep(self.interval)
 
     # ---- State Handlers -------------------------------------------------
-    def _handle_api_down(self) -> None:
-        if self._api_ok:
-            _beep()
-            reason = "API nicht erreichbar"
-            self._log(f"{reason} – Bot pausiert")
-            if hasattr(self.gui, "update_api_status"):
-                self.gui.update_api_status(False, reason)
-            StatusDispatcher.dispatch("api", False, reason)
-            if getattr(self.gui, "running", False):
-                self.gui.running = False
-                self._pause_reason = "api"
-        self._api_ok = False
-
-    def _handle_api_up(self) -> None:
-        if not self._api_ok:
-            if hasattr(self.gui, "update_api_status"):
-                self.gui.update_api_status(True)
-            StatusDispatcher.dispatch("api", True)
-            if not getattr(self.gui, "running", False) and self._pause_reason == "api":
-                self.gui.running = True
-            self._pause_reason = None
-        else:
-            if hasattr(self.gui, "update_api_status"):
-                self.gui.update_api_status(True)
-            StatusDispatcher.dispatch("api", True)
-        self._api_ok = True
 
     def _handle_feed_down(self, reason: str, *, log: bool = True) -> None:
         if self._feed_ok:
