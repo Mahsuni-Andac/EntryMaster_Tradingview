@@ -251,18 +251,29 @@ def run_bot_live(settings=None, app=None):
     auto_multi = gui_bridge.auto_multiplier
 
     # ---- NEU: Auf Candles warten (ATR Ready Phase) ----
+    ATR_REQUIRED = 14
     wait_counter = 0
+    last_logged = -1
     while True:
-        candles_ready = get_live_candles(settings["symbol"], interval, 100)
+        candles_ready = get_live_candles(settings["symbol"], interval, ATR_REQUIRED)
         atr_tmp = calculate_atr(candles_ready, 14)
-        if len(candles_ready) >= 20 and atr_tmp > 0:
-            print("✅ Genug Candles vorhanden – Starte Bot-Logik.")
+        count = len(candles_ready)
+        if count >= ATR_REQUIRED and atr_tmp > 0:
+            msg = "✅ ATR bereit – Starte Bot-Logik."
+            print(msg)
+            if app and hasattr(app, "update_status"):
+                app.update_status(msg)
             break
-        if app and hasattr(app, "update_status"):
-            app.update_status("⏳ Initialisiere... Warte auf Candle-Daten")
-        print("⏳ Warte auf ausreichend Candles für ATR...")
+        if count != last_logged:
+            progress = (
+                f"⏳ Warte auf ATR-Berechnung... ({count}/{ATR_REQUIRED} Candles erhalten)"
+            )
+            print(progress)
+            if app and hasattr(app, "update_status"):
+                app.update_status(progress)
+            last_logged = count
         wait_counter += 1
-        if wait_counter > 40:  # max. 20 Sekunden warten
+        if wait_counter > 80:  # max. 40 Sekunden warten
             print("⚠️ Timeout beim Warten auf Candles – starte trotzdem")
             break
         time.sleep(0.5)

@@ -168,16 +168,23 @@ def _restart_candle_websocket() -> None:
 def _monitor_loop() -> None:
     """Background watchdog checking for stalled candle feed."""
     global _FEED_MONITOR_STARTED
+    last_ok: bool | None = None
     while _FEED_MONITOR_STARTED:
         try:
             import global_state
+
             last_ts = global_state.last_feed_time
-            if last_ts is None or time.time() - last_ts > 30:
-                print("❌ Feed tot – versuche Neustart")
+            alive = last_ts is not None and time.time() - last_ts <= 30
+            if not alive:
+                if last_ok is not False:
+                    print("❌ Feed tot – versuche Neustart")
                 stop_candle_websocket()
                 start_candle_websocket(_CANDLE_SYMBOL, _CANDLE_INTERVAL)
+                last_ok = False
             else:
-                print("✅ Candle-Feed aktiv")
+                if last_ok is not True:
+                    print("✅ Candle-Feed aktiv")
+                last_ok = True
         except Exception as exc:
             print("⚠️ Feed-Monitor Fehler", exc)
         time.sleep(20)
