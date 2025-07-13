@@ -444,7 +444,7 @@ class TradingGUI(TradingGUILogicMixin):
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
             self.api_frame.system_status_label.config(textvariable=self.system_status_var)
 
-        # Anzeige des aktiven Datenfeeds (WebSocket/REST)
+        # Anzeige des WebSocket-Status
         self.feed_mode_var = tk.StringVar(value="")
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "feed_mode_label"):
             self.api_frame.feed_mode_label.config(textvariable=self.feed_mode_var)

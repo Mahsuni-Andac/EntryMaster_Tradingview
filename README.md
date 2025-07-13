@@ -110,3 +110,4 @@ REST wurde entfernt, um saubere Candle-Daten sicherzustellen.
 
 
 **Hinweis:** Alte BitMEX- und REST-Komponenten wurden entfernt; der Bot arbeitet nun nur noch mit Binance-WebSocket-Daten.
+Legacy-Tests und ungenutzte Adapter wurden ebenfalls gestrichen.
