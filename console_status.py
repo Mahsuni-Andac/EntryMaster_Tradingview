@@ -57,7 +57,7 @@ def options_snapshot(settings):
 
 def print_no_signal_status(settings, position=None, price=None, session_name=None, saved_profit=None, only_active_filters=True):
     nowstr = datetime.now().strftime("[%H:%M:%S]")
-    print(f"{nowstr} ➖ Kein Signal" + (f" | Session: {session_name}" if session_name else ""))
+    print(f"{nowstr} ➖ Ich warte auf ein Indikator Signal" + (f" | Session: {session_name}" if session_name else ""))
     filter_status = []
     filter_status.append("RSI✅" if settings.get("rsi_filter", False) else "RSI❌")
     filter_status.append("Volume✅" if settings.get("volume_filter", False) else "Volume❌")

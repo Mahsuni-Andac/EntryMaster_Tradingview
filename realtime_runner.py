@@ -574,7 +574,7 @@ def run_bot_live(settings=None, app=None):
                         print(f"❌ Fehler bei Orderplatzierung: {e}")
             else:
                 if not no_signal_printed:
-                    print("➖ Kein Signal")
+                    print("➖ Ich warte auf ein Indikator Signal")
                     no_signal_printed = True
 
     reason = "Kapital aufgebraucht" if capital <= 0 else "Loop beendet"
