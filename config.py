@@ -15,4 +15,6 @@ SETTINGS = {
     "data_source_mode": "rest",  # rest | websocket | auto
     "version": "V10.4_Pro",
     "paper_mode": True,
+    # Datenquelle für Marktdaten: websocket | rest | auto
+    "data_source_mode": "auto",
 }

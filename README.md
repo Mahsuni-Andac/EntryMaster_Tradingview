@@ -70,6 +70,13 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 - **Wirksamkeitsstatus**:
   - Direkt daneben wird der Zustand des Systems bewertet.
   - Beispiel: `✅ Alle Systeme laufen fehlerfrei` oder `❌ System macht Fehler!`
+- **Datenfeed-Modusanzeige**:
+  - Neben dem Systemstatus wird live angezeigt, ob die Binance-Daten 
+    per WebSocket oder REST empfangen werden.
+  - Die Anzeige passt sich automatisch an und ist farblich markiert.
+  - Beispiele:
+    - `✅ Alle Systeme laufen fehlerfrei | 🟢 WebSocket kommt an`
+    - `✅ Alle Systeme laufen fehlerfrei | 🔴 REST kommt an`
 
 - **Fehleranzeige im Log**:
   - Wenn ein Problem erkannt wird, erscheint unten im GUI-Log ein Eintrag mit Zeitstempel und Fehlerursache – aber nur einmal pro Fehler (kein Spam).
