@@ -7,7 +7,8 @@ Handelslogik basiert auf einem TradingView-Indikator und läuft wahlweise im Liv
 Handelsergebnisse.
 
 ## Eigenschaften
-* Preisfeed ausschließlich über **python-binance** WebSocket (BTCUSDT)
+* Preis- und Candlefeed ausschließlich über **python-binance** WebSocket (BTCUSDT)
+* Der Bot empfängt 1-Minuten-Candles via `btcusdt@kline_1m` und zeigt nur abgeschlossene Kerzen an. REST wurde komplett entfernt.
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
@@ -40,12 +41,12 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 
 ## 📡 Datenquelle
 
-Der EntryMaster Bot nutzt WebSocket-Preisdaten von Binance BTCUSDT.
+Der EntryMaster Bot nutzt WebSocket-Preisdaten und 1m-Candle-Daten von Binance BTCUSDT.
 
 Dieser Bot arbeitet ausschließlich mit Live-Marktdaten von Binance BTCUSDT über
 die WebSocket-API. REST-Zugriffe wurden entfernt, um maximale
-Echtzeitpräzision zu gewährleisten. Der Preisfeed wird niemals über andere
-Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
+Echtzeitpräzision zu gewährleisten. Sowohl Preis- als auch Candle-Daten werden nur per WebSocket bezogen.
+Der Preisfeed wird niemals über andere Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
 
 ## Trading-Modi: Paper vs. Live
 

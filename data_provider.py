@@ -12,7 +12,7 @@ from typing import List, Optional, TypedDict
 
 import time
 
-from binance_ws import BinanceWebSocket
+from binance_ws import BinanceWebSocket, BinanceCandleWebSocket
 from tkinter import Tk, StringVar
 
 
@@ -22,6 +22,10 @@ _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
 
 _WS_STARTED: bool = False
+_CANDLE_WS_CLIENT: BinanceCandleWebSocket | None = None
+_CANDLE_WS_STARTED: bool = False
+_WS_CANDLES: list["Candle"] = []
+_CANDLE_WARNING_SHOWN: bool = False
 
 # Tk root used for Tkinter variables when none is provided
 _TK_ROOT: Tk | None = None
@@ -90,6 +94,38 @@ def stop_websocket() -> None:
     _WEBSOCKET_RUNNING = False
 
 
+def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
+    """Start candle websocket feed for *symbol* and *interval*."""
+    global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
+    if _CANDLE_WS_STARTED:
+        return
+
+    print("INFO WebSocket Candle-Stream gestartet")
+
+    def handle(candle: dict) -> None:
+        update_candle_feed(candle)
+        print(
+            f"✅ Candle empfangen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
+        )
+
+    _CANDLE_WS_CLIENT = BinanceCandleWebSocket(handle)
+    _CANDLE_WS_CLIENT.start()
+    _CANDLE_WS_STARTED = True
+
+
+def stop_candle_websocket() -> None:
+    """Stop running candle websocket if active."""
+    global _CANDLE_WS_CLIENT, _CANDLE_WS_STARTED
+    if _CANDLE_WS_CLIENT is None:
+        return
+    try:
+        _CANDLE_WS_CLIENT.stop()
+    except Exception:
+        pass
+    _CANDLE_WS_CLIENT = None
+    _CANDLE_WS_STARTED = False
+
+
 def is_websocket_running() -> bool:
     """Return ``True`` if the websocket manager is active."""
     return _WEBSOCKET_RUNNING
@@ -126,6 +162,20 @@ class Candle(TypedDict):
     volume: float
 
 
+def update_candle_feed(candle: Candle) -> None:
+    """Store *candle* in the internal cache and update feed timestamp."""
+    global _WS_CANDLES, _WEBSOCKET_RUNNING
+    _WS_CANDLES.append(candle)
+    if len(_WS_CANDLES) > 1000:
+        _WS_CANDLES.pop(0)
+    _WEBSOCKET_RUNNING = True
+    try:
+        import global_state
+        global_state.last_feed_time = time.time()
+    except Exception:
+        pass
+
+
 
 
 def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) -> Optional[float]:
@@ -152,9 +202,10 @@ def get_latest_candle_batch(
     return get_live_candles(symbol, interval, limit)
 
 def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
-    """Retrieve recent candles from Binance Spot."""
-    # candle data no longer fetched via REST
-    return []
+    """Retrieve recent candles from Binance Spot via WebSocket."""
+    if not _CANDLE_WS_STARTED:
+        start_candle_websocket(symbol, interval)
+    return _WS_CANDLES[-limit:]
 
 
 def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:
