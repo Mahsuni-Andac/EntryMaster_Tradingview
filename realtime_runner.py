@@ -117,14 +117,15 @@ def run_bot_live(settings=None, app=None):
     wait_counter = 0
     while True:
         candles_ready = get_live_candles(settings["symbol"], interval, 100)
-        if len(candles_ready) >= 14:
+        atr_tmp = calculate_atr(candles_ready, 14)
+        if len(candles_ready) >= 20 and atr_tmp > 0:
             print("✅ Genug Candles vorhanden – Starte Bot-Logik.")
             break
         if app and hasattr(app, "update_status"):
             app.update_status("⏳ Initialisiere... Warte auf Candle-Daten")
         print("⏳ Warte auf ausreichend Candles für ATR...")
         wait_counter += 1
-        if wait_counter > 30:  # max. 15 Sekunden warten
+        if wait_counter > 40:  # max. 20 Sekunden warten
             print("⚠️ Timeout beim Warten auf Candles – starte trotzdem")
             break
         time.sleep(0.5)
@@ -229,7 +230,7 @@ def run_bot_live(settings=None, app=None):
                 candles.pop(0)
 
             # Berechnung des ATR und Zuordnung zu atr_value_global
-            atr_value_global = calculate_atr(candles, 14) if calculate_atr(candles, 14) is not None else 0.0
+            atr_value_global = calculate_atr(candles, 14)
 
             # Der Rest des Codes bleibt unverändert
             close_list = [c["close"] for c in candles[-20:] if "close" in c]
