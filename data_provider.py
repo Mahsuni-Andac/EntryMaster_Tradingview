@@ -13,10 +13,44 @@ from datetime import datetime
 from typing import Iterable, List, Optional, TypedDict
 
 from binance.client import Client
+from binance import ThreadedWebsocketManager  # for optional WebSocket feed
 
 from config import SETTINGS
 
 _BINANCE = Client("", "")
+# WebSocket manager and price cache used when ``data_source_mode`` is
+# set to ``websocket`` or ``auto``.
+_WS_MANAGER: ThreadedWebsocketManager | None = None
+_WS_PRICE: dict[str, float] = {}
+
+
+def _init_websocket(symbol: str) -> None:
+    """Start a websocket price feed for *symbol* if not running."""
+    global _WS_MANAGER
+    if _WS_MANAGER is not None:
+        return
+    try:
+        _WS_MANAGER = ThreadedWebsocketManager()
+        _WS_MANAGER.start()
+
+        def handle(msg):
+            if msg.get("e") == "error":
+                return
+            price = msg.get("c") or msg.get("p")
+            if price is not None:
+                _WS_PRICE[symbol] = float(price)
+
+        _WS_MANAGER.start_symbol_ticker_socket(symbol.lower(), handle)
+    except Exception as exc:
+        logging.debug("WebSocket init failed: %s", exc)
+        _WS_MANAGER = None
+
+
+def _fetch_ws_price(symbol: str) -> Optional[float]:
+    """Return latest price from websocket if available."""
+    if _WS_MANAGER is None:
+        _init_websocket(symbol)
+    return _WS_PRICE.get(symbol)
 
 def _normalize_symbol(symbol: str) -> str:
     """Return API-compatible symbol name for Binance."""
@@ -46,6 +80,15 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         return None
 
     pair = _normalize_symbol(symbol or "BTCUSDT")
+    mode = SETTINGS.get("data_source_mode", "rest").lower()
+
+    if mode in {"websocket", "auto"}:
+        price = _fetch_ws_price(pair)
+        if price is not None:
+            return price
+        if mode == "websocket":
+            return None
+
     try:
         data = _BINANCE.get_symbol_ticker(symbol=pair)
         price = float(data["price"])
@@ -64,6 +107,13 @@ def get_latest_candle_batch(
 def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
     """Retrieve recent candles from Binance Spot."""
     pair = _normalize_symbol(symbol)
+    mode = SETTINGS.get("data_source_mode", "rest").lower()
+
+    if mode in {"websocket", "auto"}:
+        # placeholder: websocket candle feed not yet implemented
+        if mode == "websocket":
+            return []
+
     try:
         raw = _BINANCE.get_klines(symbol=pair, interval=interval, limit=limit)
         candles: List[Candle] = []
