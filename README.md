@@ -2,7 +2,10 @@
 
 **EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot, der ausschließlich auf **Binance Spot** Live-Marktdaten per **WebSocket** basiert. Er kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
 
-Das Projekt nutzt eine flache Struktur. Jede Datei beginnt mit `# dateiname.py` und es gibt keine erklärenden Kommentare.
+Dieses Repository folgt drei Prinzipien:
+- Alle Dateien liegen direkt im Hauptordner
+- Jede Datei startet mit `# dateiname.py`
+- Es existieren keine beschreibenden Kommentare
 
 ---
 
@@ -133,7 +136,7 @@ python main.py
 ## 📁 Projektstruktur
 
 ```text
-EntryMaster/
+EntryMaster_Tradingview/
 ├── adaptive_sl_manager.py
 ├── andac_entry_master.py
 ├── api_credential_frame.py
