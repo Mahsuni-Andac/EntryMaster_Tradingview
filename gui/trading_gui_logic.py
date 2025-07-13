@@ -234,17 +234,17 @@ class TradingGUILogicMixin:
             color = "red"
         else:
             if mode == "websocket":
-                text = "🟢 WebSocket kommt an"
+                text = "🟢 WebSocket aktiv"
                 color = "green"
             elif mode == "rest":
-                text = "🔴 REST kommt an"
+                text = "🔴 REST aktiv"
                 color = "orange"
             else:  # auto
                 if websocket:
-                    text = "🟢 WebSocket kommt an"
+                    text = "🟢 WebSocket aktiv"
                     color = "green"
                 else:
-                    text = "🔴 REST kommt an"
+                    text = "🔴 REST aktiv"
                     color = "orange"
 
         if hasattr(self, "feed_mode_var"):

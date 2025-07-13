@@ -128,11 +128,14 @@ class APICredentialFrame(ttk.LabelFrame):
     def _on_source_change(self, mode: str) -> None:
         from data_provider import start_websocket, stop_websocket
 
+        prev = SETTINGS.get("data_source_mode", "rest")
         SETTINGS["data_source_mode"] = mode
         symbol = SETTINGS.get("symbol", "BTCUSDT")
-        if mode in {"rest", "auto"}:
+        if prev == "websocket" and mode != "websocket":
             stop_websocket()
         if mode == "websocket":
+            if prev != "websocket":
+                stop_websocket()
             start_websocket(symbol)
 
     def log_price(self, text: str, error: bool = False) -> None:
