@@ -12,8 +12,8 @@ import logging
 from datetime import datetime
 from typing import Iterable, List, Optional, TypedDict
 
-import asyncio
 import threading
+import time
 
 from binance.client import Client
 from binance import ThreadedWebsocketManager  # for optional WebSocket feed
@@ -43,8 +43,7 @@ def _init_websocket(symbol: str) -> None:
         if _WS_MANAGER is not None:
             return
         try:
-            loop = asyncio.new_event_loop()
-            _WS_MANAGER = ThreadedWebsocketManager(loop=loop)
+            _WS_MANAGER = ThreadedWebsocketManager()
             _WS_MANAGER.start()
 
             def handle(msg):
@@ -56,8 +55,13 @@ def _init_websocket(symbol: str) -> None:
                 if price is not None:
                     _WS_PRICE[symbol] = float(price)
                     _WS_ACTIVE = True
+                    try:
+                        import global_state
+                        global_state.last_feed_time = time.time()
+                    except Exception:
+                        pass
 
-            _WS_MANAGER.start_symbol_ticker_socket(symbol.lower(), handle)
+            _WS_MANAGER.start_symbol_ticker_socket(callback=handle, symbol=symbol)
         except Exception as exc:
             logging.debug("WebSocket init failed: %s", exc)
             _WS_MANAGER = None

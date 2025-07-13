@@ -29,7 +29,12 @@ Handelsergebnisse.
 ## Beispielkonfiguration
 Die Datei `config.py` enthält alle wichtigen Parameter. Standardmäßig wird mit
 `BTCUSDT` gehandelt und der Paper-Modus ist aktiv, solange keine API-Schlüssel
-hinterlegt sind.
+hinterlegt sind. Dort lässt sich auch die Option `data_source_mode` setzen:
+
+- `websocket` – nutze ausschließlich den Binance WebSocket
+- `rest` – nutze ausschließlich REST-Requests
+- `auto` – versuche WebSocket und falle auf REST zurück
+
 
 ## Starten
 ```bash
@@ -43,8 +48,11 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 Der Bot kann Binance-Marktdaten über einen WebSocket-Stream oder per REST-API beziehen.
 In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** auswählen.
 Im Auto-Modus versucht der Bot zunächst den WebSocket-Stream und schaltet bei
-Problemen automatisch auf REST um. Der aktuell verwendete Modus ist in der GUI
-jederzeit sichtbar.
+Problemen automatisch auf REST um. Der aktuell verwendete Modus wird in der GUI
+live angezeigt:
+
+- **🟢 WebSocket kommt an** – Stream aktiv
+- **🔴 REST kommt an** – Fallback auf REST
 
 ## Trading-Modi: Paper vs. Live
 
