@@ -221,7 +221,44 @@ def emergency_exit_position(app):
         app.log_event("🛑 Position wurde im Notausstiegsmodus geschlossen!")
     else:
         print("❌ Keine Position offen, um sie zu schließen!")
-        app.log_event("❌ Keine offene Position zum Notausstiegsmodus gefunden.")  # Nachricht wenn keine Position da ist
+        app.log_event(
+            "❌ Keine offene Position zum Notausstiegsmodus gefunden."
+        )  # Nachricht wenn keine Position da ist
+
+
+def wait_for_initial_candles(
+    symbol: str,
+    interval: str,
+    app: TradingGUILogicMixin | TradingGUI | None = None,
+    required: int = 14,
+) -> list[dict]:
+    """Blockiert bis ``required`` Kerzen empfangen wurden.
+
+    Damit steht ausreichend Historie für die ATR-Berechnung zur Verfügung.
+    """
+
+    last_logged = -1
+    while True:
+        candles = get_live_candles(symbol, interval, required)
+        count = len(candles)
+        if count >= required:
+            msg = "✅ ATR bereit – Starte Bot-Logik."
+            logging.info(msg)
+            if app and hasattr(app, "update_status"):
+                app.update_status(msg)
+            else:
+                gui_bridge.update_status(msg)
+            return candles
+
+        if count != last_logged:
+            progress = f"⏳ Warte auf ATR-Berechnung... ({count}/{required} Candles erhalten)"
+            logging.info(progress)
+            if app and hasattr(app, "update_status"):
+                app.update_status(progress)
+            else:
+                gui_bridge.update_status(progress)
+            last_logged = count
+        time.sleep(1)
 
 def run_bot_live(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
@@ -252,33 +289,15 @@ def run_bot_live(settings=None, app=None):
 
     # ---- NEU: Auf Candles warten (ATR Ready Phase) ----
     ATR_REQUIRED = 14
-    wait_counter = 0
-    last_logged = -1
-    while True:
-        candles_ready = get_live_candles(settings["symbol"], interval, ATR_REQUIRED)
-        atr_tmp = calculate_atr(candles_ready, 14)
-        count = len(candles_ready)
-        if count >= ATR_REQUIRED and atr_tmp > 0:
-            msg = "✅ ATR bereit – Starte Bot-Logik."
-            print(msg)
-            if app and hasattr(app, "update_status"):
-                app.update_status(msg)
-            break
-        if count != last_logged:
-            progress = (
-                f"⏳ Warte auf ATR-Berechnung... ({count}/{ATR_REQUIRED} Candles erhalten)"
-            )
-            print(progress)
-            if app and hasattr(app, "update_status"):
-                app.update_status(progress)
-            last_logged = count
-        wait_counter += 1
-        if wait_counter > 80:  # max. 40 Sekunden warten
-            print("⚠️ Timeout beim Warten auf Candles – starte trotzdem")
-            break
-        time.sleep(0.5)
+    candles_ready = wait_for_initial_candles(
+        settings["symbol"], interval, app, ATR_REQUIRED
+    )
+    atr_tmp = calculate_atr(candles_ready, ATR_REQUIRED)
+    atr_value_global = atr_tmp
     if app and hasattr(app, "update_status"):
         app.update_status("✅ Bereit")
+    else:
+        gui_bridge.update_status("✅ Bereit")
 
     live_requested = gui_bridge.live_trading and API_KEY and API_SECRET
     paper_mode = settings.get("paper_mode", True)
