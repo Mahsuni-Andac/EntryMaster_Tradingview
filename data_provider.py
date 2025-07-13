@@ -139,7 +139,6 @@ _FEED_STUCK_COUNT = 0
 _FEED_LAST_LEN = 0
 
 
-# Refactor: improved feed monitor using candle count delta
 def _monitor_loop(symbol: str, interval: str) -> None:
     global _FEED_MONITOR_STARTED, _FEED_STUCK_COUNT, _FEED_LAST_LEN
 
