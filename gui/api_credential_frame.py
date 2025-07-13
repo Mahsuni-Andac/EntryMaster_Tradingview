@@ -72,6 +72,11 @@ class APICredentialFrame(ttk.LabelFrame):
         self.system_status_label = ttk.Label(status_row, textvariable=self.system_status, foreground="green")
         self.system_status_label.pack(side="left", padx=(10, 0))
 
+        # Anzeige, ob Daten via WebSocket oder REST empfangen werden
+        self.feed_mode = tk.StringVar(value="")
+        self.feed_mode_label = ttk.Label(status_row, textvariable=self.feed_mode, foreground="green")
+        self.feed_mode_label.pack(side="left", padx=(10, 0))
+
         # disable all fields until user actively chooses an exchange
         self._select_exchange("")
 

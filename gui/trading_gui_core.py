@@ -61,6 +61,11 @@ class TradingGUI(TradingGUILogicMixin):
         # Binance REST client für Preisabfragen
         self.binance_client = Client()
 
+        from config import SETTINGS
+        mode = SETTINGS.get("data_source_mode", "auto").lower()
+        self.websocket_active = mode == "websocket"
+        self._update_feed_mode_display(False)
+
         # MARKTDATEN-MONITOR starten
         self.market_interval_ms = 1000
         self._update_market_monitor()
@@ -176,6 +181,8 @@ class TradingGUI(TradingGUILogicMixin):
         # Track current connection states for the watchdog
         self.feed_ok = False
         self.api_ok = False
+        # Merker, ob ein WebSocket aktiv ist
+        self.websocket_active = False
 
         # Statusvariablen je Exchange
         self.exchange_status_vars = {ex: tk.StringVar(value="⚪") for ex in EXCHANGES}
@@ -434,10 +441,17 @@ class TradingGUI(TradingGUILogicMixin):
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
             self.api_frame.system_status_label.config(textvariable=self.system_status_var)
 
+        # Anzeige des aktiven Datenfeeds (WebSocket/REST)
+        self.feed_mode_var = tk.StringVar(value="")
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "feed_mode_label"):
+            self.api_frame.feed_mode_label.config(textvariable=self.feed_mode_var)
+
         # Invisible container to keep widgets for tests
         frame = ttk.Frame(self.root)
         self.all_ok_label = ttk.Label(frame, text="", foreground="green")
         self.all_ok_label.grid(row=0, column=0, sticky="w")
+        self.feed_mode_label = ttk.Label(frame, textvariable=self.feed_mode_var, foreground="green")
+        self.feed_mode_label.grid(row=0, column=1, padx=(10,0), sticky="w")
         row_index = 1
         for name, var in sorted(self.setting_vars.items()):
             row = ttk.Frame(frame)

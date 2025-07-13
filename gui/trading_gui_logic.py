@@ -199,6 +199,7 @@ class TradingGUILogicMixin:
             return
         self._last_feed_status = (ok, reason)
         self.feed_ok = ok
+        self._update_feed_mode_display(ok)
         if ok:
             if hasattr(self, "feed_status_label") and self.feed_status_label.winfo_ismapped():
                 self.feed_status_label.pack_forget()
@@ -221,6 +222,37 @@ class TradingGUILogicMixin:
                 self.neon_panel.set_status("feed", "red", text)
             if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
                 self.api_frame.update_market_status(False)
+
+    def _update_feed_mode_display(self, ok: bool) -> None:
+        """Update label showing the active data source."""
+        from config import SETTINGS
+
+        mode = SETTINGS.get("data_source_mode", "auto").lower()
+        websocket = getattr(self, "websocket_active", False)
+        if not ok:
+            text = "❌ Kein Feed"
+            color = "red"
+        else:
+            if mode == "websocket":
+                text = "🟢 WebSocket kommt an"
+                color = "green"
+            elif mode == "rest":
+                text = "🔴 REST kommt an"
+                color = "orange"
+            else:  # auto
+                if websocket:
+                    text = "🟢 WebSocket kommt an"
+                    color = "green"
+                else:
+                    text = "🔴 REST kommt an"
+                    color = "orange"
+
+        if hasattr(self, "feed_mode_var"):
+            self.feed_mode_var.set(text)
+        if hasattr(self, "feed_mode_label"):
+            self.feed_mode_label.config(foreground=color)
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "feed_mode_label"):
+            self.api_frame.feed_mode_label.config(foreground=color)
 
     def update_exchange_status(self, exchange: str, ok: bool) -> None:
         if hasattr(self, "exchange_status_vars") and exchange in self.exchange_status_vars:
