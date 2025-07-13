@@ -139,7 +139,10 @@ def main():
     init_price_var(root)
 
     def update_price(p):
-        root.after(0, lambda: price_var.set(p))
+        if price_var is not None:
+            root.after(0, lambda val=p: price_var.set(val))
+        else:
+            print("[WebSocket] ❌ price_var ist nicht initialisiert")
 
     ws = BinanceWebSocket(update_price)
     ws.start()
