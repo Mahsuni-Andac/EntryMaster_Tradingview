@@ -16,7 +16,7 @@ import time
 
 from binance.client import Client
 from binance_ws import BinanceWebSocket
-from tkinter import StringVar
+from tkinter import Tk, StringVar
 
 from config import SETTINGS
 
@@ -26,17 +26,28 @@ _BINANCE = Client("", "")
 _WS_CLIENT: BinanceWebSocket | None = None
 _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
+
 _WS_STARTED: bool = False
+
+# Tk root used for Tkinter variables when none is provided
+_TK_ROOT: Tk | None = None
 
 # Tkinter variable updated by the WebSocket callback
 price_var: StringVar | None = None
 
 
 def init_price_var(master=None) -> None:
-    """Initialize the price ``StringVar`` after Tk has started."""
-    global price_var
+    """Initialize ``price_var`` ensuring there is a valid ``Tk`` root."""
+    global price_var, _TK_ROOT
+    if master is None:
+        if _TK_ROOT is None:
+            _TK_ROOT = Tk()
+        master = _TK_ROOT
+    else:
+        _TK_ROOT = master
+
     if price_var is None:
-        price_var = StringVar(master=master, value="")
+        price_var = StringVar(master=master, value="--")
 
 
 def start_websocket(symbol: str = "BTCUSDT") -> None:
@@ -46,13 +57,16 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
         return
 
     def handle(price: str) -> None:
+        """Callback for websocket price updates."""
         global _WEBSOCKET_RUNNING
         try:
             p = float(price)
             _WS_PRICE[symbol] = p
             _WEBSOCKET_RUNNING = True
-            if price_var is not None:
-                price_var.set(str(price))
+            if price_var is not None and price_var.master is not None:
+                price_var.master.after(0, lambda val=price: price_var.set(str(val)))
+            else:
+                print("[WebSocket] \u274c price_var ist nicht initialisiert")
             try:
                 import global_state
                 global_state.last_feed_time = time.time()
@@ -129,8 +143,8 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         data = _BINANCE.get_symbol_ticker(symbol=pair)
         price = float(data["price"])
         logging.debug("Price update %s: %.2f", pair, price)
-        if price_var is not None:
-            price_var.set(str(price))
+        if price_var is not None and price_var.master is not None:
+            price_var.master.after(0, lambda val=price: price_var.set(str(val)))
         return price
     except Exception as exc:
         logging.debug("Failed to fetch %s: %s", pair, exc)
