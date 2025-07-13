@@ -70,12 +70,14 @@ class BinanceCandleWebSocket:
                 break
 
     def _on_message(self, ws, message):
+        """Handle incoming kline messages and forward completed candles."""
         global last_candle_time
         try:
             data = json.loads(message)
             k = data.get("k")
             if not k or not k.get("x"):
                 return
+
             candle = {
                 "timestamp": k.get("t"),
                 "open": float(k.get("o")),
@@ -84,12 +86,34 @@ class BinanceCandleWebSocket:
                 "close": float(k.get("c")),
                 "volume": float(k.get("v")),
             }
+
+            # keep internal timestamp for debug/analytics
             last_candle_time = time.time()
+
             print(
-                f"✅ Candle abgeschlossen: Open={candle['open']}, Close={candle['close']}"
+                f"✅ Candle abgeschlossen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
             )
-            # forward the complete candle to the callback only once
-            self.on_candle(candle)
+
+            # push candle to data provider and update global feed timestamp
+            try:
+                from data_provider import update_candle_feed
+
+                update_candle_feed(candle)
+            except Exception as exc:  # pragma: no cover - runtime safety
+                if not self._warning_printed:
+                    print("⚠️ Fehler beim Weiterleiten der Candle", exc)
+                    self._warning_printed = True
+
+            try:
+                import global_state
+
+                global_state.last_feed_time = time.time()
+            except Exception:
+                pass
+
+            if self.on_candle:
+                # forward the candle to optional callback for further processing
+                self.on_candle(candle)
         except Exception as e:
             if not self._warning_printed:
                 print("⚠️ Candle-Daten unvollständig oder fehlerhaft", e)

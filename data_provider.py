@@ -103,12 +103,11 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
     print("INFO WebSocket Candle-Stream gestartet")
 
     def handle(candle: dict) -> None:
-        update_candle_feed(candle)
         print(
             f"✅ Candle empfangen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
         )
 
-    # pass the handler directly to the websocket; no additional callback needed
+    # let the websocket manager update the feed itself; callback only logs
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle, symbol=symbol, interval=interval)
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
