@@ -57,6 +57,20 @@ Der WebSocket wird nur einmal gestartet und bleibt aktiv, bis der Modus geänder
 - **🟢 WebSocket aktiv** – Stream aktiv
 - **🔴 REST aktiv** – Fallback auf REST
 
+## Live-Daten-Handling
+
+### 📡 Datenquellen (Binance BTCUSDT)
+- Der Bot unterstützt **zwei Datenquellen** für Marktdaten:
+  - WebSocket (schnell, zuverlässig, ohne Auth)
+  - REST-API (Fallback bei Verbindungsproblemen)
+
+- Über die GUI kann per Schalter umgeschaltet werden zwischen:
+  - `Auto` (empfohlen): bevorzugt WebSocket, wechselt bei Problemen zu REST
+  - `WebSocket`: nutzt ausschließlich Live-Stream
+  - `REST`: nutzt zyklischen Abruf alle 1s
+
+- Die aktive Datenquelle wird in der GUI angezeigt. Konflikte werden intern gelöst. **Es ist immer nur eine Datenquelle gleichzeitig aktiv.**
+
 ### 📡 Datenquelle: Binance BTCUSDT (Spot)
 Der EntryMaster-Bot nutzt immer BTCUSDT-Marktdaten von Binance Spot (nicht Futures). Der Preisfeed erfolgt standardmäßig über WebSocket für Echtzeit-Ticks. Sollte dieser ausfallen, greift der Bot automatisch auf REST zurück. Der Benutzer kann im GUI-Feld bei der API-Konfiguration manuell auswählen:
 
