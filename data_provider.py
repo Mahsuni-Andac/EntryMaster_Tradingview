@@ -142,9 +142,11 @@ def stop_candle_websocket() -> None:
     _CANDLE_WS_STARTED = False
     logger.info("Candle-WebSocket gestoppt")
 
+_FEED_STUCK_COUNT = 0
+
+
 def _monitor_loop(symbol: str, interval: str) -> None:
-    global _FEED_MONITOR_STARTED
-    last_len = 0
+    global _FEED_MONITOR_STARTED, _FEED_STUCK_COUNT
 
     while _FEED_MONITOR_STARTED:
         time.sleep(_FEED_CHECK_INTERVAL)
@@ -152,22 +154,38 @@ def _monitor_loop(symbol: str, interval: str) -> None:
             import global_state
 
             last_ts = global_state.last_feed_time
-            timed_out = last_ts is None or time.time() - last_ts > 30
+            last_candle_time = get_last_candle_time()
+
+            alive = (
+                last_ts is not None
+                and time.time() - last_ts <= 30
+                and last_candle_time is not None
+                and time.time() - last_candle_time <= 65
+            )
+
             current_len = len(_WS_CANDLES)
-            unchanged = current_len == last_len
 
-            if timed_out or unchanged:
-                logger.warning(
-                    "Feed-Stagnation erkannt (timeout=%s, unchanged=%s) – Neustart",
-                    timed_out,
-                    unchanged,
+            if not alive:
+                age = (
+                    int(time.time() - last_candle_time)
+                    if last_candle_time is not None
+                    else "unknown"
                 )
-                stop_candle_websocket()
-                start_candle_websocket(symbol, interval)
+                logger.warning(
+                    "FEED ERROR: letzte Candle kam vor %ss (timestamp=%s)",
+                    age,
+                    last_candle_time,
+                )
+                if _FEED_STUCK_COUNT < 3:
+                    _FEED_STUCK_COUNT += 1
+                    stop_candle_websocket()
+                    start_candle_websocket(symbol, interval)
             else:
-                logger.debug("Candle-Feed aktiv (%s Candles)", current_len)
-
-            last_len = current_len
+                logger.debug(
+                    "Candle-Feed aktiv (%s Candles)",
+                    current_len,
+                )
+                _FEED_STUCK_COUNT = 0
         except Exception as exc:
             logger.error("Feed-Monitor Fehler: %s", exc)
 
