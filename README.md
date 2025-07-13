@@ -7,10 +7,7 @@ Handelslogik basiert auf einem TradingView-Indikator und läuft wahlweise im Liv
 Handelsergebnisse.
 
 ## Eigenschaften
-* Preisfeed über **python-binance** (BTCUSDT)
-* Wählbare Marktdatenquelle: REST, WebSocket oder Auto
-* Im **Auto-Modus** wird zuerst der WebSocket-Stream verwendet und bei Problemen
-  automatisch auf REST umgeschaltet
+* Preisfeed ausschließlich über **python-binance** WebSocket (BTCUSDT)
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
@@ -30,11 +27,8 @@ Handelsergebnisse.
 ## Beispielkonfiguration
 Die Datei `config.py` enthält alle wichtigen Parameter. Standardmäßig wird mit
 `BTCUSDT` gehandelt und der Paper-Modus ist aktiv, solange keine API-Schlüssel
-hinterlegt sind. Dort lässt sich auch die Option `data_source_mode` setzen:
-
-- `websocket` – nutze ausschließlich den Binance WebSocket
-- `rest` – nutze ausschließlich REST-Requests
-- `auto` – versuche WebSocket und falle automatisch auf REST zurück, wenn keine Verbindung zustande kommt
+hinterlegt sind. Der Eintrag `data_source_mode` ist fest auf `websocket`
+gesetzt und sollte nicht verändert werden.
 
 
 ## Starten
@@ -46,39 +40,12 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 
 ## 📡 Datenquelle
 
-Der EntryMaster Bot nutzt WebSocket-Preisdaten von Binance BTCUSDT. Bei Fehler erfolgt ein automatischer Fallback auf REST. Die Quelle wird live in der GUI angezeigt. Die WebSocket-Verbindung ist stabil, einmalig und kollisionsfrei mit der Tkinter-Oberfläche integriert.
+Der EntryMaster Bot nutzt WebSocket-Preisdaten von Binance BTCUSDT.
 
-Der Bot kann Binance-Marktdaten über einen WebSocket-Stream oder per REST-API beziehen.
-In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** auswählen.
-Im Auto-Modus wird zuerst versucht, einen WebSocket aufzubauen. Schlägt das fehl oder bricht die Verbindung ab, stellt der Bot automatisch auf REST um. Läuft der WebSocket bereits, wird er nicht erneut gestartet. Beim Wechsel des Datenmodus wird ein vorhandener Stream vorher mit `twm.stop()` beendet. Der aktuell genutzte Modus wird in der GUI angezeigt:
-
-Der WebSocket wird nur einmal gestartet und bleibt aktiv, bis der Modus geändert wird. Beim Wechsel des Datenmodus werden laufende Streams sauber beendet, damit keine doppelten Verbindungen entstehen.
-
-- **🟢 WebSocket aktiv** – Stream aktiv
-- **🔴 REST aktiv** – Fallback auf REST
-
-## Live-Daten-Handling
-
-### 📡 Datenquellen (Binance BTCUSDT)
-- Der Bot unterstützt **zwei Datenquellen** für Marktdaten:
-  - WebSocket (schnell, zuverlässig, ohne Auth)
-  - REST-API (Fallback bei Verbindungsproblemen)
-
-- Über die GUI kann per Schalter umgeschaltet werden zwischen:
-  - `Auto` (empfohlen): bevorzugt WebSocket, wechselt bei Problemen zu REST
-  - `WebSocket`: nutzt ausschließlich Live-Stream
-  - `REST`: nutzt zyklischen Abruf alle 1s
-
-- Die aktive Datenquelle wird in der GUI angezeigt. Konflikte werden intern gelöst. **Es ist immer nur eine Datenquelle gleichzeitig aktiv.**
-
-### 📡 Datenquelle: Binance BTCUSDT (Spot)
-Der EntryMaster-Bot nutzt immer BTCUSDT-Marktdaten von Binance Spot (nicht Futures). Der Preisfeed erfolgt standardmäßig über WebSocket für Echtzeit-Ticks. Sollte dieser ausfallen, greift der Bot automatisch auf REST zurück. Der Benutzer kann im GUI-Feld bei der API-Konfiguration manuell auswählen:
-
-- **Auto** → versucht WebSocket, fällt zurück auf REST
-- **WebSocket** → erzwingt Echtzeit-Ticks
-- **REST** → fallback-only (z. B. bei Netzrestriktionen)
-
-Wichtig: Der Preisfeed wird niemals über andere Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
+Dieser Bot arbeitet ausschließlich mit Live-Marktdaten von Binance BTCUSDT über
+die WebSocket-API. REST-Zugriffe wurden entfernt, um maximale
+Echtzeitpräzision zu gewährleisten. Der Preisfeed wird niemals über andere
+Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
 
 ## Trading-Modi: Paper vs. Live
 
@@ -115,12 +82,10 @@ Wichtig: Der Preisfeed wird niemals über andere Börsen gespeist. BitMEX dient 
   - Direkt daneben wird der Zustand des Systems bewertet.
   - Beispiel: `✅ Alle Systeme laufen fehlerfrei` oder `❌ System macht Fehler!`
 - **Datenfeed-Modusanzeige**:
-  - Neben dem Systemstatus wird live angezeigt, ob die Binance-Daten 
-    per WebSocket oder REST empfangen werden.
+  - Neben dem Systemstatus wird live angezeigt, ob der WebSocket verbunden ist.
   - Die Anzeige passt sich automatisch an und ist farblich markiert.
-  - Beispiele:
-    - `✅ Alle Systeme laufen fehlerfrei | 🟢 WebSocket kommt an`
-    - `✅ Alle Systeme laufen fehlerfrei | 🔴 REST kommt an`
+  - Beispiel:
+    - `✅ Alle Systeme laufen fehlerfrei | 🟢 WebSocket verbunden`
 
 - **Fehleranzeige im Log**:
   - Wenn ein Problem erkannt wird, erscheint unten im GUI-Log ein Eintrag mit Zeitstempel und Fehlerursache – aber nur einmal pro Fehler (kein Spam).
