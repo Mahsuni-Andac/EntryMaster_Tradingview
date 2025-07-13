@@ -23,7 +23,12 @@ from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
 from global_state import entry_time_global, ema_trend_global, atr_value_global
 from binance_ws import BinanceWebSocket
-from data_provider import init_price_var, price_var
+import data_provider
+
+# Tk root and shared price variable
+root = tk.Tk()
+data_provider.init_price_var(root)
+price_var = data_provider.price_var
 
 init(autoreset=True)
 setup_logging()
@@ -135,14 +140,12 @@ def on_gui_start(gui):
 def main():
     load_settings_from_file()
     detect_available_exchanges(SETTINGS)
-    root = tk.Tk()
-    init_price_var(root)
 
     def update_price(p):
-        if price_var is not None:
-            root.after(0, lambda val=p: price_var.set(val))
-        else:
-            print("[WebSocket] ❌ price_var ist nicht initialisiert")
+        try:
+            root.after(0, lambda: price_var.set(p))
+        except Exception as e:
+            print("❌ WebSocket Fehler:", e)
 
     ws = BinanceWebSocket(update_price)
     ws.start()
