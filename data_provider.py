@@ -49,8 +49,8 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
     if _WS_STARTED and _WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive():
         return
     if _WS_STARTED:
+        stop_websocket()
         logger.info("Price WebSocket neu gestartet")
-        _WS_STARTED = False
 
     def handle(price: str) -> None:
         try:
@@ -90,6 +90,9 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
     ):
         logger.debug("Candle-WebSocket bereits aktiv")
         return
+    if _CANDLE_WS_STARTED:
+        stop_candle_websocket()
+        logger.info("Candle-WebSocket neu gestartet")
 
     logger.info("WebSocket Candle-Stream gestartet")
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(
@@ -159,7 +162,8 @@ def _monitor_loop(symbol: str, interval: str) -> None:
                 _FEED_STUCK_COUNT += 1
                 if _FEED_STUCK_COUNT >= 2:
                     stop_candle_websocket()
-                    start_candle_websocket(symbol, interval)
+                    if not _CANDLE_WS_STARTED:
+                        start_candle_websocket(symbol, interval)
                     _FEED_STUCK_COUNT = 0
             else:
                 _FEED_STUCK_COUNT = 0
@@ -208,10 +212,11 @@ class Candle(TypedDict):
     volume: float
 
 def is_candle_valid(candle: dict) -> bool:
-    required = ("timestamp", "open", "high", "low", "close", "volume")
+    required = ("timestamp", "close")
     return all(key in candle and candle[key] not in (None, "") for key in required)
 
 def update_candle_feed(candle: Candle) -> None:
+    logger.debug("update_candle_feed called: %s", candle)
     if not is_candle_valid(candle):
         logger.warning("Ungültige Candle empfangen: %s", candle)
         return

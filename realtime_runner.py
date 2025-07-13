@@ -271,7 +271,10 @@ def run_bot_live(settings=None, app=None):
 
     print_start_banner(capital)
 
-    start_candle_websocket(settings["symbol"], settings.get("interval", "1m"))
+    if not data_provider._CANDLE_WS_STARTED:
+        start_candle_websocket(settings["symbol"], settings.get("interval", "1m"))
+    else:
+        logging.info("Candle WebSocket already running")
 
     if app:
         settings["log_event"] = app.log_event
