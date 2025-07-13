@@ -63,8 +63,8 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
             p = float(price)
             _WS_PRICE[symbol] = p
             _WEBSOCKET_RUNNING = True
-            if price_var is not None and price_var.master is not None:
-                price_var.master.after(0, lambda val=price: price_var.set(str(val)))
+            if price_var is not None and _TK_ROOT is not None:
+                _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
             else:
                 print("[WebSocket] \u274c price_var ist nicht initialisiert")
             try:
@@ -143,8 +143,8 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         data = _BINANCE.get_symbol_ticker(symbol=pair)
         price = float(data["price"])
         logging.debug("Price update %s: %.2f", pair, price)
-        if price_var is not None and price_var.master is not None:
-            price_var.master.after(0, lambda val=price: price_var.set(str(val)))
+        if price_var is not None and _TK_ROOT is not None:
+            _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
         return price
     except Exception as exc:
         logging.debug("Failed to fetch %s: %s", pair, exc)
