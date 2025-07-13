@@ -398,7 +398,8 @@ class TradingGUILogicMixin:
         self.sl_tp_manual_active.set(True)
         self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
-            self.manual_sl_button.config(fg="green")
+            # blue indicates active but not yet validated
+            self.manual_sl_button.config(fg="blue")
         if hasattr(self, "auto_sl_button"):
             self.auto_sl_button.config(fg="black")
         self.log_event("📝 Manuelle SL/TP aktiviert")
@@ -408,6 +409,7 @@ class TradingGUILogicMixin:
         self.sl_tp_auto_active.set(True)
         self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
+            # blue indicates active but pending validation
             self.auto_sl_button.config(fg="blue")
         if hasattr(self, "manual_sl_button"):
             self.manual_sl_button.config(fg="black")
@@ -416,12 +418,16 @@ class TradingGUILogicMixin:
     def set_auto_sl_status(self, ok: bool) -> None:
         """Update Button-Farbe je nach Status."""
         self.sl_tp_auto_active.set(ok)
+        if ok:
+            self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
             color = "green" if ok else "red"
             self.auto_sl_button.config(fg=color)
 
     def set_manual_sl_status(self, ok: bool) -> None:
         self.sl_tp_manual_active.set(ok)
+        if ok:
+            self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
             color = "green" if ok else "red"
             self.manual_sl_button.config(fg=color)

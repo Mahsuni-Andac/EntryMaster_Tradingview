@@ -118,6 +118,17 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle, symbol=symbol, interval=interval)
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
+
+    # wait up to 10 seconds for first candle to arrive
+    start_time = time.time()
+    while time.time() - start_time < 10:
+        if _WS_CANDLES:
+            print("✅ Erste Candle(s) empfangen – WebSocket läuft stabil")
+            break
+        time.sleep(0.5)
+    else:
+        print("⚠️ Kein Candle-Update nach 10s")
+
     if not _FEED_MONITOR_STARTED:
         monitor_feed()
 
@@ -146,14 +157,13 @@ def _monitor_loop() -> None:
     global _FEED_MONITOR_STARTED
     while _FEED_MONITOR_STARTED:
         try:
-            import global_state
-
-            ts = global_state.last_feed_time
-            if ts is None or time.time() - ts > 20:
-                print("\u26a0\ufe0f Candle-Feed hängt – WebSocket Neustart")
-                _restart_candle_websocket()
+            last_ts = get_last_candle_time()
+            if last_ts is None or time.time() - last_ts > 25:
+                print("⚠️ Kein Candle-Update seit 25s – versuche Neustart")
+                stop_candle_websocket()
+                start_candle_websocket(_CANDLE_SYMBOL, _CANDLE_INTERVAL)
             else:
-                print("\u2705 Candle-Feed OK")
+                print("✅ Candle-Feed aktiv")
         except Exception as exc:
             print("⚠️ Feed-Monitor Fehler", exc)
         time.sleep(20)

@@ -39,9 +39,8 @@ def calculate_atr(candles, length):
         if all(k in c and c[k] is not None for k in ("high", "low", "close"))
     ]
     if not candles or len(candles) < length:
-        if len(candles) < 3:
-            print("⚠️ Zu wenige valide Candles für ATR")
-        return None
+        # return 0 without warning when not enough candles available
+        return 0.0
 
     trs = []
     for i in range(1, len(candles)):
