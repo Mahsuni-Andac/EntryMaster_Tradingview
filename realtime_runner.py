@@ -160,6 +160,7 @@ def run_bot_live(settings=None, app=None):
 
     no_signal_printed = False
     first_feed = False
+    candle_warning_printed = False
 
     while capital > 0 and not getattr(app, "force_exit", False):
         if not getattr(app, "running", False):
@@ -183,9 +184,13 @@ def run_bot_live(settings=None, app=None):
             if not candle:
                 last_candle = get_last_candle_time()
                 if last_candle is None or time.time() - last_candle > 5:
-                    print("⚠️ Keine Candle-Daten.")
+                    if not candle_warning_printed:
+                        print("⚠️ Keine Candle-Daten.")
+                        candle_warning_printed = True
                 time.sleep(1)
                 continue
+            else:
+                candle_warning_printed = False
 
             # Update global timestamp for feed watchdog
             global_state.last_feed_time = time.time()
