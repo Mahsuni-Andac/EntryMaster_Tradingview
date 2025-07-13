@@ -6,6 +6,7 @@ import json
 import time
 import logging
 from typing import Callable, Optional
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class BaseWebSocket:
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1)
 
+
 last_candle_time: float | None = None
 
 
@@ -66,7 +68,12 @@ class BinanceWebSocket(BaseWebSocket):
 class BinanceCandleWebSocket(BaseWebSocket):
     """WebSocket manager for Binance candle streams."""
 
-    def __init__(self, on_candle: Optional[Callable[[dict], None]] = None, symbol: str = "btcusdt", interval: str = "1m"):
+    def __init__(
+        self,
+        on_candle: Optional[Callable[[dict], None]] = None,
+        symbol: str = "btcusdt",
+        interval: str = "1m",
+    ):
         self.on_candle = on_candle
         self.symbol = symbol.lower()
         self.interval = interval
@@ -91,8 +98,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 break
 
     def _on_message(self, ws, message):
-        """Handle incoming kline messages and forward completed candles."""
-        # Use actual emoji character to avoid encoding issues on some systems
         logging.debug("📥 Raw: %s", message)
         global last_candle_time
         try:
@@ -101,10 +106,9 @@ class BinanceCandleWebSocket(BaseWebSocket):
             if not k:
                 return
 
-            # always update feed timestamp on any kline message
+            # Immer Feed-Zeit aktualisieren, auch bei "nicht abgeschlossen"
             try:
                 import global_state
-
                 global_state.last_feed_time = time.time()
             except Exception as e:
                 logging.error("Fehler beim Setzen von last_feed_time: %s", e)
@@ -112,8 +116,18 @@ class BinanceCandleWebSocket(BaseWebSocket):
             if not k.get("x"):
                 return
 
+            # Neue Logik: Nur weiterverarbeiten, wenn Candle timestamp "frisch" ist
+            candle_ts = k.get("t") // 1000
+            now = int(datetime.now(tz=timezone.utc).timestamp())
+
+            if now - candle_ts > 65:
+                logger.warning(
+                    "⚠️ Candle veraltet – empfangen: %s, jetzt: %s", candle_ts, now
+                )
+                return
+
             candle = {
-                "timestamp": k.get("t"),
+                "timestamp": candle_ts,
                 "open": float(k.get("o")),
                 "high": float(k.get("h")),
                 "low": float(k.get("l")),
@@ -121,7 +135,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 "volume": float(k.get("v")),
             }
 
-            # keep internal timestamp for debug/analytics
             last_candle_time = time.time()
 
             logging.debug(
@@ -131,20 +144,16 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 candle["volume"],
             )
 
-            # push candle to data provider and update global feed timestamp
             if self.on_candle:
                 try:
                     self.on_candle(candle)
-                except Exception as exc:  # pragma: no cover - runtime safety
+                except Exception as exc:
                     if not self._warning_printed:
-                        logger.warning(
-                            "Fehler beim Weiterleiten der Candle: %s", exc
-                        )
+                        logger.warning("Fehler beim Weiterleiten der Candle: %s", exc)
                         self._warning_printed = True
 
             try:
                 import global_state
-
                 global_state.last_feed_time = time.time()
             except Exception as e:
                 logger.error("Fehler beim Setzen von last_feed_time: %s", e)
@@ -154,8 +163,11 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 self._warning_printed = True
 
     def _on_error(self, ws, error):
-        """Log websocket errors."""
         logger.error("Candle-WS Fehler: %s", error)
+
+    def _on_close(self, ws, status_code, msg):
+        logger.info("Candle-WS geschlossen: %s %s", status_code, msg)
+
 
     def _on_close(self, ws, status_code, msg):
         """Log websocket close events."""
