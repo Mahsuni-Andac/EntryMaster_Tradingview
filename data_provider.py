@@ -121,11 +121,23 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
     print("INFO WebSocket Candle-Stream gestartet")
 
     def handle(candle: dict) -> None:
-        print(
-            f"✅ Candle empfangen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
-        )
+        """Callback zum Speichern von Candle-Daten."""
+        try:
+            parsed: Candle = {
+                "timestamp": int(candle["timestamp"]),
+                "open": float(candle["open"]),
+                "high": float(candle["high"]),
+                "low": float(candle["low"]),
+                "close": float(candle["close"]),
+                "volume": float(candle["volume"]),
+            }
+        except Exception as exc:
+            logging.warning("⚠️ Ungültige Candle-Daten: %s", exc)
+            return
 
-    # let the websocket manager update the feed itself; callback only logs
+        update_candle_feed(parsed)
+
+    # WebSocket updates the feed via callback
     _CANDLE_SYMBOL = symbol
     _CANDLE_INTERVAL = interval
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle, symbol=symbol, interval=interval)
