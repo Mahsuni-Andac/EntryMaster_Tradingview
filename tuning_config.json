@@ -36,7 +36,7 @@
   "feed_status_var": "",
   "feed_ok": true,
   "api_ok": false,
-  "system_status_var": "✅ Alle Systeme laufen fehlerfrei"
+  "system_status_var": "✅ Alle Systeme laufen fehlerfrei",
   "market_interval_ms": 1000,
   "time_filters": [
     [
