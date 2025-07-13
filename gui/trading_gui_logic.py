@@ -390,16 +390,16 @@ class TradingGUILogicMixin:
         except Exception:
             self.sl_tp_manual_active.set(False)
             if hasattr(self, "manual_sl_button"):
-                self.manual_sl_button.config(foreground="red")
+            self.manual_sl_button.config(fg="red")
             self.log_event("❌ Ungültige manuelle SL/TP Werte")
             return
 
         self.sl_tp_manual_active.set(True)
         self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
-            self.manual_sl_button.config(foreground="green")
+            self.manual_sl_button.config(fg="green")
         if hasattr(self, "auto_sl_button"):
-            self.auto_sl_button.config(foreground="black")
+            self.auto_sl_button.config(fg="black")
         self.log_event("📝 Manuelle SL/TP aktiviert")
 
     def activate_auto_sl_tp(self):
@@ -407,9 +407,9 @@ class TradingGUILogicMixin:
         self.sl_tp_auto_active.set(True)
         self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
-            self.auto_sl_button.config(foreground="blue")
+            self.auto_sl_button.config(fg="blue")
         if hasattr(self, "manual_sl_button"):
-            self.manual_sl_button.config(foreground="black")
+            self.manual_sl_button.config(fg="black")
         self.log_event("⚙️ Adaptive SL/TP aktiviert")
 
     def set_auto_sl_status(self, ok: bool) -> None:
@@ -417,13 +417,13 @@ class TradingGUILogicMixin:
         self.sl_tp_auto_active.set(ok)
         if hasattr(self, "auto_sl_button"):
             color = "green" if ok else "red"
-            self.auto_sl_button.config(foreground=color)
+            self.auto_sl_button.config(fg=color)
 
     def set_manual_sl_status(self, ok: bool) -> None:
         self.sl_tp_manual_active.set(ok)
         if hasattr(self, "manual_sl_button"):
             color = "green" if ok else "red"
-            self.manual_sl_button.config(foreground=color)
+            self.manual_sl_button.config(fg=color)
 
 def stop_and_reset(self):
     self.force_exit = True
