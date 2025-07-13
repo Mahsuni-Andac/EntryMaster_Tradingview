@@ -231,13 +231,16 @@ def wait_for_initial_candles(
     interval: str,
     app: TradingGUILogicMixin | TradingGUI | None = None,
     required: int = 14,
+    timeout: int = 20,
 ) -> list[dict]:
-    """Blockiert bis ``required`` Kerzen empfangen wurden.
+    """Wait for at least ``required`` candles or until ``timeout`` seconds.
 
-    Damit steht ausreichend Historie für die ATR-Berechnung zur Verfügung.
+    Progress is reported via ``update_status`` to the GUI.
     """
 
+    start_time = time.time()
     last_logged = -1
+
     while True:
         candles = get_live_candles(symbol, interval, required)
         count = len(candles)
@@ -250,8 +253,22 @@ def wait_for_initial_candles(
                 gui_bridge.update_status(msg)
             return candles
 
+        elapsed = time.time() - start_time
+        if elapsed >= timeout:
+            msg = (
+                f"⚠️ Timeout beim Warten auf Candles – starte trotzdem ({count}/{required})"
+            )
+            logging.warning(msg)
+            if app and hasattr(app, "update_status"):
+                app.update_status(msg)
+            else:
+                gui_bridge.update_status(msg)
+            return candles
+
         if count != last_logged:
-            progress = f"⏳ Warte auf ATR-Berechnung... ({count}/{required} Candles erhalten)"
+            progress = (
+                f"⏳ Warte auf ATR-Berechnung... ({count}/{required} Candles erhalten)"
+            )
             logging.info(progress)
             if app and hasattr(app, "update_status"):
                 app.update_status(progress)
