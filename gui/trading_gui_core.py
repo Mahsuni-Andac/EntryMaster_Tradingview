@@ -12,7 +12,7 @@ from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 
 class TradingGUI(TradingGUILogicMixin):
-    def __init__(self, root, cred_manager: APICredentialManager | None = None):
+    def __init__(self, root, cred_manager: APICredentialManager | None = None, price_var: tk.StringVar | None = None):
         self.root = root
         # Set window title to reflect the new project name
         self.root.title("🧞‍♂️ EntryMaster_Tradingview – Kapital-Safe Edition")
@@ -24,6 +24,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.running = False
         self.force_exit = False
         self.live_pnl = 0.0
+        self.price_var = price_var or tk.StringVar(value="--")
 
         self.auto_apply_recommendations = tk.BooleanVar(value=False)
         self.auto_multiplier = tk.BooleanVar(value=False)
@@ -233,9 +234,7 @@ class TradingGUI(TradingGUILogicMixin):
         self._on_mode_toggle()
 
         # Preis-Anzeige oben rechts
-        from data_provider import init_price_var, price_var
-        init_price_var(self.root)
-        self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
+        self.price_label = ttk.Label(top_info, textvariable=self.price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
         # --- Hauptcontainer ---
@@ -556,10 +555,10 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")
 
-        from data_provider import fetch_last_price, websocket_active
+        from data_provider import fetch_last_price, is_websocket_running
 
         price = fetch_last_price("binance", symbol)
-        self.websocket_active = websocket_active()
+        self.websocket_active = is_websocket_running()
 
         stamp = datetime.now().strftime("%H:%M:%S")
         line = (

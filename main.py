@@ -22,12 +22,10 @@ from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
 from global_state import entry_time_global, ema_trend_global, atr_value_global
 from binance_ws import BinanceWebSocket
-import data_provider
 
 # Tk root and shared price variable
 root = tk.Tk()
-data_provider.init_price_var(root)
-price_var = data_provider.price_var
+price_var = tk.StringVar(value="--")
 
 init(autoreset=True)
 setup_logging()
@@ -148,7 +146,7 @@ def main():
     ws = BinanceWebSocket(update_price)
     ws.start()
     cred_manager = APICredentialManager()
-    gui = EntryMasterGUI(root, cred_manager=cred_manager)
+    gui = EntryMasterGUI(root, cred_manager=cred_manager, price_var=price_var)
     gui_bridge = GUIBridge(gui_instance=gui)
     gui.callback = lambda: on_gui_start(gui)
 

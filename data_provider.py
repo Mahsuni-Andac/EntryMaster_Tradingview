@@ -14,7 +14,6 @@ import time
 import threading
 
 import binance_ws
-from tkinter import Tk, StringVar
 
 
 # WebSocket manager and price cache
@@ -39,32 +38,9 @@ _WS_STARTED: bool = False
 _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _CANDLE_WS_STARTED: bool = False
 _WS_CANDLES: list["Candle"] = []
-_CANDLE_WARNING_SHOWN: bool = False
-_CANDLE_SYMBOL: str = "BTCUSDT"
-_CANDLE_INTERVAL: str = "1m"
+
 _FEED_MONITOR_THREAD: threading.Thread | None = None
 _FEED_MONITOR_STARTED: bool = False
-
-# Tk root used for Tkinter variables when none is provided
-_TK_ROOT: Tk | None = None
-
-
-# Tkinter variable updated by the WebSocket callback
-price_var: StringVar | None = None
-
-
-def init_price_var(master=None) -> None:
-    """Initialize ``price_var`` ensuring there is a valid ``Tk`` root."""
-    global price_var, _TK_ROOT
-    if master is None:
-        if _TK_ROOT is None:
-            _TK_ROOT = Tk()
-        master = _TK_ROOT
-    else:
-        _TK_ROOT = master
-
-    if price_var is None:
-        price_var = StringVar(master=master, value="--")
 
 
 def start_websocket(symbol: str = "BTCUSDT") -> None:
@@ -79,22 +55,18 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
             p = float(price)
             _WS_PRICE[symbol] = p
             WebSocketStatus.set_running(True)
-            if price_var is not None and _TK_ROOT is not None:
-                _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
-            else:
-                print("[WebSocket] \u274c price_var ist nicht initialisiert")
             try:
                 import global_state
                 global_state.last_feed_time = time.time()
             except Exception:
                 pass
         except Exception as e:  # pragma: no cover - just log
-            print("❌ WebSocket Fehler", e)
+            logging.error("WebSocket Fehler: %s", e)
 
     _WS_CLIENT = binance_ws.BinanceWebSocket(handle)
     _WS_CLIENT.start()
     _WS_STARTED = True
-    print("✅ WebSocket verbunden: Binance BTCUSDT")
+    logging.info("WebSocket verbunden: Binance BTCUSDT")
 
 
 def stop_websocket() -> None:
@@ -113,22 +85,15 @@ def stop_websocket() -> None:
 
 def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
     """Start candle websocket feed for *symbol* and *interval*."""
-    global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT, _CANDLE_SYMBOL, _CANDLE_INTERVAL
+    global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
     if _CANDLE_WS_STARTED:
-        print("⚠️ Candle-WebSocket bereits gestartet.")
+        logging.warning("Candle-WebSocket bereits gestartet")
         return
 
-    print("INFO WebSocket Candle-Stream gestartet")
+    logging.info("WebSocket Candle-Stream gestartet")
 
-    def handle(candle: dict) -> None:
-        print(
-            f"✅ Candle empfangen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
-        )
-
-    # let the websocket manager update the feed itself; callback only logs
-    _CANDLE_SYMBOL = symbol
-    _CANDLE_INTERVAL = interval
-    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle, symbol=symbol, interval=interval)
+    # pass None so BinanceCandleWebSocket forwards candles to update_candle_feed
+    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(None, symbol=symbol, interval=interval)
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
 
@@ -136,14 +101,14 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
     start_time = time.time()
     while time.time() - start_time < 10:
         if _WS_CANDLES:
-            print("✅ Erste Candle(s) empfangen – WebSocket läuft stabil")
+            logging.info("Erste Candle(s) empfangen – WebSocket läuft stabil")
             break
         time.sleep(0.5)
     else:
-        print("⚠️ Kein Candle-Update nach 10s")
+        logging.warning("Kein Candle-Update nach 10s")
 
     if not _FEED_MONITOR_STARTED:
-        monitor_feed()
+        monitor_feed(symbol, interval)
 
 
 def stop_candle_websocket() -> None:
@@ -157,15 +122,11 @@ def stop_candle_websocket() -> None:
         pass
     _CANDLE_WS_CLIENT = None
     _CANDLE_WS_STARTED = False
+    logging.info("Candle-WebSocket gestoppt")
 
 
-def _restart_candle_websocket() -> None:
-    """Restart the candle websocket using last parameters."""
-    stop_candle_websocket()
-    start_candle_websocket(_CANDLE_SYMBOL, _CANDLE_INTERVAL)
 
-
-def _monitor_loop() -> None:
+def _monitor_loop(symbol: str, interval: str) -> None:
     """Background watchdog checking for stalled candle feed."""
     global _FEED_MONITOR_STARTED
     last_ok: bool | None = None
@@ -177,37 +138,32 @@ def _monitor_loop() -> None:
             alive = last_ts is not None and time.time() - last_ts <= 30
             if not alive:
                 if last_ok is not False:
-                    print("❌ Feed tot – versuche Neustart")
+                    logging.warning("Feed tot – versuche Neustart")
                 stop_candle_websocket()
-                start_candle_websocket(_CANDLE_SYMBOL, _CANDLE_INTERVAL)
+                start_candle_websocket(symbol, interval)
                 last_ok = False
             else:
                 if last_ok is not True:
-                    print("✅ Candle-Feed aktiv")
+                    logging.info("Candle-Feed aktiv")
                 last_ok = True
         except Exception as exc:
-            print("⚠️ Feed-Monitor Fehler", exc)
+            logging.error("Feed-Monitor Fehler: %s", exc)
         time.sleep(20)
 
 
-def monitor_feed() -> None:
+def monitor_feed(symbol: str, interval: str) -> None:
     """Start feed monitor thread once."""
     global _FEED_MONITOR_STARTED, _FEED_MONITOR_THREAD
     if _FEED_MONITOR_STARTED:
         return
-    print("INFO Candle-Feed Monitor gestartet")
+    logging.info("Candle-Feed Monitor gestartet")
     _FEED_MONITOR_STARTED = True
-    _FEED_MONITOR_THREAD = threading.Thread(target=_monitor_loop, daemon=True)
+    _FEED_MONITOR_THREAD = threading.Thread(target=_monitor_loop, args=(symbol, interval), daemon=True)
     _FEED_MONITOR_THREAD.start()
 
 
 def is_websocket_running() -> bool:
     """Return ``True`` if the websocket manager is active."""
-    return WebSocketStatus.is_running()
-
-
-def websocket_active() -> bool:
-    """Return ``True`` if a websocket stream is delivering prices."""
     return WebSocketStatus.is_running()
 
 
@@ -248,6 +204,7 @@ def update_candle_feed(candle: Candle) -> None:
     if len(_WS_CANDLES) > 1000:
         _WS_CANDLES.pop(0)
     WebSocketStatus.set_running(True)
+    logging.debug("Candle gespeichert: %s", candle)
     try:
         import global_state
         global_state.last_feed_time = time.time()

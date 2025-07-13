@@ -129,9 +129,9 @@ class APICredentialFrame(ttk.LabelFrame):
         self.market_status_label.config(foreground=color)
 
     def check_market_feed(self) -> None:
-        from data_provider import websocket_active
+        from data_provider import is_websocket_running
 
-        ok = websocket_active()
+        ok = is_websocket_running()
         self.update_market_status(ok)
 
     # ------------------------------------------------------------------
