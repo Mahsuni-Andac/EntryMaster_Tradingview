@@ -105,20 +105,23 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
         return
 
     logger.info("WebSocket Candle-Stream gestartet")
-    # BinanceCandleWebSocket ruft intern update_candle_feed auf
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(
-        None, symbol=symbol, interval=interval
+        update_candle_feed, symbol=symbol, interval=interval
     )
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
 
     start_time = time.time()
+    error_logged = False
     while time.time() - start_time < 10:
         with _CANDLE_LOCK:
             has_candles = bool(_WS_CANDLES)
         if has_candles:
             logger.info("Erste Candle(s) empfangen – WebSocket läuft stabil")
             break
+        if not error_logged and time.time() - start_time >= 5:
+            logger.warning("FEED ERROR: Keine Candle-Daten empfangen nach 5s")
+            error_logged = True
         time.sleep(0.5)
     else:
         logger.warning(

@@ -5,7 +5,9 @@ import threading
 import json
 import time
 import logging
-from typing import Callable
+from typing import Callable, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class BaseWebSocket:
@@ -23,7 +25,7 @@ class BaseWebSocket:
                 self.ws = WebSocketApp(self.url, on_message=self.on_message)
                 self.ws.run_forever()
             except Exception as e:
-                print("WebSocket Fehler:", e)
+                logger.error("WebSocket Fehler: %s", e)
                 time.sleep(5)
 
     def start(self) -> None:
@@ -58,13 +60,13 @@ class BinanceWebSocket(BaseWebSocket):
                 if price:
                     self.on_price(price)
         except Exception as e:
-            print("WebSocket Fehler:", e)
+            logger.error("WebSocket Fehler: %s", e)
 
 
 class BinanceCandleWebSocket(BaseWebSocket):
     """WebSocket manager for Binance candle streams."""
 
-    def __init__(self, on_candle: Callable[[dict], None], symbol: str = "btcusdt", interval: str = "1m"):
+    def __init__(self, on_candle: Optional[Callable[[dict], None]] = None, symbol: str = "btcusdt", interval: str = "1m"):
         self.on_candle = on_candle
         self.symbol = symbol.lower()
         self.interval = interval
@@ -83,7 +85,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 )
                 self.ws.run_forever(ping_interval=10, ping_timeout=5)
             except Exception as e:
-                print("WebSocket Fehler:", e)
+                logger.error("WebSocket Fehler: %s", e)
                 time.sleep(5)
             else:
                 break
@@ -130,34 +132,31 @@ class BinanceCandleWebSocket(BaseWebSocket):
             )
 
             # push candle to data provider and update global feed timestamp
-            try:
-                from data_provider import update_candle_feed
-
-                update_candle_feed(candle)
-            except Exception as exc:  # pragma: no cover - runtime safety
-                if not self._warning_printed:
-                    print("⚠️ Fehler beim Weiterleiten der Candle", exc)
-                    self._warning_printed = True
+            if self.on_candle:
+                try:
+                    self.on_candle(candle)
+                except Exception as exc:  # pragma: no cover - runtime safety
+                    if not self._warning_printed:
+                        logger.warning(
+                            "Fehler beim Weiterleiten der Candle: %s", exc
+                        )
+                        self._warning_printed = True
 
             try:
                 import global_state
 
                 global_state.last_feed_time = time.time()
             except Exception as e:
-                print("❌ Fehler beim Setzen von last_feed_time:", e)
-
-            if self.on_candle:
-                # forward the candle to optional callback for further processing
-                self.on_candle(candle)
+                logger.error("Fehler beim Setzen von last_feed_time: %s", e)
         except Exception as e:
             if not self._warning_printed:
-                print("⚠️ Candle-Daten unvollständig oder fehlerhaft", e)
+                logger.warning("Candle-Daten unvollständig oder fehlerhaft: %s", e)
                 self._warning_printed = True
 
     def _on_error(self, ws, error):
         """Log websocket errors."""
-        print("❌ Candle-WS Fehler:", error)
+        logger.error("Candle-WS Fehler: %s", error)
 
     def _on_close(self, ws, status_code, msg):
         """Log websocket close events."""
-        print(f"🔌 Candle-WS geschlossen: {status_code} {msg}")
+        logger.info("Candle-WS geschlossen: %s %s", status_code, msg)
