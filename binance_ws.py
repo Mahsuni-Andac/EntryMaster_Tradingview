@@ -2,6 +2,7 @@ from websocket import WebSocketApp
 import threading
 import json
 import time
+import logging
 from typing import Callable
 
 
@@ -88,12 +89,23 @@ class BinanceCandleWebSocket(BaseWebSocket):
     def _on_message(self, ws, message):
         """Handle incoming kline messages and forward completed candles."""
         # Use actual emoji character to avoid encoding issues on some systems
-        print("📥 Raw:", message)
+        logging.debug("📥 Raw: %s", message)
         global last_candle_time
         try:
             data = json.loads(message)
             k = data.get("k")
-            if not k or not k.get("x"):
+            if not k:
+                return
+
+            # always update feed timestamp on any kline message
+            try:
+                import global_state
+
+                global_state.last_feed_time = time.time()
+            except Exception as e:
+                logging.error("Fehler beim Setzen von last_feed_time: %s", e)
+
+            if not k.get("x"):
                 return
 
             candle = {
@@ -108,8 +120,11 @@ class BinanceCandleWebSocket(BaseWebSocket):
             # keep internal timestamp for debug/analytics
             last_candle_time = time.time()
 
-            print(
-                f"✅ Candle abgeschlossen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
+            logging.debug(
+                "✅ Candle abgeschlossen: Open=%s, Close=%s, Vol=%s",
+                candle["open"],
+                candle["close"],
+                candle["volume"],
             )
 
             # push candle to data provider and update global feed timestamp
