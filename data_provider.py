@@ -127,6 +127,7 @@ def stop_candle_websocket() -> None:
             pass
     _CANDLE_WS_CLIENT = None
     _CANDLE_WS_STARTED = False
+    stop_feed_monitor()
     logger.info("Candle-WebSocket gestoppt")
 
 _FEED_STUCK_COUNT = 0
@@ -161,7 +162,6 @@ def _monitor_loop(symbol: str, interval: str) -> None:
                     start_candle_websocket(symbol, interval)
                     _FEED_STUCK_COUNT = 0
             else:
-                logger.debug("Candle-Feed aktiv (%s Candles)", current_len)
                 _FEED_STUCK_COUNT = 0
         except Exception as exc:
             logger.error("Feed-Monitor Fehler: %s", exc)
@@ -177,6 +177,14 @@ def monitor_feed(symbol: str, interval: str) -> None:
         target=_monitor_loop, args=(symbol, interval), daemon=True
     )
     _FEED_MONITOR_THREAD.start()
+
+def stop_feed_monitor() -> None:
+    global _FEED_MONITOR_STARTED, _FEED_MONITOR_THREAD
+    if _FEED_MONITOR_STARTED:
+        _FEED_MONITOR_STARTED = False
+        if _FEED_MONITOR_THREAD and _FEED_MONITOR_THREAD.is_alive():
+            _FEED_MONITOR_THREAD.join(timeout=1)
+        _FEED_MONITOR_THREAD = None
 
 def get_last_candle_time() -> Optional[float]:
     return binance_ws.last_candle_time
@@ -212,7 +220,6 @@ def update_candle_feed(candle: Candle) -> None:
         _WS_CANDLES.append(candle)
         if len(_WS_CANDLES) > _MAX_CANDLES:
             _WS_CANDLES.pop(0)
-        logger.debug("%d Candles im Feed", len(_WS_CANDLES))
 
     WebSocketStatus.set_running(True)
 
