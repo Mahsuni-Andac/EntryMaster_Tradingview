@@ -2,10 +2,9 @@ from websocket import WebSocketApp
 import threading
 import json
 import time
-from typing import Callable, Optional
+from typing import Callable
 
-on_candle_callback: Optional[Callable[[dict], None]] = None
-last_candle_time: Optional[float] = None
+last_candle_time: float | None = None
 
 
 class BinanceWebSocket:
@@ -89,14 +88,7 @@ class BinanceCandleWebSocket:
             print(
                 f"✅ Candle abgeschlossen: Open={candle['open']}, Close={candle['close']}"
             )
-            if on_candle_callback:
-                on_candle_callback(
-                    {
-                        "timestamp": candle["timestamp"],
-                        "open": candle["open"],
-                        "close": candle["close"],
-                    }
-                )
+            # forward the complete candle to the callback only once
             self.on_candle(candle)
         except Exception as e:
             if not self._warning_printed:
