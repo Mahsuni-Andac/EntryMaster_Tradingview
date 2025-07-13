@@ -185,6 +185,14 @@ def run_bot_live(settings=None, app=None):
             else:
                 candle_warning_printed = False
 
+            if not all(
+                k in candle and candle[k] is not None
+                for k in ("open", "high", "low", "close", "volume")
+            ):
+                print("⚠️ Candle-Daten unvollständig oder fehlerhaft", candle)
+                time.sleep(1)
+                continue
+
             # Update global timestamp for feed watchdog
             global_state.last_feed_time = time.time()
 
