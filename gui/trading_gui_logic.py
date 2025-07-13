@@ -281,12 +281,25 @@ class TradingGUILogicMixin:
     def log_event(self, msg):
         from central_logger import log_messages
 
+        ignore = ["Only Binance spot data supported", "Antwort unvollständig"]
+        if any(txt in msg for txt in ignore):
+            return
+
         for line in log_messages(msg):
             self.log_box.insert("end", f"{line}\n")
         lines = self.log_box.get("1.0", "end-1c").splitlines()
         if len(lines) > 30:
             self.log_box.delete("1.0", f"{len(lines)-30 + 1}.0")
         self.log_box.see("end")
+
+    def _log_error_once(self, text: str) -> None:
+        if not hasattr(self, "_error_cache"):
+            self._error_cache = set()
+        if text in self._error_cache:
+            return
+        self._error_cache.add(text)
+        stamp = datetime.now().strftime("%H:%M:%S")
+        self.log_event(f"[{stamp}] ❌ Wirksamkeit: {text}")
 
     def save_to_file(self, filename=TUNING_FILE):
         state = {}
@@ -303,6 +316,8 @@ class TradingGUILogicMixin:
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
             self.log_event("💾 Einstellungen gespeichert")
+            if hasattr(self, "neon_panel"):
+                self.neon_panel.set_status("saved", "green", "Konfiguration gespeichert")
         except Exception as e:
             self.log_event(f"Fehler beim Speichern: {e}")
 

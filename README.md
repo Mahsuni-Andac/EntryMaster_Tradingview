@@ -58,3 +58,26 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 - Diese Anzeige dient als Live-Status zur Preisreferenz für Nutzer und zur Verifikation des Systemzustands.
 - Bei Verbindungsproblemen wird "❌" angezeigt.
 
+## 🖥️ Grafische Oberfläche (GUI)
+
+### ✅ Live-Status & Systemanzeige
+
+- **Marktdatenstatus**:
+  - In der GUI wird angezeigt, ob Binance BTCUSDT-Marktdaten erfolgreich empfangen werden.
+  - Beispiel: `✅ Marktdaten kommen an`
+
+- **Wirksamkeitsstatus**:
+  - Direkt daneben wird der Zustand des Systems bewertet.
+  - Beispiel: `✅ Alle Systeme laufen fehlerfrei` oder `❌ System macht Fehler!`
+
+- **Fehleranzeige im Log**:
+  - Wenn ein Problem erkannt wird, erscheint unten im GUI-Log ein Eintrag mit Zeitstempel und Fehlerursache – aber nur einmal pro Fehler (kein Spam).
+
+- **Status-Glühbirnen (rechts)**:
+  - Zeigen kompakten Überblick über Systemelemente wie:
+    - BitMEX API verbunden
+    - Paper-Trading aktiv
+    - Preisfeed OK
+    - Konfiguration gespeichert
+  - Farbige Punkte mit Beschreibungstooltips
+

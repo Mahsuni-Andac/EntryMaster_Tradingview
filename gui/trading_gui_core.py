@@ -46,6 +46,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.log_box = None
         self.auto_status_label = None
         self.live_trading = tk.BooleanVar(value=False)
+        self.paper_mode = tk.BooleanVar(value=True)
         self.trading_mode = tk.StringVar(value="paper")
         self.mode_label = None
 
@@ -85,6 +86,8 @@ class TradingGUI(TradingGUILogicMixin):
             "safe": ("Sicherheitsfilter", self.andac_opt_safe_mode),
             "vol": ("Volumenfilter", self.andac_opt_volumen_strong),
             "session": ("Session Filter", self.andac_opt_session_filter),
+            "paper": ("Paper-Trading aktiv", self.paper_mode),
+            "saved": ("Konfiguration gespeichert", None),
         }
 
         self._neon_vars = {}
@@ -94,6 +97,8 @@ class TradingGUI(TradingGUILogicMixin):
                 self._neon_vars[key] = var
                 var.trace_add("write", lambda *a, k=key, v=var: self._update_neon_var(k, v))
                 self._update_neon_var(key, var)
+        # initial state for "saved" indicator
+        self.neon_panel.set_status("saved", "blue", "Noch nicht gespeichert")
 
     def _update_neon_var(self, key, var):
         color = "green" if var.get() else "blue"
@@ -111,6 +116,7 @@ class TradingGUI(TradingGUILogicMixin):
 
     def _on_mode_toggle(self):
         self.live_trading.set(self.trading_mode.get() == "live")
+        self.paper_mode.set(not self.live_trading.get())
         self._update_mode_label()
 
     def _init_variables(self):
@@ -422,36 +428,19 @@ class TradingGUI(TradingGUILogicMixin):
         self.backend_settings = {}
         self.status_labels = {}
         self.status_rows = {}
-        frame = ttk.LabelFrame(self.root, text="Wirksamkeitsstatus")
-        frame.pack(padx=10, pady=5, fill="both", expand=True)
+        self.logged_errors = set()
 
-        # Canvas für Scrollfunktion
-        canvas = tk.Canvas(frame, highlightthickness=0)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
+        self.system_status_var = tk.StringVar(value="")
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
+            self.api_frame.system_status_label.config(textvariable=self.system_status_var)
 
-        inner = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=inner, anchor="nw")
-
-        def _on_config(_event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            if inner.winfo_reqheight() > canvas.winfo_height():
-                if not scrollbar.winfo_ismapped():
-                    scrollbar.pack(side="right", fill="y")
-            else:
-                if scrollbar.winfo_ismapped():
-                    scrollbar.pack_forget()
-
-        inner.bind("<Configure>", _on_config)
-        self.root.bind("<Configure>", _on_config)
-
-        self.all_ok_label = ttk.Label(inner, text="", foreground="green")
+        # Invisible container to keep widgets for tests
+        frame = ttk.Frame(self.root)
+        self.all_ok_label = ttk.Label(frame, text="", foreground="green")
         self.all_ok_label.grid(row=0, column=0, sticky="w")
         row_index = 1
         for name, var in sorted(self.setting_vars.items()):
-            row = ttk.Frame(inner)
+            row = ttk.Frame(frame)
             row.grid(row=row_index, column=0, columnspan=2, sticky="w")
             ttk.Label(row, text=name).pack(side="left")
             lbl = ttk.Label(row, text="", foreground="red")
@@ -462,7 +451,8 @@ class TradingGUI(TradingGUILogicMixin):
             self.update_setting_status(name, var)
             row_index += 1
 
-        _on_config()
+        # Keep frame hidden
+        frame.pack_forget()
         self.root.after(1000, self.update_all_status_labels)
         self._update_all_ok_label()
 
@@ -494,13 +484,13 @@ class TradingGUI(TradingGUILogicMixin):
                 label.config(text="inaktiv", foreground="red")
                 if not row.winfo_ismapped():
                     row.grid()
-                self.log_event(f"⚠️ {name} greift nicht")
+                self._log_error_once(f"{name} greift nicht")
         except Exception as e:
             row = self.status_rows[name]
             self.status_labels[name].config(text=f"Fehler: {e}", foreground="orange")
             if not row.winfo_ismapped():
                 row.grid()
-            self.log_event(f"{name} Fehler: {e}")
+            self._log_error_once(f"{name} Fehler: {e}")
         self._update_all_ok_label()
 
     def update_all_status_labels(self):
@@ -512,12 +502,18 @@ class TradingGUI(TradingGUILogicMixin):
     def _update_all_ok_label(self):
         any_visible = any(row.winfo_ismapped() for row in self.status_rows.values())
         if any_visible:
-            if self.all_ok_label.winfo_ismapped():
-                self.all_ok_label.grid_remove()
+            text = "❌ System macht Fehler!"
+            color = "red"
         else:
-            self.all_ok_label.config(text="✅ Alle Systeme laufen fehlerfrei")
-            if not self.all_ok_label.winfo_ismapped():
-                self.all_ok_label.grid()
+            text = "✅ Alle Systeme laufen fehlerfrei"
+            color = "green"
+
+        self.all_ok_label.config(text=text, foreground=color)
+
+        if hasattr(self, "system_status_var"):
+            self.system_status_var.set(text)
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
+            self.api_frame.system_status_label.config(foreground=color)
 
     # MARKTDATEN-MONITOR -------------------------------------------------
     def _update_market_monitor(self) -> None:
