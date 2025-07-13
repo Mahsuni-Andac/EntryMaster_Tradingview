@@ -45,6 +45,8 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 
 ## 📡 Datenquelle
 
+Der EntryMaster Bot nutzt WebSocket-Preisdaten von Binance BTCUSDT. Bei Fehler erfolgt ein automatischer Fallback auf REST. Die Quelle wird live in der GUI angezeigt. Die WebSocket-Verbindung ist stabil, einmalig und kollisionsfrei mit der Tkinter-Oberfläche integriert.
+
 Der Bot kann Binance-Marktdaten über einen WebSocket-Stream oder per REST-API beziehen.
 In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** auswählen.
 Im Auto-Modus wird zuerst versucht, einen WebSocket aufzubauen. Schlägt das fehl oder bricht die Verbindung ab, stellt der Bot automatisch auf REST um. Läuft der WebSocket bereits, wird er nicht erneut gestartet. Beim Wechsel des Datenmodus wird ein vorhandener Stream vorher mit `twm.stop()` beendet. Der aktuell genutzte Modus wird in der GUI angezeigt:

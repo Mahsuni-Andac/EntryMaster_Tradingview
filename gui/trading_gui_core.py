@@ -227,7 +227,8 @@ class TradingGUI(TradingGUILogicMixin):
         self._on_mode_toggle()
 
         # Preis-Anzeige oben rechts
-        from data_provider import price_var
+        from data_provider import init_price_var, price_var
+        init_price_var(self.root)
         self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
