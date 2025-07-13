@@ -17,6 +17,7 @@ import time
 
 from binance.client import Client
 from binance import ThreadedWebsocketManager  # for optional WebSocket feed
+from tkinter import StringVar
 
 from config import SETTINGS
 
@@ -28,10 +29,14 @@ _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
 _WS_LOCK = threading.Lock()
 
+# Tkinter variable updated by the WebSocket callback
+price_var = StringVar(value="")
+
 
 def start_websocket(symbol: str = "BTCUSDT") -> None:
     """Public helper to start the websocket feed."""
-    _init_websocket(symbol)
+    if _WS_MANAGER is None or not _WS_MANAGER.is_alive():
+        _init_websocket(symbol)
 
 
 def is_websocket_running() -> bool:
@@ -47,10 +52,10 @@ def websocket_active() -> bool:
 def _init_websocket(symbol: str) -> None:
     """Start a websocket price feed for *symbol* if not running."""
     global _WS_MANAGER, _WEBSOCKET_RUNNING
-    if _WEBSOCKET_RUNNING:
+    if _WS_MANAGER is not None and _WS_MANAGER.is_alive():
         return
     with _WS_LOCK:
-        if _WEBSOCKET_RUNNING:
+        if _WS_MANAGER is not None and _WS_MANAGER.is_alive():
             return
         try:
             _WS_MANAGER = ThreadedWebsocketManager()
@@ -65,6 +70,7 @@ def _init_websocket(symbol: str) -> None:
                 if price is not None:
                     _WS_PRICE[symbol] = float(price)
                     _WEBSOCKET_RUNNING = True
+                    price_var.set(str(price))
                     try:
                         import global_state
                         global_state.last_feed_time = time.time()
@@ -90,6 +96,7 @@ def stop_websocket() -> None:
             _WS_MANAGER = None
         _WEBSOCKET_RUNNING = False
         _WS_PRICE.clear()
+        price_var.set("")
 
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
@@ -143,6 +150,7 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         data = _BINANCE.get_symbol_ticker(symbol=pair)
         price = float(data["price"])
         logging.debug("Price update %s: %.2f", pair, price)
+        price_var.set(str(price))
         return price
     except Exception as exc:
         logging.debug("Failed to fetch %s: %s", pair, exc)

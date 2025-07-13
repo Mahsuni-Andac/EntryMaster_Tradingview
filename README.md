@@ -43,18 +43,16 @@ python main.py
 Die GUI fragt die BitMEX-Zugangsdaten ab und zeigt fortlaufend die Binance-Spot-
 Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter kann jederzeit vom Simulationsmodus in den Live-Betrieb gewechselt werden.
 
-## Datenquellen & Modus
+## 📡 Datenquelle
 
 Der Bot kann Binance-Marktdaten über einen WebSocket-Stream oder per REST-API beziehen.
 In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** auswählen.
-Im Auto-Modus versucht der Bot zunächst den WebSocket-Stream und schaltet bei
-Problemen automatisch auf REST um. Der aktuell verwendete Modus wird in der GUI
-live angezeigt:
+Im Auto-Modus wird zuerst versucht, einen WebSocket aufzubauen. Schlägt das fehl oder bricht die Verbindung ab, stellt der Bot automatisch auf REST um. Läuft der WebSocket bereits, wird er nicht erneut gestartet. Beim Wechsel des Datenmodus wird ein vorhandener Stream vorher mit `twm.stop()` beendet. Der aktuell genutzte Modus wird in der GUI angezeigt:
 
-Der WebSocket wird dabei nur einmal gestartet und bleibt aktiv, bis der Modus geändert wird. Beim Wechsel des Datenmodus werden laufende Streams sauber beendet und bei Bedarf neu aufgebaut. Dadurch werden Konflikte im Eventloop zuverlässig vermieden.
+Der WebSocket wird nur einmal gestartet und bleibt aktiv, bis der Modus geändert wird. Beim Wechsel des Datenmodus werden laufende Streams sauber beendet, damit keine doppelten Verbindungen entstehen.
 
-- **🟢 WebSocket kommt an** – Stream aktiv
-- **🔴 REST kommt an** – Fallback auf REST
+- **🟢 WebSocket aktiv** – Stream aktiv
+- **🔴 REST aktiv** – Fallback auf REST
 
 ## Trading-Modi: Paper vs. Live
 
