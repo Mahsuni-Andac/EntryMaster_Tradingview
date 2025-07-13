@@ -18,22 +18,26 @@ class BaseWebSocket:
         self.on_message = on_message
         self.ws: WebSocketApp | None = None
         self.thread: threading.Thread | None = None
+        self._running = False
 
     def _run(self) -> None:
-        while True:
+        time.sleep(2)
+        while self._running:
             try:
                 self.ws = WebSocketApp(self.url, on_message=self.on_message)
-                self.ws.run_forever()
+                self.ws.run_forever(ping_interval=20, ping_timeout=10)
             except Exception as e:
                 logger.error("WebSocket Fehler: %s", e)
                 time.sleep(5)
 
     def start(self) -> None:
         if not self.thread or not self.thread.is_alive():
+            self._running = True
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
 
     def stop(self) -> None:
+        self._running = False
         if self.ws:
             try:
                 self.ws.close()
@@ -80,7 +84,8 @@ class BinanceCandleWebSocket(BaseWebSocket):
         self._warning_printed = False
 
     def _run(self) -> None:
-        while True:
+        time.sleep(2)
+        while self._running:
             try:
                 self.ws = WebSocketApp(
                     self.url,
@@ -88,12 +93,10 @@ class BinanceCandleWebSocket(BaseWebSocket):
                     on_error=self._on_error,
                     on_close=self._on_close,
                 )
-                self.ws.run_forever(ping_interval=10, ping_timeout=5)
+                self.ws.run_forever(ping_interval=20, ping_timeout=10)
             except Exception as e:
                 logger.error("WebSocket Fehler: %s", e)
                 time.sleep(5)
-            else:
-                break
 
     def _on_message(self, ws, message):
         logging.debug("📥 Raw: %s", message)
@@ -101,7 +104,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
         try:
             data = json.loads(message)
             k = data.get("k")
-            if not k:
+            if not k or not k.get("x"):
                 return
 
             try:
@@ -109,9 +112,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 global_state.last_feed_time = time.time()
             except Exception as e:
                 logging.error("Fehler beim Setzen von last_feed_time: %s", e)
-
-            if not k.get("x"):
-                return
 
             candle_ts = k.get("t") // 1000
             now = int(datetime.now(tz=timezone.utc).timestamp())
@@ -147,12 +147,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
                     if not self._warning_printed:
                         logger.warning("Fehler beim Weiterleiten der Candle: %s", exc)
                         self._warning_printed = True
-
-            try:
-                import global_state
-                global_state.last_feed_time = time.time()
-            except Exception as e:
-                logger.error("Fehler beim Setzen von last_feed_time: %s", e)
         except Exception as e:
             if not self._warning_printed:
                 logger.warning("Candle-Daten unvollständig oder fehlerhaft: %s", e)
@@ -160,10 +154,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
     def _on_error(self, ws, error):
         logger.error("Candle-WS Fehler: %s", error)
-
-    def _on_close(self, ws, status_code, msg):
-        logger.info("Candle-WS geschlossen: %s %s", status_code, msg)
-
 
     def _on_close(self, ws, status_code, msg):
         logger.info("Candle-WS geschlossen: %s %s", status_code, msg)
