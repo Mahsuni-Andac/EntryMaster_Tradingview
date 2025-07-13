@@ -110,15 +110,10 @@ class SystemMonitor:
         self._feed_ok = False
 
     def _handle_feed_up(self) -> None:
-        if not self._feed_ok:
-            if hasattr(self.gui, "update_feed_status"):
-                self.gui.update_feed_status(True)
-            StatusDispatcher.dispatch("feed", True)
-            if not getattr(self.gui, "running", False) and self._pause_reason == "feed":
-                self.gui.running = True
-            self._pause_reason = None
-        else:
-            if hasattr(self.gui, "update_feed_status"):
-                self.gui.update_feed_status(True)
-            StatusDispatcher.dispatch("feed", True)
+        if not self._feed_ok and not getattr(self.gui, "running", False) and self._pause_reason == "feed":
+            self.gui.running = True
+        self._pause_reason = None
+        if hasattr(self.gui, "update_feed_status"):
+            self.gui.update_feed_status(True)
+        StatusDispatcher.dispatch("feed", True)
         self._feed_ok = True
