@@ -390,7 +390,8 @@ class TradingGUILogicMixin:
         except Exception:
             self.sl_tp_manual_active.set(False)
             if hasattr(self, "manual_sl_button"):
-            self.manual_sl_button.config(fg="red")
+                # Button rot einfärben, um ungültige Eingabe zu signalisieren
+                self.manual_sl_button.config(fg="red")
             self.log_event("❌ Ungültige manuelle SL/TP Werte")
             return
 
