@@ -1,8 +1,11 @@
 # config.py
 
+BINANCE_SYMBOL = "BTCUSDT"
+BINANCE_INTERVAL = "1m"
+
 SETTINGS = {
-    "symbol": "BTCUSDT",
-    "interval": "1m",
+    "symbol": BINANCE_SYMBOL,
+    "interval": BINANCE_INTERVAL,
     "starting_balance": 1000,
     "leverage": 20,
     "stop_loss_atr_multiplier": 0.5,

@@ -7,6 +7,7 @@ import time
 import logging
 from typing import Callable, Optional
 from datetime import datetime, timezone
+from config import BINANCE_SYMBOL, BINANCE_INTERVAL
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ last_candle_time: float | None = None
 
 class BinanceWebSocket(BaseWebSocket):
     def __init__(self, on_price: Callable[[str], None]):
-        url = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
+        url = f"wss://stream.binance.com:9443/ws/{BINANCE_SYMBOL.lower()}@kline_{BINANCE_INTERVAL}"
         super().__init__(url, self._on_message)
         self.on_price = on_price
 
@@ -75,12 +76,10 @@ class BinanceCandleWebSocket(BaseWebSocket):
     def __init__(
         self,
         on_candle: Optional[Callable[[dict], None]] = None,
-        symbol: str = "btcusdt",
-        interval: str = "1m",
     ):
         self.on_candle = on_candle
-        self.symbol = symbol.lower()
-        self.interval = interval
+        self.symbol = BINANCE_SYMBOL.lower()
+        self.interval = BINANCE_INTERVAL
         url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
         super().__init__(url, self._on_message)
         self._warning_printed = False

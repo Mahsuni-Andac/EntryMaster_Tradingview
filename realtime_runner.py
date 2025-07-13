@@ -16,6 +16,7 @@ from data_provider import (
     get_live_candles,
     start_candle_websocket,
 )
+from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
 from exit_handler import close_position
 from cooldown_manager import CooldownManager
@@ -211,8 +212,6 @@ def emergency_exit_position(app):
 
 
 def wait_for_initial_candles(
-    symbol: str,
-    interval: str,
     app: TradingGUILogicMixin | TradingGUI | None = None,
     required: int = 14,
     timeout: int = 20,
@@ -222,7 +221,7 @@ def wait_for_initial_candles(
     last_logged = -1
 
     while True:
-        candles = get_live_candles(symbol, interval, required)
+        candles = get_live_candles(required)
         count = len(candles)
         if count >= required:
             msg = "✅ ATR bereit – Starte Bot-Logik."
@@ -267,7 +266,7 @@ def run_bot_live(settings=None, app=None):
     print_start_banner(capital)
 
     if not data_provider._CANDLE_WS_STARTED:
-        start_candle_websocket(settings["symbol"], settings.get("interval", "1m"))
+        start_candle_websocket()
     else:
         logging.info("Candle WebSocket already running")
 
@@ -281,13 +280,11 @@ def run_bot_live(settings=None, app=None):
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
     start_capital = capital
-    interval = gui_bridge.interval
+    interval = BINANCE_INTERVAL
     auto_multi = gui_bridge.auto_multiplier
 
     ATR_REQUIRED = 14
-    candles_ready = wait_for_initial_candles(
-        settings["symbol"], interval, app, ATR_REQUIRED
-    )
+    candles_ready = wait_for_initial_candles(app, ATR_REQUIRED)
     atr_tmp = calculate_atr(candles_ready, ATR_REQUIRED)
     atr_value_global = atr_tmp
     if app and hasattr(app, "update_status"):
@@ -354,8 +351,8 @@ def run_bot_live(settings=None, app=None):
             continue
 
         try:
-            candle = fetch_latest_candle(settings["symbol"], interval)
-            price = fetch_last_price("binance", settings["symbol"])
+            candle = fetch_latest_candle()
+            price = fetch_last_price()
             stamp = datetime.now().strftime("%H:%M:%S")
             if price is None and hasattr(app, "log_event"):
                 app.log_event("Keine Marktdaten – Exchange: BINANCE")
@@ -416,7 +413,7 @@ def run_bot_live(settings=None, app=None):
         if entry_type:
             log_msg = (
                 f"[{stamp}] Signal erkannt: {entry_type.upper()} "
-                f"({settings['symbol']} @ {close_price:.2f})"
+                f"({BINANCE_SYMBOL} @ {close_price:.2f})"
             )
             print(log_msg)
             if hasattr(app, "log_event"):

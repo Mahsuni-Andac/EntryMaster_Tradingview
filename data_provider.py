@@ -9,6 +9,7 @@ import threading
 
 import binance_ws
 from tkinter import Tk, StringVar
+from config import BINANCE_SYMBOL, BINANCE_INTERVAL
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def init_price_var(master: Tk) -> None:
     if price_var is None:
         price_var = StringVar(master=master, value="--")
 
-def start_websocket(symbol: str = "BTCUSDT") -> None:
+def start_websocket() -> None:
     global _WS_STARTED, _WS_CLIENT
 
     if _WS_STARTED and _WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive():
@@ -55,7 +56,7 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
     def handle(price: str) -> None:
         try:
             p = float(price)
-            _WS_PRICE[symbol] = p
+            _WS_PRICE[BINANCE_SYMBOL] = p
             WebSocketStatus.set_running(True)
             if price_var and _TK_ROOT:
                 _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
@@ -65,7 +66,7 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
     _WS_CLIENT = binance_ws.BinanceWebSocket(handle)
     _WS_CLIENT.start()
     _WS_STARTED = True
-    logger.info("WebSocket verbunden: Binance BTCUSDT")
+    logger.info("WebSocket verbunden: Binance %s", BINANCE_SYMBOL)
 
 def stop_websocket() -> None:
     global _WS_CLIENT, _WS_STARTED
@@ -79,7 +80,7 @@ def stop_websocket() -> None:
     WebSocketStatus.set_running(False)
     logger.info("WebSocket gestoppt")
 
-def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
+def start_candle_websocket() -> None:
     global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
 
     if (
@@ -96,7 +97,7 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
 
     logger.info("WebSocket Candle-Stream gestartet")
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(
-        update_candle_feed, symbol=symbol, interval=interval
+        update_candle_feed
     )
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
@@ -119,7 +120,7 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
         )
 
     if not _FEED_MONITOR_STARTED:
-        monitor_feed(symbol, interval)
+        monitor_feed()
 
 def stop_candle_websocket() -> None:
     global _CANDLE_WS_CLIENT, _CANDLE_WS_STARTED
@@ -137,7 +138,7 @@ _FEED_STUCK_COUNT = 0
 _FEED_LAST_LEN = 0
 
 
-def _monitor_loop(symbol: str, interval: str) -> None:
+def _monitor_loop() -> None:
     global _FEED_MONITOR_STARTED, _FEED_STUCK_COUNT, _FEED_LAST_LEN
 
     while _FEED_MONITOR_STARTED:
@@ -163,14 +164,14 @@ def _monitor_loop(symbol: str, interval: str) -> None:
                 if _FEED_STUCK_COUNT >= 2:
                     stop_candle_websocket()
                     if not _CANDLE_WS_STARTED:
-                        start_candle_websocket(symbol, interval)
+                        start_candle_websocket()
                     _FEED_STUCK_COUNT = 0
             else:
                 _FEED_STUCK_COUNT = 0
         except Exception as exc:
             logger.error("Feed-Monitor Fehler: %s", exc)
 
-def monitor_feed(symbol: str, interval: str) -> None:
+def monitor_feed() -> None:
     global _FEED_MONITOR_STARTED, _FEED_MONITOR_THREAD
     if _FEED_MONITOR_STARTED and _FEED_MONITOR_THREAD and _FEED_MONITOR_THREAD.is_alive():
         return
@@ -178,7 +179,7 @@ def monitor_feed(symbol: str, interval: str) -> None:
     logger.info("Candle-Feed Monitor gestartet")
     _FEED_MONITOR_STARTED = True
     _FEED_MONITOR_THREAD = threading.Thread(
-        target=_monitor_loop, args=(symbol, interval), daemon=True
+        target=_monitor_loop, daemon=True
     )
     _FEED_MONITOR_THREAD.start()
 
@@ -193,15 +194,13 @@ def stop_feed_monitor() -> None:
 def get_last_candle_time() -> Optional[float]:
     return binance_ws.last_candle_time
 
-def _fetch_ws_price(symbol: str) -> Optional[float]:
+def _fetch_ws_price() -> Optional[float]:
     if not _WS_STARTED or not (_WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive()):
-        start_websocket(symbol)
-    price = _WS_PRICE.get(symbol)
+        start_websocket()
+    price = _WS_PRICE.get(BINANCE_SYMBOL)
     WebSocketStatus.set_running(price is not None)
     return price
 
-def _normalize_symbol(symbol: str) -> str:
-    return symbol.replace("/", "").replace("_", "").upper()
 
 class Candle(TypedDict):
     timestamp: int
@@ -228,24 +227,20 @@ def update_candle_feed(candle: Candle) -> None:
 
     WebSocketStatus.set_running(True)
 
-def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) -> Optional[float]:
-    if exchange.lower() != "binance":
-        logger.debug("Ignoring price request for unsupported exchange %s", exchange)
-        return None
-    pair = _normalize_symbol(symbol or "BTCUSDT")
-    return _fetch_ws_price(pair)
+def fetch_last_price() -> Optional[float]:
+    return _fetch_ws_price()
 
-def get_latest_candle_batch(symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100) -> List[Candle]:
-    return get_live_candles(symbol, interval, limit)
+def get_latest_candle_batch(limit: int = 100) -> List[Candle]:
+    return get_live_candles(limit)
 
-def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
+def get_live_candles(limit: int) -> List[Candle]:
     if not _CANDLE_WS_STARTED:
-        start_candle_websocket(symbol, interval)
+        start_candle_websocket()
     with _CANDLE_LOCK:
         return list(_WS_CANDLES[-limit:])
 
-def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:
-    candles = get_latest_candle_batch(symbol, interval, 1)
+def fetch_latest_candle() -> Optional[Candle]:
+    candles = get_latest_candle_batch(1)
     candle = candles[-1] if candles else None
     if candle and not is_candle_valid(candle):
         logger.warning("fetch_latest_candle: incomplete data %s", candle)

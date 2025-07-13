@@ -11,13 +11,12 @@ EXCHANGES = ["Binance"]
 
 class APICredentialFrame(ttk.LabelFrame):
 
-    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None, select_callback=None) -> None:
+    def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None) -> None:
         super().__init__(master, text="Exchange API")
         self.cred_manager = cred_manager
         self.log_callback = log_callback
-        self.select_callback = select_callback
 
-        self.active_exchange = tk.StringVar(value="")
+        self.active_exchange = tk.StringVar(value=EXCHANGES[0])
 
         self.vars: Dict[str, Dict[str, tk.Variable]] = {}
         self.status_vars: Dict[str, tk.StringVar] = {}
@@ -25,10 +24,8 @@ class APICredentialFrame(ttk.LabelFrame):
 
         self.data_source_mode = tk.StringVar(value="websocket")
 
-        ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
-        box = ttk.Combobox(self, state="readonly", values=EXCHANGES, textvariable=self.active_exchange, width=10)
-        box.grid(row=0, column=1, sticky="w")
-        box.bind("<<ComboboxSelected>>", lambda _e: self._on_select())
+        ttk.Label(self, text="Exchange:").grid(row=0, column=0, sticky="w")
+        ttk.Label(self, text=EXCHANGES[0]).grid(row=0, column=1, sticky="w")
 
         start_row = 1
         for idx, exch in enumerate(EXCHANGES):
@@ -77,8 +74,6 @@ class APICredentialFrame(ttk.LabelFrame):
         self.feed_mode_label = ttk.Label(status_row, textvariable=self.feed_mode, foreground="green")
         self.feed_mode_label.pack(side="left", padx=(10, 0))
 
-        self._select_exchange("")
-
         term_frame = tk.Frame(self, bg="black")
         term_frame.grid(row=0, column=4, rowspan=len(EXCHANGES)+1, padx=5, sticky="ne")
         self.price_terminal = tk.Text(term_frame, height=6, width=24, bg="black", fg="green", state="disabled")
@@ -86,22 +81,6 @@ class APICredentialFrame(ttk.LabelFrame):
 
         self.check_market_feed()
 
-    def _select_exchange(self, exch: str) -> None:
-        for name in EXCHANGES:
-            data = self.vars[name]
-            state = "normal" if name == exch else "disabled"
-            data["entry1"].config(state=state)
-            data["entry2"].config(state=state)
-            if name != exch:
-                self.status_vars[name].set("⚪")
-                self.status_labels[name].config(foreground="grey")
-
-    def _on_select(self) -> None:
-        exch = self.active_exchange.get()
-        self._select_exchange(exch)
-        if self.select_callback:
-            self.select_callback(exch)
-        self.check_market_feed()
 
 
     def log_price(self, text: str, error: bool = False) -> None:
@@ -127,13 +106,7 @@ class APICredentialFrame(ttk.LabelFrame):
         self.update_market_status(ok)
 
     def _save(self) -> None:
-        exch = self.active_exchange.get()
-        if not exch:
-            if self.log_callback:
-                self.log_callback("Keine Exchange gewählt")
-            else:
-                messagebox.showinfo("Status", "Bitte Exchange wählen")
-            return
+        exch = EXCHANGES[0]
         data = self.vars[exch]
         key = data["key"].get().strip()
         secret = data["secret"].get().strip()
