@@ -53,22 +53,6 @@ class BaseWebSocket:
 last_candle_time: float | None = None
 
 
-class BinanceWebSocket(BaseWebSocket):
-    def __init__(self, on_price: Callable[[str], None]):
-        url = f"wss://stream.binance.com:9443/ws/{BINANCE_SYMBOL.lower()}@kline_{BINANCE_INTERVAL}"
-        super().__init__(url, self._on_message)
-        self.on_price = on_price
-
-    def _on_message(self, ws, message) -> None:
-        try:
-            data = json.loads(message)
-            k = data.get("k")
-            if k and k.get("x"):
-                price = k.get("c")
-                if price:
-                    self.on_price(price)
-        except Exception as e:
-            logger.error("WebSocket Fehler: %s", e)
 
 
 class BinanceCandleWebSocket(BaseWebSocket):

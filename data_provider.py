@@ -13,13 +13,10 @@ from config import BINANCE_SYMBOL, BINANCE_INTERVAL
 
 logger = logging.getLogger(__name__)
 
-_WS_CLIENT: binance_ws.BinanceWebSocket | None = None
-_WS_PRICE: dict[str, float] = {}
 _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _WS_CANDLES: list[Candle] = []
 _CANDLE_LOCK = threading.Lock()
 _MAX_CANDLES = 1000
-_WS_STARTED: bool = False
 _CANDLE_WS_STARTED: bool = False
 _FEED_MONITOR_THREAD: threading.Thread | None = None
 _FEED_MONITOR_STARTED: bool = False
@@ -43,42 +40,6 @@ def init_price_var(master: Tk) -> None:
     _TK_ROOT = master
     if price_var is None:
         price_var = StringVar(master=master, value="--")
-
-def start_websocket() -> None:
-    global _WS_STARTED, _WS_CLIENT
-
-    if _WS_STARTED and _WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive():
-        return
-    if _WS_STARTED:
-        stop_websocket()
-        logger.info("Price WebSocket neu gestartet")
-
-    def handle(price: str) -> None:
-        try:
-            p = float(price)
-            _WS_PRICE[BINANCE_SYMBOL] = p
-            WebSocketStatus.set_running(True)
-            if price_var and _TK_ROOT:
-                _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
-        except Exception as exc:
-            logger.error("WebSocket Fehler: %s", exc)
-
-    _WS_CLIENT = binance_ws.BinanceWebSocket(handle)
-    _WS_CLIENT.start()
-    _WS_STARTED = True
-    logger.info("WebSocket verbunden: Binance %s", BINANCE_SYMBOL)
-
-def stop_websocket() -> None:
-    global _WS_CLIENT, _WS_STARTED
-    if _WS_CLIENT:
-        try:
-            _WS_CLIENT.stop()
-        except Exception:
-            pass
-    _WS_CLIENT = None
-    _WS_STARTED = False
-    WebSocketStatus.set_running(False)
-    logger.info("WebSocket gestoppt")
 
 def start_candle_websocket() -> None:
     global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
@@ -194,12 +155,6 @@ def stop_feed_monitor() -> None:
 def get_last_candle_time() -> Optional[float]:
     return binance_ws.last_candle_time
 
-def _fetch_ws_price() -> Optional[float]:
-    if not _WS_STARTED or not (_WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive()):
-        start_websocket()
-    price = _WS_PRICE.get(BINANCE_SYMBOL)
-    WebSocketStatus.set_running(price is not None)
-    return price
 
 
 class Candle(TypedDict):
@@ -225,10 +180,19 @@ def update_candle_feed(candle: Candle) -> None:
         if len(_WS_CANDLES) > _MAX_CANDLES:
             _WS_CANDLES.pop(0)
 
+    if price_var and _TK_ROOT:
+        try:
+            _TK_ROOT.after(0, lambda val=candle["close"]: price_var.set(str(val)))
+        except Exception:
+            pass
+
     WebSocketStatus.set_running(True)
 
 def fetch_last_price() -> Optional[float]:
-    return _fetch_ws_price()
+    candle = fetch_latest_candle()
+    if candle:
+        return candle.get("close")
+    return None
 
 def get_latest_candle_batch(limit: int = 100) -> List[Candle]:
     return get_live_candles(limit)
