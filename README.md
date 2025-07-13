@@ -171,6 +171,15 @@ EntryMaster_Tradingview/
 
 ---
 
+## Architekturprinzipien
+
+🔹 **Maximale Reduktionsstrategie**: Jede Zeile Code erfüllt eine klar definierte Funktion. Keine ungenutzten Methoden, veralteten Imports oder toten Abhängigkeiten.
+🔹 **Keine Redundanzen**: Nur eine zuständige Quelle pro Aufgabe (z. B. eine Candle-Quelle, ein Preis-Handler).
+🔹 **Live-Stabilität vor Funktionserweiterung**: Der Code ist für Latenzfreiheit und Fehlertoleranz im Dauerbetrieb optimiert.
+🔹 **Single Responsibility**: Jede Datei hat eine klar eingegrenzte Verantwortung (z. B. WebSocket, GUI, Strategy, Logging).
+
+---
+
 ## ✨ Noch in Entwicklung (Roadmap)
 
 - GUI-basierte Backtests

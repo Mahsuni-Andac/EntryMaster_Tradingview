@@ -34,8 +34,6 @@ class SystemMonitor:
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
-        if global_state.last_feed_time is None:
-            global_state.last_feed_time = time.time()
         self._running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()

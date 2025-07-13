@@ -31,8 +31,10 @@ class BaseWebSocket:
                 time.sleep(5)
 
     def start(self) -> None:
+        if self._running:
+            return
+        self._running = True
         if not self.thread or not self.thread.is_alive():
-            self._running = True
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
 
@@ -99,7 +101,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 time.sleep(5)
 
     def _on_message(self, ws, message):
-        logging.debug("📥 Raw: %s", message)
         global last_candle_time
         try:
             data = json.loads(message)
@@ -132,13 +133,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
             }
 
             last_candle_time = time.time()
-
-            logging.debug(
-                "✅ Candle abgeschlossen: Open=%s, Close=%s, Vol=%s",
-                candle["open"],
-                candle["close"],
-                candle["volume"],
-            )
 
             if self.on_candle:
                 try:

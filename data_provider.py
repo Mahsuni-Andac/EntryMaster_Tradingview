@@ -59,12 +59,6 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
             WebSocketStatus.set_running(True)
             if price_var and _TK_ROOT:
                 _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
-            try:
-                import global_state
-
-                global_state.last_feed_time = time.time()
-            except Exception:
-                pass
         except Exception as exc:
             logger.error("WebSocket Fehler: %s", exc)
 
@@ -150,18 +144,14 @@ def _monitor_loop(symbol: str, interval: str) -> None:
             last_ts = global_state.last_feed_time
             last_candle_time = get_last_candle_time()
 
-            alive = (
-                last_ts is not None
-                and time.time() - last_ts <= 30
-                and last_candle_time is not None
-                and time.time() - last_candle_time <= 65
-            )
+            alive = last_ts is not None and time.time() - last_ts <= 30
+            recent = last_candle_time is not None and time.time() - last_candle_time <= 65
 
             current_len = len(_WS_CANDLES)
-            stuck = current_len == _FEED_LAST_LEN
+            new_candle = current_len != _FEED_LAST_LEN
             _FEED_LAST_LEN = current_len
 
-            if not alive or stuck:
+            if not new_candle and not recent and not alive:
                 logger.warning(
                     "FEED ERROR: Candle-Feed steht (len=%s)", current_len
                 )
@@ -225,12 +215,6 @@ def update_candle_feed(candle: Candle) -> None:
         logger.debug("%d Candles im Feed", len(_WS_CANDLES))
 
     WebSocketStatus.set_running(True)
-    try:
-        import global_state
-
-        global_state.last_feed_time = time.time()
-    except Exception:
-        pass
 
 def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) -> Optional[float]:
     if exchange.lower() != "binance":
