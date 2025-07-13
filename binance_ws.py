@@ -1,3 +1,5 @@
+# binance_ws.py
+
 from websocket import WebSocketApp
 import threading
 import json
