@@ -178,19 +178,8 @@ def run_bot_live(settings=None, app=None):
             candle = fetch_latest_candle(settings["symbol"], interval)
             price = fetch_last_price("binance", settings["symbol"])
             stamp = datetime.now().strftime("%H:%M:%S")
-            if price is not None and hasattr(app, "log_event"):
-                msg = f"[{stamp}] Preis-Update: {settings['symbol']} = {price:.2f}"
-                print(msg)
-                app.log_event(msg)
-                if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
-                    app.api_frame.log_price(
-                        f"{settings['symbol'].replace('_','')}: {price:.2f} ({stamp})"
-                    )
-            elif price is None:
-                if hasattr(app, "log_event"):
-                    app.log_event("Keine Marktdaten – Exchange: BINANCE")
-                if hasattr(app, "api_frame") and hasattr(app.api_frame, "log_price"):
-                    app.api_frame.log_price(f"{settings['symbol']}: -- ({stamp})", error=True)
+            if price is None and hasattr(app, "log_event"):
+                app.log_event("Keine Marktdaten – Exchange: BINANCE")
             if not candle:
                 print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
