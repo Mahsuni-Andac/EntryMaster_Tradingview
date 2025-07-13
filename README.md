@@ -48,6 +48,21 @@ die WebSocket-API. REST-Zugriffe wurden entfernt, um maximale
 Echtzeitpräzision zu gewährleisten. Sowohl Preis- als auch Candle-Daten werden nur per WebSocket bezogen.
 Der Preisfeed wird niemals über andere Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
 
+### 📡 WebSocket-only Betrieb
+
+Der Bot nutzt **ausschließlich WebSocket** für Binance BTCUSDT Marktdaten.
+REST wurde entfernt, um saubere Candle-Daten sicherzustellen.
+
+- ✅ Stream: `kline_1m`
+- ✅ Nur abgeschlossene Candles (`x == True`) werden verarbeitet
+- ✅ Anzeige in GUI + Log: "Marktdaten kommen an"
+
+#### ⚠️ Hinweise
+- Wenn keine Candle-Daten angezeigt werden, prüfe:
+  - Verbindung zur Binance API
+  - Ob der `kline`-Stream verwendet wird und nicht `@trade`
+  - Ob `kline['x'] == True` korrekt überprüft wird
+
 ## Trading-Modi: Paper vs. Live
 
 - **Einstieg & Ausstieg erfolgen immer anhand echter Binance BTCUSDT Marktdaten**

@@ -12,17 +12,17 @@ from typing import List, Optional, TypedDict
 
 import time
 
-from binance_ws import BinanceWebSocket, BinanceCandleWebSocket
+import binance_ws
 from tkinter import Tk, StringVar
 
 
 # WebSocket manager and price cache
-_WS_CLIENT: BinanceWebSocket | None = None
+_WS_CLIENT: binance_ws.BinanceWebSocket | None = None
 _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
 
 _WS_STARTED: bool = False
-_CANDLE_WS_CLIENT: BinanceCandleWebSocket | None = None
+_CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _CANDLE_WS_STARTED: bool = False
 _WS_CANDLES: list["Candle"] = []
 _CANDLE_WARNING_SHOWN: bool = False
@@ -74,7 +74,7 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
         except Exception as e:  # pragma: no cover - just log
             print("❌ WebSocket Fehler", e)
 
-    _WS_CLIENT = BinanceWebSocket(handle)
+    _WS_CLIENT = binance_ws.BinanceWebSocket(handle)
     _WS_CLIENT.start()
     _WS_STARTED = True
     print("✅ WebSocket verbunden: Binance BTCUSDT")
@@ -108,7 +108,8 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
             f"✅ Candle empfangen: Open={candle['open']}, Close={candle['close']}, Vol={candle['volume']}"
         )
 
-    _CANDLE_WS_CLIENT = BinanceCandleWebSocket(handle)
+    binance_ws.on_candle_callback = handle
+    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle)
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
 
@@ -134,6 +135,11 @@ def is_websocket_running() -> bool:
 def websocket_active() -> bool:
     """Return ``True`` if a websocket stream is delivering prices."""
     return _WEBSOCKET_RUNNING
+
+
+def get_last_candle_time() -> Optional[float]:
+    """Return the timestamp of the most recent closed candle."""
+    return binance_ws.last_candle_time
 
 
 
