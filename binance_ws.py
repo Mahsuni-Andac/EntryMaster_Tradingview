@@ -132,6 +132,8 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 "volume": float(k.get("v")),
             }
 
+            logger.debug("Candle received: %s", candle)
+
             last_candle_time = time.time()
 
             if self.on_candle:
