@@ -25,36 +25,46 @@ _BINANCE = Client("", "")
 # set to ``websocket`` or ``auto``.
 _WS_MANAGER: ThreadedWebsocketManager | None = None
 _WS_PRICE: dict[str, float] = {}
-_WS_ACTIVE: bool = False
+_WEBSOCKET_RUNNING: bool = False
 _WS_LOCK = threading.Lock()
+
+
+def start_websocket(symbol: str = "BTCUSDT") -> None:
+    """Public helper to start the websocket feed."""
+    _init_websocket(symbol)
+
+
+def is_websocket_running() -> bool:
+    """Return ``True`` if the websocket manager is active."""
+    return _WEBSOCKET_RUNNING
 
 
 def websocket_active() -> bool:
     """Return ``True`` if a websocket stream is delivering prices."""
-    return _WS_MANAGER is not None and _WS_ACTIVE
+    return _WEBSOCKET_RUNNING
 
 
 def _init_websocket(symbol: str) -> None:
     """Start a websocket price feed for *symbol* if not running."""
-    global _WS_MANAGER, _WS_ACTIVE
-    if _WS_MANAGER is not None:
+    global _WS_MANAGER, _WEBSOCKET_RUNNING
+    if _WEBSOCKET_RUNNING:
         return
     with _WS_LOCK:
-        if _WS_MANAGER is not None:
+        if _WEBSOCKET_RUNNING:
             return
         try:
             _WS_MANAGER = ThreadedWebsocketManager()
             _WS_MANAGER.start()
 
             def handle(msg):
-                global _WS_ACTIVE
+                global _WEBSOCKET_RUNNING
                 if msg.get("e") == "error":
-                    _WS_ACTIVE = False
+                    _WEBSOCKET_RUNNING = False
                     return
                 price = msg.get("c") or msg.get("p")
                 if price is not None:
                     _WS_PRICE[symbol] = float(price)
-                    _WS_ACTIVE = True
+                    _WEBSOCKET_RUNNING = True
                     try:
                         import global_state
                         global_state.last_feed_time = time.time()
@@ -65,12 +75,12 @@ def _init_websocket(symbol: str) -> None:
         except Exception as exc:
             logging.debug("WebSocket init failed: %s", exc)
             _WS_MANAGER = None
-            _WS_ACTIVE = False
+            _WEBSOCKET_RUNNING = False
 
 
 def stop_websocket() -> None:
     """Stop the active websocket stream if running."""
-    global _WS_MANAGER, _WS_ACTIVE
+    global _WS_MANAGER, _WEBSOCKET_RUNNING
     with _WS_LOCK:
         if _WS_MANAGER is not None:
             try:
@@ -78,18 +88,18 @@ def stop_websocket() -> None:
             except Exception as exc:  # pragma: no cover - best effort cleanup
                 logging.debug("WebSocket stop failed: %s", exc)
             _WS_MANAGER = None
-        _WS_ACTIVE = False
+        _WEBSOCKET_RUNNING = False
         _WS_PRICE.clear()
 
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
     """Return latest price from websocket if available."""
-    global _WS_ACTIVE
-    if _WS_MANAGER is None or not _WS_MANAGER.is_alive():
+    global _WEBSOCKET_RUNNING
+    if not _WEBSOCKET_RUNNING or _WS_MANAGER is None or not _WS_MANAGER.is_alive():
         stop_websocket()
         _init_websocket(symbol)
     price = _WS_PRICE.get(symbol)
-    _WS_ACTIVE = price is not None
+    _WEBSOCKET_RUNNING = price is not None
     return price
 
 def _normalize_symbol(symbol: str) -> str:
