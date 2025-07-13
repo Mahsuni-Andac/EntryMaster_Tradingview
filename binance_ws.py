@@ -61,8 +61,13 @@ class BinanceCandleWebSocket:
         url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
         while True:
             try:
-                self.ws = WebSocketApp(url, on_message=self._on_message)
-                self.ws.run_forever()
+                self.ws = WebSocketApp(
+                    url,
+                    on_message=self._on_message,
+                    on_error=self._on_error,
+                    on_close=self._on_close,
+                )
+                self.ws.run_forever(ping_interval=10, ping_timeout=5)
             except Exception as e:
                 print("WebSocket Fehler:", e)
                 time.sleep(5)
@@ -71,6 +76,7 @@ class BinanceCandleWebSocket:
 
     def _on_message(self, ws, message):
         """Handle incoming kline messages and forward completed candles."""
+        print("\ud83d\udce5 Raw:", message)
         global last_candle_time
         try:
             data = json.loads(message)
@@ -118,6 +124,14 @@ class BinanceCandleWebSocket:
             if not self._warning_printed:
                 print("⚠️ Candle-Daten unvollständig oder fehlerhaft", e)
                 self._warning_printed = True
+
+    def _on_error(self, ws, error):
+        """Log websocket errors."""
+        print("❌ Candle-WS Fehler:", error)
+
+    def _on_close(self, ws, status_code, msg):
+        """Log websocket close events."""
+        print(f"🔌 Candle-WS geschlossen: {status_code} {msg}")
 
     def start(self):
         if self.thread and self.thread.is_alive():
