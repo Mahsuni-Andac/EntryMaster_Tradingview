@@ -26,7 +26,6 @@ from global_state import (
 )
 import global_state
 
-from init_helpers import import_trader
 from indicator_utils import calculate_ema, calculate_atr
 
 # NEU: Adaptive Engines
@@ -138,13 +137,7 @@ def run_bot_live(settings=None, app=None):
     andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
 
-    TraderClass = import_trader(settings.get("trading_backend", "bitmex"))
     trader = None
-    if TraderClass and live_trading:
-        trader = TraderClass(
-            api_key=API_KEY,
-            api_secret=API_SECRET
-        )
 
     candles = []
     position = None

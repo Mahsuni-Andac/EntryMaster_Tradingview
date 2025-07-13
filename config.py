@@ -8,7 +8,6 @@ SETTINGS = {
     "stop_loss_atr_multiplier": 0.5,
     "take_profit_atr_multiplier": 1.5,
     "use_session_filter": False,
-    "trading_backend": "bitmex",  # nur BitMEX für Orderausführung
     "multiplier": 20,
     "auto_multiplier": False,
     "capital": 1000,
