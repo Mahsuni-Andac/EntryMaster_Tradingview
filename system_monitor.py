@@ -1,12 +1,4 @@
-"""Real-time system monitoring with auto-pause/resume.
-
-The monitor inspects the ``global_state.last_feed_time`` timestamp every
-few seconds for the **active market only**.  Short interruptions are
-tolerated (``timeout`` defaults to 10s).  If the timestamp becomes older
-than ``timeout`` seconds, the bot is paused, an acoustic signal is emitted
-and the GUI status switches to ``❌``.  As soon as a fresh tick updates the
-timestamp the bot resumes and the status changes back to ``✅``.
-"""
+# system_monitor.py
 
 from __future__ import annotations
 
@@ -21,7 +13,6 @@ import global_state
 
 
 def _beep() -> None:
-    """Trigger a simple beep sound in the console."""
     try:
         print("\a", end="", flush=True)
     except Exception:
@@ -29,15 +20,8 @@ def _beep() -> None:
 
 
 class SystemMonitor:
-    """Background watchdog for API and market data integrity."""
 
     def __init__(self, gui, interval: int = 2, timeout: int = 10) -> None:
-        """Create monitor with *interval* seconds and feed ``timeout``.
-
-        ``interval`` controls how often the APIs are polled.  If no candle
-        update happens within ``timeout`` seconds (default ``10``) the bot will
-        be paused automatically.
-        """
         self.gui = gui
         self.interval = max(1, interval)
         self.timeout = timeout
@@ -62,7 +46,6 @@ class SystemMonitor:
             self._thread.join(timeout=1)
             self._thread = None
 
-    # ---- Internals -----------------------------------------------------
     def _log(self, msg: str) -> None:
         from central_logger import log_messages
 
@@ -94,7 +77,6 @@ class SystemMonitor:
                 self._handle_feed_down("API-Fehler – Antwort unvollständig", log=False)
             time.sleep(self.interval)
 
-    # ---- State Handlers -------------------------------------------------
 
     def _handle_feed_down(self, reason: str, *, log: bool = True) -> None:
         if self._feed_ok:

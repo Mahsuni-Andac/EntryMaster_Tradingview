@@ -1,6 +1,5 @@
 # entry_handler.py
 
-"""Utility to execute entries with a given trading backend."""
 
 from __future__ import annotations
 
@@ -21,36 +20,12 @@ def handle_entry(
     tp_mult: float,
     leverage: float,
 ) -> Dict[str, Any] | None:
-    """Create a new trade based on *signal* and return the position state.
-
-    Parameters
-    ----------
-    signal:
-        Either ``"long"`` or ``"short"``.
-    candle:
-        Current market candle containing ``open``/``close``/``high``/``low``.
-    settings:
-        Runtime settings dictionary.
-    app:
-        GUI reference for callbacks (unused here but kept for compatibility).
-    capital:
-        Available capital for the trade.
-    trader:
-        Trading backend implementing ``place_order``.
-    now:
-        Timestamp of the current tick.
-    sl_mult, tp_mult:
-        Multipliers for ATR based SL/TP calculation.
-    leverage:
-        Account leverage.
-    """
     try:
         direction = "long" if signal == "long" else "short"
         entry_price = float(candle["close"])
         atr = float(atr_value_global)
         capital = float(capital)
 
-        # Positionsgröße entspricht dem eingesetzten Kapital (Margin)
         position_size = round(capital, 6)
         sl_distance = atr * sl_mult
         tp_distance = atr * tp_mult
@@ -66,7 +41,6 @@ def handle_entry(
             else round(entry_price - tp_distance, 2)
         )
 
-        # Order senden
         order = trader.place_order(
             side=direction,
             quantity=position_size,
@@ -76,7 +50,6 @@ def handle_entry(
             reduce_only=False
         )
 
-        # Statusobjekt zurückgeben
         position = {
             "active": True,
             "symbol": settings.get("symbol", "BTCUSDT"),

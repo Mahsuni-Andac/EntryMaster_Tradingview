@@ -1,10 +1,4 @@
 # realtime_runner.py
-#
-# Changelog:
-# - Integrated console_status utilities for consistent output
-# - Added drawdown limit check via RiskManager
-# - Dynamic stop reason on loop exit
-# - Fixed max loss check to ignore non-positive limits
 
 import os
 import time
@@ -26,7 +20,8 @@ from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
-from gui import TradingGUI, TradingGUILogicMixin
+from trading_gui_core import TradingGUI
+from trading_gui_logic import TradingGUILogicMixin
 from config import SETTINGS
 from global_state import (
     entry_time_global,
@@ -38,13 +33,11 @@ import global_state
 
 from indicator_utils import calculate_ema, calculate_atr
 
-# NEU: Adaptive Engines
 from andac_entry_master import AndacEntryMaster, AndacSignal
 from adaptive_sl_manager import AdaptiveSLManager
 
 
 def update_indicators(candles):
-    """Return ATR and EMA values for the given candle list."""
     atr = calculate_atr(candles, 14)
     close_list = [c["close"] for c in candles[-20:] if "close" in c]
     ema = calculate_ema(close_list, 20)
@@ -54,7 +47,6 @@ def update_indicators(candles):
 def handle_existing_position(position, candle, app, capital, trader, live_trading,
                              cooldown, risk_manager, last_printed_pnl,
                              last_printed_price, settings, now):
-    """Process an open position and return updated state."""
     current = candle["close"]
     entry = position["entry"]
     pnl_live = calculate_futures_pnl(
@@ -180,7 +172,7 @@ from console_status import (
 )
 from pnl_utils import calculate_futures_pnl, check_plausibility
 
-FEE_RATE = 0.0004  # Trading fee per side
+FEE_RATE = 0.0004
 
 API_KEY = SETTINGS.get("api_key", "")
 API_SECRET = SETTINGS.get("api_secret", "")
@@ -206,24 +198,21 @@ def set_gui_bridge(gui_instance):
     gui_bridge = GUIBridge(gui_instance)
 
 def cancel_trade(position, app):
-    """Schließt die Position und setzt sie auf None"""
     print(f"❌ Abbruch der Position: {position['side']} @ {position['entry']:.2f}")
-    # Position schließen
-    app.position = None  # Position auch in der App auf None setzen
-    app.log_event("🛑 Position wurde durch Benutzer abgebrochen!")  # Log-Ereignis
-    return None  # Rückgabe von None, um die Position zu schließen
+    app.position = None
+    app.log_event("🛑 Position wurde durch Benutzer abgebrochen!")
+    return None
 
 def emergency_exit_position(app):
-    """Löst den Notausstieg aus und schließt alle Positionen"""
     if app.position:
         print("❗️ Notausstieg ausgelöst! Die Position wird geschlossen.")
-        cancel_trade(app.position, app)  # Aufruf der cancel_trade Funktion
+        cancel_trade(app.position, app)
         app.log_event("🛑 Position wurde im Notausstiegsmodus geschlossen!")
     else:
         print("❌ Keine Position offen, um sie zu schließen!")
         app.log_event(
             "❌ Keine offene Position zum Notausstiegsmodus gefunden."
-        )  # Nachricht wenn keine Position da ist
+        )
 
 
 def wait_for_initial_candles(
@@ -233,10 +222,6 @@ def wait_for_initial_candles(
     required: int = 14,
     timeout: int = 20,
 ) -> list[dict]:
-    """Wait for at least ``required`` candles or until ``timeout`` seconds.
-
-    Progress is reported via ``update_status`` to the GUI.
-    """
 
     start_time = time.time()
     last_logged = -1
@@ -286,7 +271,6 @@ def run_bot_live(settings=None, app=None):
 
     print_start_banner(capital)
 
-    # sicherstellen, dass der Candle-Feed laeuft
     start_candle_websocket(settings["symbol"], settings.get("interval", "1m"))
 
     if app:
@@ -294,17 +278,14 @@ def run_bot_live(settings=None, app=None):
         set_gui_bridge(app)
         start_capital = capital
 
-    # --- HIER Manager initialisieren ---
     risk_manager = RiskManager(app, start_capital)
 
-    # --- HIER: GUI/Bridge-Parameter einlesen ---
     multiplier = gui_bridge.multiplier
-    capital = float(gui_bridge.capital)      # <--- float!
-    start_capital = capital                  # <--- Startwert merken für Verlustlimit
+    capital = float(gui_bridge.capital)
+    start_capital = capital
     interval = gui_bridge.interval
     auto_multi = gui_bridge.auto_multiplier
 
-    # ---- NEU: Auf Candles warten (ATR Ready Phase) ----
     ATR_REQUIRED = 14
     candles_ready = wait_for_initial_candles(
         settings["symbol"], interval, app, ATR_REQUIRED
@@ -322,9 +303,7 @@ def run_bot_live(settings=None, app=None):
     settings["paper_mode"] = not live_trading
 
     leverage = multiplier
-    # interval wird aus GUI übernommen, NICHT überschreiben!
 
-    # Restliche Initialisierung...
     cooldown = CooldownManager(settings.get("cooldown", 3))
     session_filter = SessionFilter()
 
@@ -374,7 +353,6 @@ def run_bot_live(settings=None, app=None):
             time.sleep(1)
             continue
         risk_manager.update_capital(capital)
-        # --- Schutzmechanismen ---
         if risk_manager.check_loss_limit() or risk_manager.check_drawdown_limit():
             time.sleep(1)
             continue
@@ -404,7 +382,6 @@ def run_bot_live(settings=None, app=None):
                 time.sleep(1)
                 continue
 
-            # Update global timestamp for feed watchdog
             global_state.last_feed_time = time.time()
 
             if not first_feed:
@@ -427,13 +404,12 @@ def run_bot_live(settings=None, app=None):
             close_price = candle["close"]
             now = time.time()
 
-        except Exception as e:  # Hier wird der Fehler abgefangen
+        except Exception as e:
             print("❌ Fehler im Botlauf:", e)
             traceback.print_exc()
             time.sleep(2)
-            continue  # Weiter zum nächsten Loop
+            continue
 
-        # GUI Empfehlungen/Filter (wie gehabt)
         if hasattr(app, "auto_apply_recommendations") and app.auto_apply_recommendations.get():
             try:
                 app.apply_recommendations()
@@ -458,7 +434,6 @@ def run_bot_live(settings=None, app=None):
             if hasattr(app, "log_event"):
                 app.log_event(log_msg)
 
-        # --- POSITION HANDLING ---
         if position:
             position, capital, last_printed_pnl, last_printed_price, closed = handle_existing_position(
                 position,
@@ -477,9 +452,8 @@ def run_bot_live(settings=None, app=None):
             if closed:
                 continue
             no_signal_printed = False
-            continue  # Next Loop
+            continue
 
-        # --- ENTRY PLACEMENT ---
         if not position:
             if cooldown.in_cooldown(now):
                 print("🕒 In Cooldown nach SL")

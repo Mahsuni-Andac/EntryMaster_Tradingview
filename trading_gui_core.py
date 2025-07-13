@@ -5,22 +5,19 @@ from tkinter import ttk
 from datetime import datetime
 import logging
 
-from .trading_gui_logic import TradingGUILogicMixin
-from .api_credential_frame import APICredentialFrame, EXCHANGES
-from .neon_status_panel import NeonStatusPanel
+from trading_gui_logic import TradingGUILogicMixin
+from api_credential_frame import APICredentialFrame, EXCHANGES
+from neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 
 class TradingGUI(TradingGUILogicMixin):
     def __init__(self, root, cred_manager: APICredentialManager | None = None):
         self.root = root
-        # Set window title to reflect the new project name
         self.root.title("🧞‍♂️ EntryMaster_Tradingview – Kapital-Safe Edition")
 
-        # --- API-Zugangsdaten ---
         self.cred_manager = cred_manager or APICredentialManager()
 
-        # --- Zustände & Live-Werte ---
         self.running = False
         self.force_exit = False
         self.live_pnl = 0.0
@@ -28,7 +25,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.auto_apply_recommendations = tk.BooleanVar(value=False)
         self.auto_multiplier = tk.BooleanVar(value=False)
 
-        # --- APC & Verlustlimit ---
         self.apc_enabled = tk.BooleanVar(value=False)
         self.apc_rate = tk.StringVar(value="10")
         self.apc_interval = tk.StringVar(value="60")
@@ -39,7 +35,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.max_loss_value = tk.StringVar(value="10")
         self.max_loss_status_label = None
 
-        # --- Controls & Vars ---
         self.multiplier_entry = None
         self.capital_entry = None
         self.log_box = None
@@ -63,17 +58,14 @@ class TradingGUI(TradingGUILogicMixin):
         self.websocket_active = True
         self._update_feed_mode_display(False)
 
-        # MARKTDATEN-MONITOR starten
         self.market_interval_ms = 1000
         self._update_market_monitor()
 
-        # Reduce overall window height by 10% after layout is built
         self.root.update_idletasks()
         width = self.root.winfo_width()
         height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
 
-    # ---- Neon Status Panel -------------------------------------------
     def _init_neon_panel(self):
         self.neon_panel = NeonStatusPanel(self.root)
         self.neon_panel.frame.pack(side="right", fill="y", padx=(0, 5))
@@ -99,7 +91,6 @@ class TradingGUI(TradingGUILogicMixin):
                 self._neon_vars[key] = var
                 var.trace_add("write", lambda *a, k=key, v=var: self._update_neon_var(k, v))
                 self._update_neon_var(key, var)
-        # initial state for "saved" indicator
         self.neon_panel.set_status("saved", "blue", "Noch nicht gespeichert")
 
     def _update_neon_var(self, key, var):
@@ -125,7 +116,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.multiplier_var = tk.StringVar(value="20")
         self.capital_var = tk.StringVar(value="1000")
         
-        # --- Andac Entry-Master Optionen ---
         self.andac_lookback = tk.StringVar(value="20")
         self.andac_puffer = tk.StringVar(value="10.0")
         self.andac_vol_mult = tk.StringVar(value="1.2")
@@ -140,7 +130,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_volumen_strong = tk.BooleanVar()
         self.andac_opt_session_filter = tk.BooleanVar()
 
-        # Zusätzliche Filter
         self.use_doji_blocker = tk.BooleanVar()
 
         self.interval = tk.StringVar(value="1m")
@@ -148,7 +137,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.time_start = tk.StringVar(value="08:00")
         self.time_end = tk.StringVar(value="18:00")
 
-        # Empfehlungslayouts (optional)
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volboost_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -170,40 +158,32 @@ class TradingGUI(TradingGUILogicMixin):
         self.safe_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.auto_status_label = None
 
-        # --- Manuelle SL/TP Eingabe & Steuerung ---
         self.manual_sl_var = tk.StringVar(value="")
         self.manual_tp_var = tk.StringVar(value="")
         self.sl_tp_auto_active = tk.BooleanVar(value=False)
         self.sl_tp_manual_active = tk.BooleanVar(value=False)
 
-        # Statusanzeigen für API & Datenfeed
         self.api_status_var = tk.StringVar(value="API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
         self.api_status_label = None
         self.feed_status_label = None
-        # Track current connection states for the watchdog
         self.feed_ok = False
         self.api_ok = False
-        # Merker, ob ein WebSocket aktiv ist
         self.websocket_active = False
 
-        # Statusvariablen je Exchange
         self.exchange_status_vars = {ex: tk.StringVar(value="⚪") for ex in EXCHANGES}
         self.exchange_status_labels = {}
         self.exchange_status_cache = {}
 
     def _build_gui(self):
-        # wrapper for main content to allow side panels
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(side="left", fill="both", expand=True)
 
-        # --- Oberer Info-Bereich ---
         top_info = ttk.Frame(self.main_frame)
         top_info.pack(pady=5)
         self._build_api_credentials(top_info)
         self.capital_value = ttk.Label(top_info, text="💰 Kapital: $0", foreground="green", font=("Arial", 11, "bold"))
         self.capital_value.pack(side="left", padx=10)
-        # Sparkonto/Gewinn-Anzeige entfernt
         self.pnl_value = ttk.Label(top_info, text="📉 PnL: $0", foreground="black", font=("Arial", 11, "bold"))
         self.pnl_value.pack(side="left", padx=10)
 
@@ -232,13 +212,11 @@ class TradingGUI(TradingGUILogicMixin):
         ).pack(side="left")
         self._on_mode_toggle()
 
-        # Preis-Anzeige oben rechts
         from data_provider import init_price_var, price_var
         init_price_var(self.root)
         self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
-        # --- Hauptcontainer ---
         container = ttk.Frame(self.main_frame)
         container.pack(padx=10, pady=5)
         risk = ttk.Frame(container)
@@ -248,7 +226,6 @@ class TradingGUI(TradingGUILogicMixin):
         extra = ttk.Frame(container)
         andac = ttk.Frame(container)
 
-        # Neue Spalte für Risikomanagement ganz links
         risk.grid(row=0, column=0, padx=10, sticky="nw")
         left.grid(row=0, column=1, padx=10, sticky="ne")
         right.grid(row=0, column=2, padx=10, sticky="ne")
@@ -256,10 +233,8 @@ class TradingGUI(TradingGUILogicMixin):
         extra.grid(row=0, column=4, padx=10, sticky="ne")
         andac.grid(row=0, column=5, padx=10, sticky="ne")
 
-        # --- Options-Überschrift über dem Intervall ---
         ttk.Label(middle, text="⚙️ Optionen", font=("Arial", 11, "bold")).grid(row=0, column=0, columnspan=6, pady=(0, 5), sticky="w")
 
-        # --- Middle ---
         ema_row = ttk.Frame(middle)
         ema_row.grid(row=1, column=0, columnspan=6, pady=(0, 8), sticky="w")
         ttk.Label(ema_row, text="Intervall:").pack(side="left")
@@ -300,7 +275,6 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
             self.time_filters.append((start, end))
 
-        # --- Risikomanagement-Spalte ---
         ttk.Label(risk, text="⚠️ Risikomanagement", font=("Arial", 11, "bold")).grid(row=0, column=0, pady=(0, 5), sticky="w")
 
         apc_frame = ttk.LabelFrame(risk, text="Auto Partial Close")
@@ -341,7 +315,6 @@ class TradingGUI(TradingGUILogicMixin):
 
     def _build_andac_options(self, parent):
         ttk.Label(parent, text="🤑 Entry-Master 🚀", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        # Zwei-Spalten-Layout: Links Checkboxen, rechts Parameter
         options_frame = ttk.Frame(parent)
         options_frame.pack()
         left_col = ttk.Frame(options_frame)
@@ -349,7 +322,6 @@ class TradingGUI(TradingGUILogicMixin):
         left_col.pack(side="left", padx=5, anchor="n")
         right_col.pack(side="left", padx=5, anchor="n")
 
-        # Checkbox-Optionen (linke Spalte)
         for text, var in [
             ("RSI/EMA", self.andac_opt_rsi_ema),
             ("🛡 Sicherheitsfilter", self.andac_opt_safe_mode),
@@ -363,16 +335,14 @@ class TradingGUI(TradingGUILogicMixin):
         ]:
             ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
 
-        # Parameter-Eingaben (rechte Spalte)
         self._add_entry_group(right_col, "Lookback", [self.andac_lookback])
         self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
         self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
-        button_frame.pack(pady=10, fill="x")  # Vermeide Pack und Grid gleichzeitig!
+        button_frame.pack(pady=10, fill="x")
 
-        # Buttons in einem Grid platzieren
         ttk.Button(button_frame, text="▶️ Bot starten", command=self.start_bot).grid(row=0, column=0, padx=5)
         ttk.Button(button_frame, text="⛔ Trade abbrechen", command=self.emergency_flat_position).grid(row=0, column=1, padx=5)
         ttk.Button(button_frame, text="❗️ Notausstieg", command=self.emergency_exit).grid(row=0, column=2, padx=5)
@@ -389,16 +359,13 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file).grid(row=1, column=3, padx=5)
         ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file).grid(row=1, column=4, padx=5)
 
-        # Auto-Status-Label weiter rechts platzieren
         self.auto_status_label = ttk.Label(button_frame, font=("Arial", 10, "bold"), foreground="green")
         self.auto_status_label.grid(row=2, column=0, columnspan=5, pady=(5, 0), padx=10, sticky="w")
 
-        # Logbox unterhalb der Buttons
         self.log_box = tk.Text(root, height=13, width=85, wrap="word", bg="#f9f9f9", relief="sunken", borderwidth=2)
         self.log_box.pack(pady=12)
 
     def stop_and_reset(self):
-        """Stoppt den Bot, ohne die Konfiguration zurückzusetzen."""
         self.force_exit = True
         self.running = False
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
@@ -430,9 +397,7 @@ class TradingGUI(TradingGUILogicMixin):
             self.on_exchange_select(exch)
 
 
-    # ---- Status Panel -------------------------------------------------
     def _collect_setting_vars(self):
-        """Collect all Tk variables for status tracking."""
         self.setting_vars = {
             name: var
             for name, var in vars(self).items()
@@ -451,7 +416,6 @@ class TradingGUI(TradingGUILogicMixin):
                 self.setting_vars[f"time_filter_{idx}_end"] = end
 
     def _build_status_panel(self):
-        """Create panel showing if settings are active in the backend."""
         self.backend_settings = {}
         self.status_labels = {}
         self.status_rows = {}
@@ -461,12 +425,10 @@ class TradingGUI(TradingGUILogicMixin):
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
             self.api_frame.system_status_label.config(textvariable=self.system_status_var)
 
-        # Anzeige des WebSocket-Status
         self.feed_mode_var = tk.StringVar(value="")
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "feed_mode_label"):
             self.api_frame.feed_mode_label.config(textvariable=self.feed_mode_var)
 
-        # Invisible container to keep widgets for tests
         frame = ttk.Frame(self.root)
         self.all_ok_label = ttk.Label(frame, text="", foreground="green")
         self.all_ok_label.grid(row=0, column=0, sticky="w")
@@ -485,17 +447,11 @@ class TradingGUI(TradingGUILogicMixin):
             self.update_setting_status(name, var)
             row_index += 1
 
-        # Keep frame hidden
         frame.pack_forget()
         self.root.after(1000, self.update_all_status_labels)
         self._update_all_ok_label()
 
     def update_setting_status(self, name, var):
-        """Verify and display the activation state of a setting.
-
-        Bei ungültigen Werten wird der Fehler angezeigt und das
-        Backend-Setting nicht überschrieben.
-        """
         try:
             value = var.get()
             parsed = value
@@ -549,9 +505,7 @@ class TradingGUI(TradingGUILogicMixin):
         if hasattr(self, "api_frame") and hasattr(self.api_frame, "system_status_label"):
             self.api_frame.system_status_label.config(foreground=color)
 
-    # MARKTDATEN-MONITOR -------------------------------------------------
     def _update_market_monitor(self) -> None:
-        """Fetch Binance spot price and update mini terminal."""
         from config import SETTINGS
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")

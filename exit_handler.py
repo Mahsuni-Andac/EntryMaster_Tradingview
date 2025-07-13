@@ -1,6 +1,5 @@
 # exit_handler.py
 
-"""Logic to manage exits of active positions."""
 
 from __future__ import annotations
 
@@ -16,7 +15,6 @@ def handle_exit(
     app: Any,
     now: float,
 ) -> Dict[str, Any]:
-    """Check for SL/TP hits and close position if required."""
     if not position.get("active"):
         return position
 
@@ -27,7 +25,7 @@ def handle_exit(
         sl = position["stop_loss"]
         tp = position["take_profit"]
         entry = position["entry_price"]
-        size = position["size"]  # eingesetztes Kapital in USD
+        size = position["size"]
         leverage = position.get("leverage", 1)
 
         exited = False

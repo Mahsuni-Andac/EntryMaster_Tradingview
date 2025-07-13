@@ -2,6 +2,8 @@
 
 **EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot, der ausschließlich auf **Binance Spot** Live-Marktdaten per **WebSocket** basiert. Er kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
 
+Das Projekt nutzt eine flache Struktur. Jede Datei beginnt mit `# dateiname.py` und es gibt keine erklärenden Kommentare.
+
 ---
 
 ## 🚀 Funktionen im Überblick
@@ -128,22 +130,43 @@ python main.py
 
 ---
 
-## 📁 Projektstruktur (Auszug)
+## 📁 Projektstruktur
 
 ```text
 EntryMaster/
-├── main.py
-├── realtime_runner.py
-├── data_provider.py
-├── binance_ws.py
-├── risk_manager.py
 ├── adaptive_sl_manager.py
 ├── andac_entry_master.py
-├── gui/
-│   ├── trading_gui_core.py
-│   ├── trading_gui_logic.py
-│   ├── api_credential_frame.py
-│   └── ...
+├── api_credential_frame.py
+├── api_key_manager.py
+├── auto_recommender.py
+├── binance_ws.py
+├── central_logger.py
+├── config.py
+├── console_status.py
+├── cooldown_manager.py
+├── data_provider.py
+├── entry_handler.py
+├── entry_master_engine.py
+├── exchange_interface.py
+├── exit_handler.py
+├── global_state.py
+├── gui_bridge.py
+├── indicator_utils.py
+├── main.py
+├── neon_status_panel.py
+├── pnl_utils.py
+├── realtime_runner.py
+├── risk_manager.py
+├── session_filter.py
+├── status_block.py
+├── status_events.py
+├── strategy.py
+├── system_monitor.py
+├── trading_gui_core.py
+├── trading_gui_logic.py
+├── test_api_key_manager.py
+├── test_pnl_utils.py
+├── test_system_monitor.py
 └── requirements.txt
 ```
 

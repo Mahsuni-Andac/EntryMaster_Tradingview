@@ -13,6 +13,5 @@ SETTINGS = {
     "capital": 1000,
     "version": "V10.4_Pro",
     "paper_mode": True,
-    # Datenquelle für Marktdaten: nur WebSocket
     "data_source_mode": "websocket",
 }

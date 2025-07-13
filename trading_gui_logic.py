@@ -1,5 +1,4 @@
 # trading_gui_logic.py
-# Changelog: added capital > 0 validation in start_bot
 
 import json
 import os
@@ -10,13 +9,11 @@ TUNING_FILE = "tuning_config.json"
 
 class TradingGUILogicMixin:
     def apply_recommendations(self):
-        """Aktiviert sinnvolle Filter-Kombinationen anhand der Marktlage."""
         try:
             from session_filter import SessionFilter
             from global_state import ema_trend_global, atr_value_global
             from config import SETTINGS
 
-            # --- Umfeld ermitteln ---
             volatility = atr_value_global
             session = SessionFilter().get_current_session()
             performance = getattr(self, "live_pnl", 0.0)
@@ -137,7 +134,7 @@ class TradingGUILogicMixin:
 
     def emergency_exit(self):
         try:
-            self.running = False  # Bot-Schleife stoppen
+            self.running = False
             if hasattr(self, "close_all_positions"):
                 self.close_all_positions()
             self.log_event("❗️ Notausstieg ausgelöst! Alle Positionen werden geschlossen.")
@@ -149,10 +146,8 @@ class TradingGUILogicMixin:
         self.running = False
         self.log_event("⛔ Trade abbrechen: Die Position wird jetzt geschlossen.")
         
-        # Überprüfen, ob eine Position vorhanden ist, bevor sie geschlossen wird
         if hasattr(self, 'position') and self.position is not None:
-            # Falls eine Position offen ist, rufen wir die Methode auf, um sie zu schließen
-            self.position = cancel_trade(self.position, self)  # Schließt die Position und setzt sie auf None
+            self.position = cancel_trade(self.position, self)
             self.log_event("✅ Position wurde erfolgreich geschlossen.")
         else:
             self.log_event("❌ Keine offene Position zum Abbrechen gefunden.")
@@ -169,7 +164,6 @@ class TradingGUILogicMixin:
         self.capital_value.config(text=f"💰 Kapital: ${capital:.2f}")
 
     def update_api_status(self, ok: bool, reason: str | None = None) -> None:
-        """Update API status label only when changed."""
         if getattr(self, "_last_api_status", (None, None)) == (ok, reason):
             return
         self._last_api_status = (ok, reason)
@@ -194,7 +188,6 @@ class TradingGUILogicMixin:
                 self.neon_panel.set_status("api", "red", text)
 
     def update_feed_status(self, ok: bool, reason: str | None = None) -> None:
-        """Update feed status label only when changed."""
         if getattr(self, "_last_feed_status", (None, None)) == (ok, reason):
             return
         self._last_feed_status = (ok, reason)
@@ -224,7 +217,6 @@ class TradingGUILogicMixin:
                 self.api_frame.update_market_status(False)
 
     def _update_feed_mode_display(self, ok: bool) -> None:
-        """Update label showing the active data source."""
         if not ok:
             text = "❌ WebSocket getrennt"
             color = "red"
@@ -379,18 +371,13 @@ class TradingGUILogicMixin:
         except:
             return var.get()
 
-    # ---------------------------------------------------------------
-    # Neue Methoden zur Steuerung manueller/adaptiver SL/TP Eingaben
-    # ---------------------------------------------------------------
     def toggle_manual_sl_tp(self):
-        """Aktiviert manuelle SL/TP-Werte nach Validierung."""
         try:
             sl = float(self.manual_sl_var.get())
             tp = float(self.manual_tp_var.get())
         except Exception:
             self.sl_tp_manual_active.set(False)
             if hasattr(self, "manual_sl_button"):
-                # Button rot einfärben, um ungültige Eingabe zu signalisieren
                 self.manual_sl_button.config(fg="red")
             self.log_event("❌ Ungültige manuelle SL/TP Werte")
             return
@@ -398,25 +385,21 @@ class TradingGUILogicMixin:
         self.sl_tp_manual_active.set(True)
         self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
-            # blue indicates active but not yet validated
             self.manual_sl_button.config(fg="blue")
         if hasattr(self, "auto_sl_button"):
             self.auto_sl_button.config(fg="black")
         self.log_event("📝 Manuelle SL/TP aktiviert")
 
     def activate_auto_sl_tp(self):
-        """Aktiviert Adaptive SL/TP Logik."""
         self.sl_tp_auto_active.set(True)
         self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
-            # blue indicates active but pending validation
             self.auto_sl_button.config(fg="blue")
         if hasattr(self, "manual_sl_button"):
             self.manual_sl_button.config(fg="black")
         self.log_event("⚙️ Adaptive SL/TP aktiviert")
 
     def set_auto_sl_status(self, ok: bool) -> None:
-        """Update Button-Farbe je nach Status."""
         self.sl_tp_auto_active.set(ok)
         if ok:
             self.sl_tp_manual_active.set(False)
@@ -436,7 +419,6 @@ def stop_and_reset(self):
     self.force_exit = True
     self.running = False
     try:
-        # Einfach nur den Bot anhalten, ohne die Konfiguration zurückzusetzen
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
     except Exception as e:
         self.log_event(f"❌ Fehler beim Anhalten des Bots: {e}")

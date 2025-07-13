@@ -16,13 +16,13 @@ class SessionFilter:
         self.session_times: Dict[str, Tuple[int, int]] = {
             "london": (6, 14),
             "new_york": (13, 21),
-            "asia": (21, 6)  # Nacht-Session (geht über Mitternacht)
+            "asia": (21, 6)
         }
 
     def get_current_hour(self) -> int:
         now = datetime.utcnow()
         if not self.use_utc:
-            now += timedelta(hours=2)  # Lokale Anpassung (z. B. für CEST)
+            now += timedelta(hours=2)
         return now.hour
 
     def get_current_session(self) -> str:
@@ -31,7 +31,7 @@ class SessionFilter:
             if start < end:
                 if start <= hour < end:
                     return name
-            else:  # Über Mitternacht
+            else:
                 if hour >= start or hour < end:
                     return name
         return "unknown"

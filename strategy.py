@@ -2,7 +2,6 @@
 
 
 def execute_trading_strategy(settings, gui):
-    """Starte die Trading-Strategie im Live-Modus."""
     msg = "📡 Starte Trading-Strategie…"
     print(msg)
     if hasattr(gui, "log_event"):
