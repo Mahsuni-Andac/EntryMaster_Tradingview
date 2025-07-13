@@ -321,7 +321,6 @@ def run_bot_live(settings=None, app=None):
             time.sleep(1)
             continue
         if not getattr(app, "feed_ok", True):
-            import global_state
             print(
                 f"🧪 Letzter Feed-Eingang vor {time.time() - global_state.last_feed_time:.1f} Sekunden"
             )
