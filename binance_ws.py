@@ -87,7 +87,8 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
     def _on_message(self, ws, message):
         """Handle incoming kline messages and forward completed candles."""
-        print("\ud83d\udce5 Raw:", message)
+        # Use actual emoji character to avoid encoding issues on some systems
+        print("📥 Raw:", message)
         global last_candle_time
         try:
             data = json.loads(message)
