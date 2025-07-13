@@ -4,21 +4,49 @@ import json
 import time
 from typing import Callable
 
+
+class BaseWebSocket:
+    """Common WebSocket helper running in a background thread."""
+
+    def __init__(self, url: str, on_message: Callable):
+        self.url = url
+        self.on_message = on_message
+        self.ws: WebSocketApp | None = None
+        self.thread: threading.Thread | None = None
+
+    def _run(self) -> None:
+        while True:
+            try:
+                self.ws = WebSocketApp(self.url, on_message=self.on_message)
+                self.ws.run_forever()
+            except Exception as e:
+                print("WebSocket Fehler:", e)
+                time.sleep(5)
+
+    def start(self) -> None:
+        if not self.thread or not self.thread.is_alive():
+            self.thread = threading.Thread(target=self._run, daemon=True)
+            self.thread.start()
+
+    def stop(self) -> None:
+        if self.ws:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1)
+
 last_candle_time: float | None = None
 
 
-class BinanceWebSocket:
-    def __init__(self, on_price):
+class BinanceWebSocket(BaseWebSocket):
+    def __init__(self, on_price: Callable[[str], None]):
+        url = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
+        super().__init__(url, self._on_message)
         self.on_price = on_price
-        self.thread: threading.Thread | None = None
-        self.ws: WebSocketApp | None = None
 
-    def _start_socket(self):
-        socket = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
-        self.ws = WebSocketApp(socket, on_message=self._on_message)
-        self.ws.run_forever()
-
-    def _on_message(self, ws, message):
+    def _on_message(self, ws, message) -> None:
         try:
             data = json.loads(message)
             k = data.get("k")
@@ -29,40 +57,23 @@ class BinanceWebSocket:
         except Exception as e:
             print("WebSocket Fehler:", e)
 
-    def start(self):
-        if self.thread and self.thread.is_alive():
-            return
-        self.thread = threading.Thread(target=self._start_socket, daemon=True)
-        self.thread.start()
 
-    def stop(self):
-        if self.ws is not None:
-            try:
-                self.ws.close()
-            except Exception:
-                pass
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1)
-
-
-class BinanceCandleWebSocket:
+class BinanceCandleWebSocket(BaseWebSocket):
     """WebSocket manager for Binance candle streams."""
 
     def __init__(self, on_candle: Callable[[dict], None], symbol: str = "btcusdt", interval: str = "1m"):
         self.on_candle = on_candle
         self.symbol = symbol.lower()
         self.interval = interval
-        self.thread: threading.Thread | None = None
-        self.ws: WebSocketApp | None = None
+        url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
+        super().__init__(url, self._on_message)
         self._warning_printed = False
 
-    def run(self) -> None:
-        """Open the websocket and keep the connection alive."""
-        url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
+    def _run(self) -> None:
         while True:
             try:
                 self.ws = WebSocketApp(
-                    url,
+                    self.url,
                     on_message=self._on_message,
                     on_error=self._on_error,
                     on_close=self._on_close,
@@ -132,18 +143,3 @@ class BinanceCandleWebSocket:
     def _on_close(self, ws, status_code, msg):
         """Log websocket close events."""
         print(f"🔌 Candle-WS geschlossen: {status_code} {msg}")
-
-    def start(self):
-        if self.thread and self.thread.is_alive():
-            return
-        self.thread = threading.Thread(target=self.run, daemon=True)
-        self.thread.start()
-
-    def stop(self):
-        if self.ws is not None:
-            try:
-                self.ws.close()
-            except Exception:
-                pass
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1)

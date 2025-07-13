@@ -10,6 +10,10 @@ import os
 import time
 import traceback
 from datetime import datetime
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s")
 
 from data_provider import (
     fetch_latest_candle,
@@ -37,6 +41,135 @@ from indicator_utils import calculate_ema, calculate_atr
 # NEU: Adaptive Engines
 from andac_entry_master import AndacEntryMaster, AndacSignal
 from adaptive_sl_manager import AdaptiveSLManager
+
+
+def update_indicators(candles):
+    """Return ATR and EMA values for the given candle list."""
+    atr = calculate_atr(candles, 14)
+    close_list = [c["close"] for c in candles[-20:] if "close" in c]
+    ema = calculate_ema(close_list, 20)
+    return atr, ema
+
+
+def handle_existing_position(position, candle, app, capital, trader, live_trading,
+                             cooldown, risk_manager, last_printed_pnl,
+                             last_printed_price, settings, now):
+    """Process an open position and return updated state."""
+    current = candle["close"]
+    entry = position["entry"]
+    pnl_live = calculate_futures_pnl(
+        entry,
+        current,
+        position["leverage"],
+        position["amount"],
+        position["side"],
+    )
+
+    if (
+        last_printed_pnl is None
+        or last_printed_price is None
+        or abs(pnl_live - last_printed_pnl) > 1.0
+        or abs(current - last_printed_price) > 1.0
+    ):
+        logging.info(
+            "⏳ Position offen (%s) | Entry: %.2f | Now: %.2f",
+            position["side"],
+            entry,
+            current,
+        )
+        logging.info(
+            "🎯 SL: %.2f | TP: %.2f | PnL: %.2f",
+            position["sl"],
+            position["tp"],
+            pnl_live,
+        )
+        last_printed_pnl = pnl_live
+        last_printed_price = current
+
+    app.update_live_trade_pnl(pnl_live)
+    app.live_pnl = pnl_live
+
+    if hasattr(app, "apc_enabled") and app.apc_enabled.get():
+        try:
+            apc_rate = float(app.apc_rate.get())
+            apc_interval = int(app.apc_interval.get())
+            apc_min_profit = float(app.apc_min_profit.get())
+            if pnl_live > apc_min_profit and position["amount"] > 1:
+                to_close = position["amount"] * (apc_rate / 100)
+                if to_close < 1:
+                    to_close = 1
+
+                size_close = to_close * position["leverage"] / entry
+                fee = current * size_close * FEE_RATE
+                gross_pnl = calculate_futures_pnl(
+                    entry,
+                    current,
+                    position["leverage"],
+                    to_close,
+                    position["side"],
+                )
+                realized = gross_pnl - fee
+                old_cap = capital
+                capital += realized
+                check_plausibility(realized, old_cap, capital, to_close)
+                position["amount"] -= to_close
+
+                log_msg = (
+                    f"⚡️ Teilverkauf {to_close:.2f} | Entry {entry:.2f} -> "
+                    f"Exit {current:.2f} | PnL {realized:.2f}$ | "
+                    f"Balance {old_cap:.2f}->{capital:.2f} | Rest {position['amount']:.2f}"
+                )
+                app.log_event(log_msg)
+                app.apc_status_label.config(text=log_msg, foreground="blue")
+                if trader and live_trading:
+                    live_partial_close(trader, settings["symbol"], position["side"], to_close)
+                if position["amount"] <= 0:
+                    position = None
+                    entry_time_global = None
+                    app.log_event("✅ Position durch APC komplett geschlossen")
+                    return position, capital, last_printed_pnl, last_printed_price, True
+                time.sleep(apc_interval)
+        except Exception as e:
+            logging.error("Fehler bei Auto Partial Close: %s", e)
+
+    hit_tp = current >= position["tp"] if position["side"] == "long" else current <= position["tp"]
+    hit_sl = current <= position["sl"] if position["side"] == "long" else current >= position["sl"]
+
+    if hit_tp or hit_sl:
+        gross_pnl = calculate_futures_pnl(
+            entry,
+            current,
+            position["leverage"],
+            position["amount"],
+            position["side"],
+        )
+        size_close = position["amount"] * position["leverage"] / entry
+        fee = current * size_close * FEE_RATE
+        pnl = gross_pnl - fee
+        old_cap = capital
+        capital += pnl
+        check_plausibility(pnl, old_cap, capital, position["amount"])
+
+        risk_manager.update_loss(pnl)
+
+        app.update_pnl(pnl)
+        app.update_capital(capital)
+        log_msg = (
+            f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
+        )
+        logging.info(log_msg)
+        app.log_event(log_msg)
+
+        app.update_live_trade_pnl(0.0)
+        app.live_pnl = 0.0
+
+        if hit_sl:
+            cooldown.register_sl(time.time())
+
+        position = None
+        entry_time_global = None
+
+    return position, capital, last_printed_pnl, last_printed_price, False
 
 from risk_manager import RiskManager
 from console_status import (
@@ -237,12 +370,7 @@ def run_bot_live(settings=None, app=None):
             if len(candles) > 100:
                 candles.pop(0)
 
-            # Berechnung des ATR und Zuordnung zu atr_value_global
-            atr_value_global = calculate_atr(candles, 14)
-
-            # Der Rest des Codes bleibt unverändert
-            close_list = [c["close"] for c in candles[-20:] if "close" in c]
-            ema = calculate_ema(close_list, 20)
+            atr_value_global, ema = update_indicators(candles)
             settings["ema_value"] = ema
 
             if ema is not None:
@@ -286,117 +414,22 @@ def run_bot_live(settings=None, app=None):
 
         # --- POSITION HANDLING ---
         if position:
-            current = candle["close"]
-            entry = position["entry"]
-            pnl_live = calculate_futures_pnl(
-                entry,
-                current,
-                position["leverage"],
-                position["amount"],
-                position["side"],
+            position, capital, last_printed_pnl, last_printed_price, closed = handle_existing_position(
+                position,
+                candle,
+                app,
+                capital,
+                trader,
+                live_trading,
+                cooldown,
+                risk_manager,
+                last_printed_pnl,
+                last_printed_price,
+                settings,
+                now,
             )
-
-            # Nur print bei Veränderung!
-            if (
-                last_printed_pnl is None or last_printed_price is None or
-                abs(pnl_live - last_printed_pnl) > 1.0 or
-                abs(current - last_printed_price) > 1.0
-            ):
-                print(f"⏳ Position offen ({position['side']}) | Entry: {entry:.2f} | Now: {current:.2f}")
-                print(f"💰 Aktuelles Balance: ${capital:.2f}")
-                print(f"🎯 SL: {position['sl']:.2f} | TP: {position['tp']:.2f} | PnL: {pnl_live:.2f}")
-                last_printed_pnl = pnl_live
-                last_printed_price = current
-
-            app.update_live_trade_pnl(pnl_live)
-            app.live_pnl = pnl_live
-
-            # --- Teilverkauf (APC) ---
-            if hasattr(app, "apc_enabled") and app.apc_enabled.get():
-                try:
-                    apc_rate = float(app.apc_rate.get())
-                    apc_interval = int(app.apc_interval.get())
-                    apc_min_profit = float(app.apc_min_profit.get())
-                    if pnl_live > apc_min_profit and position["amount"] > 1:
-                        to_close = position["amount"] * (apc_rate / 100)
-                        if to_close < 1:
-                            to_close = 1
-
-                        size_close = to_close * position["leverage"] / entry
-                        fee = current * size_close * FEE_RATE
-                        gross_pnl = calculate_futures_pnl(
-                            entry,
-                            current,
-                            position["leverage"],
-                            to_close,
-                            position["side"],
-                        )
-                        realized = gross_pnl - fee
-                        old_cap = capital
-                        capital += realized
-                        check_plausibility(realized, old_cap, capital, to_close)
-                        position["amount"] -= to_close
-
-                        log_msg = (
-                            f"⚡️ Teilverkauf {to_close:.2f} | Entry {entry:.2f} -> "
-                            f"Exit {current:.2f} | PnL {realized:.2f}$ | "
-                            f"Balance {old_cap:.2f}->{capital:.2f} | Rest {position['amount']:.2f}"
-                        )
-                        app.log_event(log_msg)
-                        app.apc_status_label.config(text=log_msg, foreground="blue")
-                        if trader and live_trading:
-                            live_partial_close(trader, settings["symbol"], position["side"], to_close)
-                        if position["amount"] <= 0:
-                            position = None
-                            entry_time_global = None
-                            app.log_event("✅ Position durch APC komplett geschlossen")
-                            continue
-                        time.sleep(apc_interval)
-                except Exception as e:
-                    print("❌ Fehler bei Auto Partial Close:", e)
-
-            hit_tp = current >= position["tp"] if position["side"] == "long" else current <= position["tp"]
-            hit_sl = current <= position["sl"] if position["side"] == "long" else current >= position["sl"]
-
-            if hit_tp or hit_sl:
-                gross_pnl = calculate_futures_pnl(
-                    entry,
-                    current,
-                    position["leverage"],
-                    position["amount"],
-                    position["side"],
-                )
-                size_close = position["amount"] * position["leverage"] / entry
-                fee = current * size_close * FEE_RATE
-                pnl = gross_pnl - fee
-                duration = int(now - position["entry_time"])
-                old_cap = capital
-                capital += pnl
-                check_plausibility(pnl, old_cap, capital, position["amount"])
-
-                # Risk-Manager informieren
-                risk_manager.update_loss(pnl)
-
-                
-
-                app.update_pnl(pnl)
-                app.update_capital(capital)
-                log_msg = (
-                    f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
-                )
-                print(log_msg)
-                app.log_event(log_msg)
-                print(f"💰 Aktuelles Balance: ${capital:.2f}")
-
-                app.update_live_trade_pnl(0.0)
-                app.live_pnl = 0.0
-
-                if hit_sl:
-                    cooldown.register_sl(time.time())
-
-                position = None
-                entry_time_global = None
-
+            if closed:
+                continue
             no_signal_printed = False
             continue  # Next Loop
 

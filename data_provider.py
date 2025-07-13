@@ -20,7 +20,20 @@ from tkinter import Tk, StringVar
 # WebSocket manager and price cache
 _WS_CLIENT: binance_ws.BinanceWebSocket | None = None
 _WS_PRICE: dict[str, float] = {}
-_WEBSOCKET_RUNNING: bool = False
+
+
+class WebSocketStatus:
+    """Simple class to store websocket running flag without globals."""
+
+    running = False
+
+    @classmethod
+    def is_running(cls) -> bool:
+        return cls.running
+
+    @classmethod
+    def set_running(cls, value: bool) -> None:
+        cls.running = value
 
 _WS_STARTED: bool = False
 _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
@@ -62,11 +75,10 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
 
     def handle(price: str) -> None:
         """Callback for websocket price updates."""
-        global _WEBSOCKET_RUNNING
         try:
             p = float(price)
             _WS_PRICE[symbol] = p
-            _WEBSOCKET_RUNNING = True
+            WebSocketStatus.set_running(True)
             if price_var is not None and _TK_ROOT is not None:
                 _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
             else:
@@ -87,7 +99,7 @@ def start_websocket(symbol: str = "BTCUSDT") -> None:
 
 def stop_websocket() -> None:
     """Stop the running websocket connection if active."""
-    global _WS_CLIENT, _WS_STARTED, _WEBSOCKET_RUNNING
+    global _WS_CLIENT, _WS_STARTED
     if _WS_CLIENT is None:
         return
     try:
@@ -96,7 +108,7 @@ def stop_websocket() -> None:
         pass
     _WS_CLIENT = None
     _WS_STARTED = False
-    _WEBSOCKET_RUNNING = False
+    WebSocketStatus.set_running(False)
 
 
 def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
@@ -184,12 +196,12 @@ def monitor_feed() -> None:
 
 def is_websocket_running() -> bool:
     """Return ``True`` if the websocket manager is active."""
-    return _WEBSOCKET_RUNNING
+    return WebSocketStatus.is_running()
 
 
 def websocket_active() -> bool:
     """Return ``True`` if a websocket stream is delivering prices."""
-    return _WEBSOCKET_RUNNING
+    return WebSocketStatus.is_running()
 
 
 def get_last_candle_time() -> Optional[float]:
@@ -200,11 +212,10 @@ def get_last_candle_time() -> Optional[float]:
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
     """Return latest price from websocket if available."""
-    global _WEBSOCKET_RUNNING
     if not _WS_STARTED:
         start_websocket(symbol)
     price = _WS_PRICE.get(symbol)
-    _WEBSOCKET_RUNNING = price is not None
+    WebSocketStatus.set_running(price is not None)
     return price
 
 def _normalize_symbol(symbol: str) -> str:
@@ -225,11 +236,11 @@ class Candle(TypedDict):
 
 def update_candle_feed(candle: Candle) -> None:
     """Store *candle* in the internal cache and update feed timestamp."""
-    global _WS_CANDLES, _WEBSOCKET_RUNNING
+    global _WS_CANDLES
     _WS_CANDLES.append(candle)
     if len(_WS_CANDLES) > 1000:
         _WS_CANDLES.pop(0)
-    _WEBSOCKET_RUNNING = True
+    WebSocketStatus.set_running(True)
     try:
         import global_state
         global_state.last_feed_time = time.time()
