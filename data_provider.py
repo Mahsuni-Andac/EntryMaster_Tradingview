@@ -201,9 +201,6 @@ def monitor_feed(symbol: str, interval: str) -> None:
     )
     _FEED_MONITOR_THREAD.start()
 
-def websocket_active() -> bool:
-    return WebSocketStatus.is_running()
-
 def get_last_candle_time() -> Optional[float]:
     return binance_ws.last_candle_time
 

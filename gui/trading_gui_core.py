@@ -556,10 +556,10 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = SETTINGS.get("symbol", "BTCUSDT")
 
-        from data_provider import fetch_last_price, websocket_active
+        from data_provider import fetch_last_price, WebSocketStatus
 
         price = fetch_last_price("binance", symbol)
-        self.websocket_active = websocket_active()
+        self.websocket_active = WebSocketStatus.is_running()
 
         stamp = datetime.now().strftime("%H:%M:%S")
         line = (
