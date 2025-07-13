@@ -19,7 +19,6 @@ from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
 from global_state import entry_time_global, ema_trend_global, atr_value_global
-from binance_ws import BinanceWebSocket
 import data_provider
 
 root = tk.Tk()
@@ -129,14 +128,7 @@ def on_gui_start(gui):
 def main():
     load_settings_from_file()
 
-    def update_price(p):
-        try:
-            root.after(0, lambda: price_var.set(p))
-        except Exception as e:
-            print("❌ WebSocket Fehler:", e)
-
-    ws = BinanceWebSocket(update_price)
-    ws.start()
+    # Candle WebSocket will start automatically when needed
     cred_manager = APICredentialManager()
     gui = EntryMasterGUI(root, cred_manager=cred_manager)
     gui_bridge = GUIBridge(gui_instance=gui)
