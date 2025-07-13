@@ -170,6 +170,12 @@ class TradingGUI(TradingGUILogicMixin):
         self.safe_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.auto_status_label = None
 
+        # --- Manuelle SL/TP Eingabe & Steuerung ---
+        self.manual_sl_var = tk.StringVar(value="")
+        self.manual_tp_var = tk.StringVar(value="")
+        self.sl_tp_auto_active = tk.BooleanVar(value=False)
+        self.sl_tp_manual_active = tk.BooleanVar(value=False)
+
         # Statusanzeigen für API & Datenfeed
         self.api_status_var = tk.StringVar(value="API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
@@ -316,6 +322,17 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Entry(loss_frame, textvariable=self.max_loss_value, width=8).grid(row=1, column=1)
         self.max_loss_status_label = ttk.Label(loss_frame, text="", foreground="red")
         self.max_loss_status_label.grid(row=3, column=0, columnspan=2, sticky="w")
+
+        manual_frame = ttk.LabelFrame(risk, text="Manuelles SL/TP")
+        manual_frame.grid(row=3, column=0, padx=5, pady=(10, 0), sticky="nw")
+        ttk.Label(manual_frame, text="SL:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8).grid(row=0, column=1)
+        ttk.Label(manual_frame, text="TP:").grid(row=1, column=0, sticky="w")
+        ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8).grid(row=1, column=1)
+        self.auto_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Auto aktiv", command=self.activate_auto_sl_tp)
+        self.auto_sl_button.grid(row=2, column=0, columnspan=2, sticky="we", pady=(5,0))
+        self.manual_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Manuell aktiv", command=self.toggle_manual_sl_tp)
+        self.manual_sl_button.grid(row=3, column=0, columnspan=2, sticky="we")
 
         self._build_andac_options(andac)
         self._build_controls(self.main_frame)
