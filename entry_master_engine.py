@@ -1,10 +1,6 @@
+# entry_master_engine.py
 
-"""Entry signal evaluation with adaptive logic and re-entry control."""
 
-# Changelog
-# - Introduced ``EntryDecision`` dataclass
-# - Removed unused ``numpy`` import
-# - Added type hints and module docstring
 
 from __future__ import annotations
 
@@ -14,7 +10,6 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class EntryDecision:
-    """Structured result of an entry evaluation."""
 
     entry_type: Optional[str]
     sl: Optional[float]
@@ -24,11 +19,10 @@ class EntryDecision:
     short_signal: bool
 
 class EntryMasterEngine:
-    """Evaluate entries and manage re-entry cooldowns."""
 
     def __init__(self, config: Dict[str, Any], mode: str = "live") -> None:
         self.config = config
-        self.mode = mode  # nur "live"
+        self.mode = mode
         self.last_entry_type: Optional[str] = None
         self.last_sl_type: Optional[str] = None
         self.cooldown: int = 0
@@ -37,7 +31,6 @@ class EntryMasterEngine:
     def evaluate_entry(
         self, candle: Dict[str, float], context: Dict[str, Any]
     ) -> EntryDecision:
-        """Return an entry decision for the provided *candle* and *context*."""
 
         open_, close, high, low = (
             candle["open"],
@@ -50,7 +43,6 @@ class EntryMasterEngine:
         wick_bot = min(open_, close) - low
         candle_range = high - low
 
-        # Fix: Edge-Case Division durch 0 sauber abfangen!
         if candle_range == 0:
             return EntryDecision(
                 entry_type=None,
@@ -64,28 +56,25 @@ class EntryMasterEngine:
         wick_ratio_top = wick_top / candle_range
         wick_ratio_bot = wick_bot / candle_range
 
-        # Adaptive Entry
         long_signal = (
             body / candle_range > 0.5 and
-            wick_ratio_bot > 0.3 and  # Deutlicher Rejection-Wick unten
+            wick_ratio_bot > 0.3 and
             context.get("momentum", 0) > 0 and
             close > context.get("ema", 0)
         )
         short_signal = (
             body / candle_range > 0.5 and
-            wick_ratio_top > 0.3 and  # Deutlicher Rejection-Wick oben
+            wick_ratio_top > 0.3 and
             context.get("momentum", 0) < 0 and
             close < context.get("ema", 0)
         )
 
-        # Breakout & Support-Bounce Detection (Optional Erweiterbar)
         breakout_long = False
         breakout_short = False
         if "history" in context and len(context["history"]) >= 5:
             breakout_long = close > max(c["high"] for c in context["history"][-5:])
             breakout_short = close < min(c["low"] for c in context["history"][-5:])
 
-        # Adaptive SL
         sl = None
         if long_signal:
             sl = min(low, context["support"] if "support" in context else low)
@@ -98,7 +87,6 @@ class EntryMasterEngine:
         elif short_signal or breakout_short:
             entry_type = "short"
 
-        # Smart Re-Entry bei Fehlausbruch (nur nach SL)
         allow_reentry = self.active_reentry and self.cooldown == 0
 
         return EntryDecision(
@@ -111,13 +99,11 @@ class EntryMasterEngine:
         )
 
     def register_sl(self, sl_type: str = "default") -> None:
-        """Register a stop-loss event and enable re-entry cooldown."""
         self.last_sl_type = sl_type
         self.active_reentry = True
         self.cooldown = self.config.get("reentry_cooldown", 3)
 
     def tick(self) -> None:
-        """Advance the internal cooldown timer."""
         if self.cooldown > 0:
             self.cooldown -= 1
         if self.cooldown == 0:

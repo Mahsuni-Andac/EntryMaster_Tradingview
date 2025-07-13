@@ -1,4 +1,4 @@
-"""Threaded helper that periodically adjusts GUI settings."""
+# auto_recommender.py
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from typing import Optional
 
 
 class AutoRecommender:
-    """Apply dynamic filter recommendations while the bot is running."""
 
     def __init__(self, gui, interval: int = 10) -> None:
         self.gui = gui

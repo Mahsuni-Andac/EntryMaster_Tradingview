@@ -1,3 +1,4 @@
+# api_credential_frame.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Dict
@@ -6,11 +7,9 @@ from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 from config import SETTINGS
 
-# Order of exchanges in the selection box
 EXCHANGES = ["Binance"]
 
 class APICredentialFrame(ttk.LabelFrame):
-    """GUI frame for managing multiple exchange credentials."""
 
     def __init__(self, master: tk.Misc, cred_manager: APICredentialManager, log_callback=None, select_callback=None) -> None:
         super().__init__(master, text="Exchange API")
@@ -18,14 +17,12 @@ class APICredentialFrame(ttk.LabelFrame):
         self.log_callback = log_callback
         self.select_callback = select_callback
 
-        # no exchange active until the user selects one
         self.active_exchange = tk.StringVar(value="")
 
         self.vars: Dict[str, Dict[str, tk.Variable]] = {}
         self.status_vars: Dict[str, tk.StringVar] = {}
         self.status_labels: Dict[str, ttk.Label] = {}
 
-        # fixed mode: WebSocket only
         self.data_source_mode = tk.StringVar(value="websocket")
 
         ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
@@ -76,15 +73,12 @@ class APICredentialFrame(ttk.LabelFrame):
         self.system_status_label = ttk.Label(status_row, textvariable=self.system_status, foreground="green")
         self.system_status_label.pack(side="left", padx=(10, 0))
 
-        # Anzeige des WebSocket-Status
         self.feed_mode = tk.StringVar(value="")
         self.feed_mode_label = ttk.Label(status_row, textvariable=self.feed_mode, foreground="green")
         self.feed_mode_label.pack(side="left", padx=(10, 0))
 
-        # disable all fields until user actively chooses an exchange
         self._select_exchange("")
 
-        # Mini price monitor
         term_frame = tk.Frame(self, bg="black")
         term_frame.grid(row=0, column=4, rowspan=len(EXCHANGES)+1, padx=5, sticky="ne")
         self.price_terminal = tk.Text(term_frame, height=6, width=24, bg="black", fg="green", state="disabled")
@@ -92,9 +86,7 @@ class APICredentialFrame(ttk.LabelFrame):
 
         self.check_market_feed()
 
-    # ------------------------------------------------------------------
     def _select_exchange(self, exch: str) -> None:
-        """Enable entry fields for *exch* and reset others."""
         for name in EXCHANGES:
             data = self.vars[name]
             state = "normal" if name == exch else "disabled"
@@ -134,7 +126,6 @@ class APICredentialFrame(ttk.LabelFrame):
         ok = WebSocketStatus.is_running()
         self.update_market_status(ok)
 
-    # ------------------------------------------------------------------
     def _save(self) -> None:
         exch = self.active_exchange.get()
         if not exch:

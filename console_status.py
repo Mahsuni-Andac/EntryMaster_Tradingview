@@ -1,12 +1,8 @@
 # console_status.py
-#
-# Changelog:
-# - Added `print_stop_banner` for unified bot termination output
 
 import time
 from datetime import datetime
 
-# ---- Rate-Limit Speicher für Warnungen ----
 _last_warnings = {}
 _last_options_snapshot = {}
 
@@ -19,9 +15,6 @@ def _throttle_warn(key, seconds=30):
     return False
 
 def print_full_filter_overview(settings):
-    """
-    Gibt eine Übersicht aller Filter und Optionen mit Status (grüner Haken / rotes Kreuz) aus.
-    """
     groups = [
         ("RSI", settings.get("rsi_filter", False)),
         ("Volume", settings.get("volume_filter", False)),
@@ -53,9 +46,6 @@ def print_full_filter_overview(settings):
     print("\n")
 
 def options_snapshot(settings):
-    """
-    Liefert einen Hash/Snapshot der wichtigsten Einstellungen für Change-Detection.
-    """
     keys = (
         "rsi_filter", "volume_filter", "ema_filter", "trailing_sl",
         "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
@@ -66,12 +56,8 @@ def options_snapshot(settings):
     return tuple(settings.get(k) for k in keys)
 
 def print_no_signal_status(settings, position=None, price=None, session_name=None, saved_profit=None, only_active_filters=True):
-    """
-    Gibt den 'Kein Signal' Statusblock mit Zeit und Session aus.
-    """
     nowstr = datetime.now().strftime("[%H:%M:%S]")
     print(f"{nowstr} ➖ Kein Signal" + (f" | Session: {session_name}" if session_name else ""))
-    # Aktive Filter oder alle anzeigen
     filter_status = []
     filter_status.append("RSI✅" if settings.get("rsi_filter", False) else "RSI❌")
     filter_status.append("Volume✅" if settings.get("volume_filter", False) else "Volume❌")
@@ -178,7 +164,6 @@ def print_start_banner(start_balance, saved_profit=None):
     print("")
 
 def print_stop_banner(reason: str | None = None) -> None:
-    """Print a unified stop banner."""
     nowstr = datetime.now().strftime("[%H:%M:%S]")
     msg = f"{nowstr} 🛑 Bot gestoppt"
     if reason:

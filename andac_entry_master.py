@@ -1,13 +1,4 @@
-"""Andac Entry-Master Indikatorimplementierung.
-
-Portierung des TradingView Pine Script Indikators
-"🤑 Andac Entry-Master 🚀 BTC-Futures-Binance" nach Python.
-
-Die Klasse bietet eine `evaluate`-Methode, die
-auf Basis neuer Candle-Daten Long- oder Short-Signale liefert.
-Alle Parameter des Originals sind als Attribute verfügbar und
-können bei der Instanziierung angepasst werden.
-"""
+# andac_entry_master.py
 
 from __future__ import annotations
 
@@ -20,9 +11,8 @@ from data_provider import fetch_latest_candle
 
 @dataclass
 class AndacSignal:
-    """Ergebnis eines Indikatoraufrufs."""
 
-    signal: Optional[str]  # "long", "short" oder None
+    signal: Optional[str]
     rsi: float
     vol_spike: bool
     engulfing: bool
@@ -30,7 +20,6 @@ class AndacSignal:
 
 
 class AndacEntryMaster:
-    """Python-Port des TradingView Indikators."""
 
     def __init__(
         self,
@@ -66,7 +55,6 @@ class AndacEntryMaster:
         self.prev_bull_signal = False
         self.prev_bear_signal = False
 
-    # ---- Hilfsfunktionen -------------------------------------------------
     @staticmethod
     def _sma(values: List[float], length: int) -> float:
         if len(values) < length:
@@ -114,9 +102,7 @@ class AndacEntryMaster:
         rsi = 100 - (100 / (1 + rs))
         return max(0.0, min(100.0, rsi))
 
-    # ---- Kernlogik -------------------------------------------------------
     def evaluate(self, candle: Dict[str, float], symbol: str = "BTCUSDT") -> AndacSignal:
-        """Analysiert die übergebene Kerze und gibt ggf. ein Entry-Signal zurück."""
 
         self.candles.append(candle)
         if len(self.candles) > self.lookback + 20:
@@ -172,7 +158,6 @@ class AndacEntryMaster:
             not self.opt_engulf_big or big_candle
         )
 
-        # --- Filterentscheidungen sammeln ---
         reasons_long: List[str] = []
         reasons_short: List[str] = []
 

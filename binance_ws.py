@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseWebSocket:
-    """Common WebSocket helper running in a background thread."""
 
     def __init__(self, url: str, on_message: Callable):
         self.url = url
@@ -66,7 +65,6 @@ class BinanceWebSocket(BaseWebSocket):
 
 
 class BinanceCandleWebSocket(BaseWebSocket):
-    """WebSocket manager for Binance candle streams."""
 
     def __init__(
         self,
@@ -106,7 +104,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
             if not k:
                 return
 
-            # Immer Feed-Zeit aktualisieren, auch bei "nicht abgeschlossen"
             try:
                 import global_state
                 global_state.last_feed_time = time.time()
@@ -116,7 +113,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
             if not k.get("x"):
                 return
 
-            # Neue Logik: Nur weiterverarbeiten, wenn Candle timestamp "frisch" ist
             candle_ts = k.get("t") // 1000
             now = int(datetime.now(tz=timezone.utc).timestamp())
 
@@ -170,5 +166,4 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
 
     def _on_close(self, ws, status_code, msg):
-        """Log websocket close events."""
         logger.info("Candle-WS geschlossen: %s %s", status_code, msg)

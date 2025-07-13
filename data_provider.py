@@ -1,9 +1,4 @@
 # data_provider.py
-#
-# Changelog:
-# - Fixed missing candle feed population by restoring internal update_candle_feed callback
-# - Removed redundant logging and callback override
-# - Simplified feed monitor logic
 
 from __future__ import annotations
 
@@ -27,7 +22,7 @@ _WS_STARTED: bool = False
 _CANDLE_WS_STARTED: bool = False
 _FEED_MONITOR_THREAD: threading.Thread | None = None
 _FEED_MONITOR_STARTED: bool = False
-_FEED_CHECK_INTERVAL = 20  # seconds
+_FEED_CHECK_INTERVAL = 20
 _TK_ROOT: Tk | None = None
 price_var: StringVar | None = None
 
@@ -49,7 +44,6 @@ def init_price_var(master: Tk) -> None:
         price_var = StringVar(master=master, value="--")
 
 def start_websocket(symbol: str = "BTCUSDT") -> None:
-    """Start the price WebSocket if not already running."""
     global _WS_STARTED, _WS_CLIENT
 
     if _WS_STARTED and _WS_CLIENT and _WS_CLIENT.thread and _WS_CLIENT.thread.is_alive():
@@ -92,7 +86,6 @@ def stop_websocket() -> None:
     logger.info("WebSocket gestoppt")
 
 def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
-    """Start the candle WebSocket and feed monitor."""
     global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
 
     if (
@@ -227,7 +220,6 @@ def is_candle_valid(candle: dict) -> bool:
     return all(key in candle and candle[key] not in (None, "") for key in required)
 
 def update_candle_feed(candle: Candle) -> None:
-    """Store incoming candle and keep a rolling window."""
     if not is_candle_valid(candle):
         logger.warning("Ungültige Candle empfangen: %s", candle)
         return

@@ -1,7 +1,7 @@
+# status_events.py
 from typing import Callable, Dict, List, Optional
 
 class StatusDispatcher:
-    """Simple event dispatcher for API/feed status changes."""
 
     _subs: Dict[str, List[Callable[[bool, Optional[str]], None]]] = {
         "api": [],

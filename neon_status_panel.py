@@ -1,3 +1,4 @@
+# neon_status_panel.py
 import tkinter as tk
 
 NEON_COLORS = {
@@ -31,12 +32,6 @@ class Tooltip:
             tw.destroy()
 
 class NeonStatusPanel:
-    """Panel with neon status bulbs.
-
-    The panel automatically creates a second column if the bulbs would exceed
-    the available vertical space.  This keeps every status fully visible even
-    when the window height is small.
-    """
 
     BULB_SIZE = 20
     PADDING = 10
@@ -57,7 +52,6 @@ class NeonStatusPanel:
         self.frame.bind("<Configure>", lambda e: self._layout())
 
     def register(self, key: str, description: str):
-        """Register a new bulb with the given key and tooltip."""
         self.items[key] = {"item": None, "desc": description, "color": "yellow"}
         self._layout()
 
@@ -73,14 +67,11 @@ class NeonStatusPanel:
                 info["item"], fill=NEON_COLORS.get(color, color)
             )
 
-    # ------------------------------------------------------------------
     def _layout(self):
-        """Arrange the bulbs in one or more columns."""
         if not self.items:
             return
         height = self.frame.winfo_height()
         if height <= 1:
-            # frame size not ready yet
             self.frame.after(50, self._layout)
             return
 
@@ -109,7 +100,6 @@ class NeonStatusPanel:
             self.canvas.tag_bind(item, "<Enter>", lambda e, k=key: self._on_enter(e, k))
             self.canvas.tag_bind(item, "<Leave>", self._on_leave)
 
-    # ------------------------------------------------------------------
     def _on_enter(self, event, key):
         bbox = self.canvas.bbox(self.items[key]["item"])
         x = self.canvas.winfo_rootx() + bbox[2] + 5

@@ -1,3 +1,4 @@
+# test_system_monitor.py
 import unittest
 from system_monitor import SystemMonitor
 
@@ -19,12 +20,10 @@ class SystemMonitorStateTest(unittest.TestCase):
     def test_pause_and_resume(self):
         gui = DummyGUI()
         mon = SystemMonitor(gui)
-        # simulate feed loss
         mon._handle_feed_down("lost")
         self.assertFalse(gui.running)
         self.assertFalse(mon._feed_ok)
         self.assertEqual(gui.feed_status, False)
-        # restore feed
         mon._handle_feed_up()
         self.assertTrue(gui.running)
         self.assertTrue(mon._feed_ok)

@@ -13,10 +13,8 @@ from central_logger import setup_logging
 from config import SETTINGS
 from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
-from gui import (
-    TradingGUI,
-    TradingGUILogicMixin,
-)
+from trading_gui_core import TradingGUI
+from trading_gui_logic import TradingGUILogicMixin
 from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
@@ -24,7 +22,6 @@ from global_state import entry_time_global, ema_trend_global, atr_value_global
 from binance_ws import BinanceWebSocket
 import data_provider
 
-# Tk root and shared price variable
 root = tk.Tk()
 data_provider.init_price_var(root)
 price_var = data_provider.price_var
@@ -33,11 +30,9 @@ init(autoreset=True)
 setup_logging()
 
 class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
-    """Kombiniert GUI und Logik für EntryMaster_Tradingview."""
     pass
 
 def load_settings_from_file(filename="tuning_config.json"):
-    """Lädt Settings aus einer JSON-Datei und überschreibt Defaults."""
     if not os.path.exists(filename):
         return
     try:
@@ -47,7 +42,6 @@ def load_settings_from_file(filename="tuning_config.json"):
         print(f"⚠️ Konnte {filename} nicht laden: {e}")
 
 def bot_control(gui):
-    """Kommandozeilensteuerung des Bots."""
     while True:
         cmd = input("💻 CMD> ").strip().lower()
         if cmd == "start":
@@ -74,25 +68,21 @@ def bot_control(gui):
                 laufzeit = int(time.time() - entry_time_global) if entry_time_global else 0
                 uhrzeit = datetime.now().strftime("%H:%M:%S")
                 datum = datetime.now().strftime("%d.%m.%Y")
-                # Kapital direkt aus capital_var (StringVar)
                 capital = 0.0
                 if hasattr(gui, "capital_var"):
                     try:
                         capital = float(gui.capital_var.get())
                     except Exception:
                         pass
-                # Hebel (Leverage)
                 leverage = SETTINGS.get("leverage", 20)
                 if hasattr(gui, "multiplier_var") and hasattr(gui.multiplier_var, "get"):
                     try:
                         leverage = float(gui.multiplier_var.get())
                     except Exception:
                         pass
-                # Trade-Info
                 trade_info = "--- (wartet)"
                 if hasattr(gui, "position") and gui.position:
                     trade_info = f"{gui.position['side'].upper()} @ {gui.position['entry']}"
-                # Filterstatus
                 filter_status = {
                     "RSI/EMA": gui.andac_opt_rsi_ema.get(),
                     "SAFE": gui.andac_opt_safe_mode.get(),
