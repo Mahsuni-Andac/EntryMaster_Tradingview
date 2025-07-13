@@ -33,7 +33,7 @@ hinterlegt sind. Dort lässt sich auch die Option `data_source_mode` setzen:
 
 - `websocket` – nutze ausschließlich den Binance WebSocket
 - `rest` – nutze ausschließlich REST-Requests
-- `auto` – versuche WebSocket und falle auf REST zurück
+- `auto` – versuche WebSocket und falle automatisch auf REST zurück, wenn keine Verbindung zustande kommt
 
 
 ## Starten
@@ -50,6 +50,8 @@ In der GUI lässt sich der Modus zwischen **WebSocket**, **REST** und **Auto** a
 Im Auto-Modus versucht der Bot zunächst den WebSocket-Stream und schaltet bei
 Problemen automatisch auf REST um. Der aktuell verwendete Modus wird in der GUI
 live angezeigt:
+
+Der WebSocket wird dabei nur einmal gestartet und bleibt aktiv, bis der Modus geändert wird. Beim Wechsel des Datenmodus werden laufende Streams sauber beendet und bei Bedarf neu aufgebaut. Dadurch werden Konflikte im Eventloop zuverlässig vermieden.
 
 - **🟢 WebSocket kommt an** – Stream aktiv
 - **🔴 REST kommt an** – Fallback auf REST
