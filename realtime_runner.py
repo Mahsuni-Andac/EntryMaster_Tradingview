@@ -16,6 +16,7 @@ from data_provider import (
     fetch_last_price,
     get_last_candle_time,
     get_live_candles,
+    start_candle_websocket,
 )
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
@@ -97,6 +98,9 @@ def run_bot_live(settings=None, app=None):
     start_capital = capital
 
     print_start_banner(capital)
+
+    # sicherstellen, dass der Candle-Feed laeuft
+    start_candle_websocket(settings["symbol"], settings.get("interval", "1m"))
 
     if app:
         settings["log_event"] = app.log_event
@@ -184,6 +188,10 @@ def run_bot_live(settings=None, app=None):
             time.sleep(1)
             continue
         if not getattr(app, "feed_ok", True):
+            import global_state
+            print(
+                f"🧪 Letzter Feed-Eingang vor {time.time() - global_state.last_feed_time:.1f} Sekunden"
+            )
             time.sleep(1)
             continue
         risk_manager.update_capital(capital)
