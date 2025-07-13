@@ -1,6 +1,11 @@
 from websocket import WebSocketApp
 import threading
 import json
+import time
+from typing import Callable, Optional
+
+on_candle_callback: Optional[Callable[[dict], None]] = None
+last_candle_time: Optional[float] = None
 
 
 class BinanceWebSocket:
@@ -10,16 +15,18 @@ class BinanceWebSocket:
         self.ws: WebSocketApp | None = None
 
     def _start_socket(self):
-        socket = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+        socket = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
         self.ws = WebSocketApp(socket, on_message=self._on_message)
         self.ws.run_forever()
 
     def _on_message(self, ws, message):
         try:
             data = json.loads(message)
-            price = data.get("p")
-            if price:
-                self.on_price(price)
+            k = data.get("k")
+            if k and k.get("x"):
+                price = k.get("c")
+                if price:
+                    self.on_price(price)
         except Exception as e:
             print("WebSocket Fehler:", e)
 
@@ -54,6 +61,7 @@ class BinanceCandleWebSocket:
         self.ws.run_forever()
 
     def _on_message(self, ws, message):
+        global last_candle_time
         try:
             data = json.loads(message)
             k = data.get("k")
@@ -67,6 +75,18 @@ class BinanceCandleWebSocket:
                 "close": float(k.get("c")),
                 "volume": float(k.get("v")),
             }
+            last_candle_time = time.time()
+            print(
+                f"✅ Candle abgeschlossen: Open={candle['open']}, Close={candle['close']}"
+            )
+            if on_candle_callback:
+                on_candle_callback(
+                    {
+                        "timestamp": candle["timestamp"],
+                        "open": candle["open"],
+                        "close": candle["close"],
+                    }
+                )
             self.on_candle(candle)
         except Exception as e:
             if not self._warning_printed:

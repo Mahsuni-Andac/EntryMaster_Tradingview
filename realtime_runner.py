@@ -11,7 +11,7 @@ import time
 import traceback
 from datetime import datetime
 
-from data_provider import fetch_latest_candle, fetch_last_price
+from data_provider import fetch_latest_candle, fetch_last_price, get_last_candle_time
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
 from status_block import print_entry_status
@@ -181,7 +181,9 @@ def run_bot_live(settings=None, app=None):
             if price is None and hasattr(app, "log_event"):
                 app.log_event("Keine Marktdaten – Exchange: BINANCE")
             if not candle:
-                print("⚠️ Keine Candle-Daten.")
+                last_candle = get_last_candle_time()
+                if last_candle is None or time.time() - last_candle > 5:
+                    print("⚠️ Keine Candle-Daten.")
                 time.sleep(1)
                 continue
 
