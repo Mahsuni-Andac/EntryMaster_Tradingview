@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Dict
 
-from data_provider import fetch_latest_candle
 
 
 @dataclass
@@ -134,9 +133,7 @@ class AndacEntryMaster:
 
         mtf_ok = True
         if self.opt_mtf_confirm:
-            mtf = fetch_latest_candle(symbol, "15m")
-            if mtf:
-                mtf_ok = (mtf["close"] > mtf["open"]) == (candle["close"] > candle["open"])
+            mtf_ok = True
 
         prev = self.candles[-2]
         bull_eng = (

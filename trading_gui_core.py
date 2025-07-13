@@ -385,16 +385,12 @@ class TradingGUI(TradingGUILogicMixin):
             parent,
             self.cred_manager,
             log_callback=self.log_event,
-            select_callback=self._on_exchange_select,
         )
         self.api_frame.pack(pady=(0, 10), fill="x")
         for exch in EXCHANGES:
             self.exchange_status_vars[exch] = self.api_frame.status_vars[exch]
             self.exchange_status_labels[exch] = self.api_frame.status_labels[exch]
 
-    def _on_exchange_select(self, exch: str) -> None:
-        if hasattr(self, "on_exchange_select"):
-            self.on_exchange_select(exch)
 
 
     def _collect_setting_vars(self):
@@ -506,13 +502,11 @@ class TradingGUI(TradingGUILogicMixin):
             self.api_frame.system_status_label.config(foreground=color)
 
     def _update_market_monitor(self) -> None:
-        from config import SETTINGS
-
-        symbol = SETTINGS.get("symbol", "BTCUSDT")
-
+        from config import BINANCE_SYMBOL
         from data_provider import fetch_last_price, WebSocketStatus
 
-        price = fetch_last_price("binance", symbol)
+        symbol = BINANCE_SYMBOL
+        price = fetch_last_price()
         self.websocket_active = WebSocketStatus.is_running()
 
         stamp = datetime.now().strftime("%H:%M:%S")

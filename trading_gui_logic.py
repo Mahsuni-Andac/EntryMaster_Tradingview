@@ -236,8 +236,6 @@ class TradingGUILogicMixin:
             cache = getattr(self, "exchange_status_cache", None)
             if cache is not None:
                 cache[exchange] = ok
-            if getattr(self.api_frame, "active_exchange", tk.StringVar()).get() != exchange:
-                return
             if getattr(self, "_last_exchange_status", {}).get(exchange) == ok:
                 return
             self._last_exchange_status = getattr(self, "_last_exchange_status", {})
@@ -256,33 +254,6 @@ class TradingGUILogicMixin:
                     if not lbl.winfo_ismapped():
                         lbl.pack(side="left", padx=5)
 
-    def on_exchange_select(self, exch: str) -> None:
-        cache = getattr(self, "exchange_status_cache", None)
-        if cache is None:
-            return
-        ok = cache.get(exch)
-        lbl = self.exchange_status_labels.get(exch)
-        if ok is None:
-            self.exchange_status_vars[exch].set("⚪")
-            if lbl and lbl.winfo_ismapped():
-                lbl.pack_forget()
-            if lbl:
-                lbl.config(foreground="grey")
-            return
-        self._last_exchange_status = getattr(self, "_last_exchange_status", {})
-        self._last_exchange_status[exch] = ok
-        if ok:
-            if lbl and lbl.winfo_ismapped():
-                lbl.pack_forget()
-            self.exchange_status_vars[exch].set("")
-        else:
-            stamp = datetime.now().strftime("%H:%M:%S")
-            text = f"{exch} ❌ ({stamp})"
-            self.exchange_status_vars[exch].set(text)
-            if lbl:
-                lbl.config(foreground="red")
-                if not lbl.winfo_ismapped():
-                    lbl.pack(side="left", padx=5)
 
     def update_pnl(self, pnl):
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
