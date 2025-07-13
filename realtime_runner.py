@@ -11,7 +11,12 @@ import time
 import traceback
 from datetime import datetime
 
-from data_provider import fetch_latest_candle, fetch_last_price, get_last_candle_time
+from data_provider import (
+    fetch_latest_candle,
+    fetch_last_price,
+    get_last_candle_time,
+    get_live_candles,
+)
 from cooldown_manager import CooldownManager
 from session_filter import SessionFilter
 from status_block import print_entry_status
@@ -107,6 +112,24 @@ def run_bot_live(settings=None, app=None):
     start_capital = capital                  # <--- Startwert merken für Verlustlimit
     interval = gui_bridge.interval
     auto_multi = gui_bridge.auto_multiplier
+
+    # ---- NEU: Auf Candles warten (ATR Ready Phase) ----
+    wait_counter = 0
+    while True:
+        candles_ready = get_live_candles(settings["symbol"], interval, 100)
+        if len(candles_ready) >= 14:
+            print("✅ Genug Candles vorhanden – Starte Bot-Logik.")
+            break
+        if app and hasattr(app, "update_status"):
+            app.update_status("⏳ Initialisiere... Warte auf Candle-Daten")
+        print("⏳ Warte auf ausreichend Candles für ATR...")
+        wait_counter += 1
+        if wait_counter > 30:  # max. 15 Sekunden warten
+            print("⚠️ Timeout beim Warten auf Candles – starte trotzdem")
+            break
+        time.sleep(0.5)
+    if app and hasattr(app, "update_status"):
+        app.update_status("✅ Bereit")
 
     live_requested = gui_bridge.live_trading and API_KEY and API_SECRET
     paper_mode = settings.get("paper_mode", True)
