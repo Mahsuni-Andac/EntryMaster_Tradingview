@@ -25,7 +25,7 @@ class GUICredentialFrameTest(unittest.TestCase):
         except tk.TclError:
             self.skipTest("Tkinter not available")
         frame = APICredentialFrame(root, APICredentialManager())
-        self.assertEqual(frame.data_source_mode.get(), "auto")
+        self.assertEqual(frame.data_source_mode.get(), "websocket")
         root.destroy()
 
 if __name__ == '__main__':

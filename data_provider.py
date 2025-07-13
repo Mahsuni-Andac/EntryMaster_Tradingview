@@ -7,25 +7,16 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from datetime import datetime
-from typing import Iterable, List, Optional, TypedDict
+from typing import List, Optional, TypedDict
 
 import time
 
-from binance.client import Client
 from binance_ws import BinanceWebSocket
 from tkinter import Tk, StringVar
 
-from config import SETTINGS
 
-# Currently active feed source: websocket | rest | auto
-current_feed_source = SETTINGS.get("data_source_mode", "auto").lower()
-
-_BINANCE = Client("", "")
-# WebSocket manager and price cache used when ``data_source_mode`` is
-# set to ``websocket`` or ``auto``.
+# WebSocket manager and price cache
 _WS_CLIENT: BinanceWebSocket | None = None
 _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
@@ -35,13 +26,6 @@ _WS_STARTED: bool = False
 # Tk root used for Tkinter variables when none is provided
 _TK_ROOT: Tk | None = None
 
-# REST polling handle
-_REST_JOB: str | None = None
-_REST_INTERVAL_MS = 1000
-_REST_RUNNING = False
-
-# Auto mode watchdog
-_AUTO_JOB: str | None = None
 
 # Tkinter variable updated by the WebSocket callback
 price_var: StringVar | None = None
@@ -116,108 +100,6 @@ def websocket_active() -> bool:
     return _WEBSOCKET_RUNNING
 
 
-def _rest_poll(symbol: str, interval: str) -> None:
-    global _REST_JOB, _REST_RUNNING
-    if _TK_ROOT is None:
-        init_price_var()
-    pair = _normalize_symbol(symbol)
-    try:
-        data = _BINANCE.get_symbol_ticker(symbol=pair)
-        price = float(data["price"])
-        _WS_PRICE[symbol] = price
-        if price_var is not None and _TK_ROOT is not None:
-            _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
-        try:
-            import global_state
-            global_state.last_feed_time = time.time()
-        except Exception:
-            pass
-    except Exception:
-        pass
-    if _TK_ROOT is not None:
-        _REST_JOB = _TK_ROOT.after(_REST_INTERVAL_MS, _rest_poll, symbol, interval)
-    _REST_RUNNING = True
-
-
-def start_rest_timer(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
-    global _REST_RUNNING
-    if _REST_RUNNING:
-        return
-    if _TK_ROOT is None:
-        init_price_var()
-    _rest_poll(symbol, interval)
-
-
-def cancel_rest_timer() -> None:
-    global _REST_JOB, _REST_RUNNING
-    if _REST_JOB and _TK_ROOT is not None:
-        try:
-            _TK_ROOT.after_cancel(_REST_JOB)
-        except Exception:
-            pass
-    _REST_JOB = None
-    _REST_RUNNING = False
-
-
-def _auto_loop(symbol: str, interval: str, timeout: int = 5) -> None:
-    global _AUTO_JOB
-    if _TK_ROOT is None:
-        init_price_var()
-    ws_ok = websocket_active()
-    last = None
-    try:
-        import global_state
-        last = global_state.last_feed_time
-    except Exception:
-        pass
-    if ws_ok:
-        cancel_rest_timer()
-    else:
-        if last is None or time.time() - last > timeout:
-            start_rest_timer(symbol, interval)
-    if _TK_ROOT is not None:
-        _AUTO_JOB = _TK_ROOT.after(1000, _auto_loop, symbol, interval, timeout)
-
-
-def stop_auto_mode() -> None:
-    global _AUTO_JOB
-    if _AUTO_JOB and _TK_ROOT is not None:
-        try:
-            _TK_ROOT.after_cancel(_AUTO_JOB)
-        except Exception:
-            pass
-    _AUTO_JOB = None
-    cancel_rest_timer()
-    stop_websocket()
-
-
-def start_auto_mode(symbol: str = "BTCUSDT", interval: str = "1m") -> None:
-    start_websocket(symbol)
-    _auto_loop(symbol, interval)
-
-
-def switch_feed_source(mode: str, symbol: str = "BTCUSDT", interval: str = "1m") -> None:
-    """Switch active data source ensuring only one is running."""
-    global current_feed_source
-    if mode == current_feed_source:
-        return
-    if current_feed_source == "websocket":
-        stop_websocket()
-    elif current_feed_source == "rest":
-        cancel_rest_timer()
-    elif current_feed_source == "auto":
-        stop_auto_mode()
-
-    current_feed_source = mode
-    SETTINGS["data_source_mode"] = mode
-    if mode == "websocket":
-        start_websocket(symbol)
-    elif mode == "rest":
-        start_rest_timer(symbol, interval)
-    else:
-        start_auto_mode(symbol, interval)
-
-
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
     """Return latest price from websocket if available."""
@@ -256,25 +138,12 @@ def fetch_last_price(exchange: str = "binance", symbol: Optional[str] = None) ->
         return None
 
     pair = _normalize_symbol(symbol or "BTCUSDT")
-    mode = current_feed_source
 
-    if mode in {"websocket", "auto"}:
-        price = _fetch_ws_price(pair)
-        if price is not None:
-            return price
-        if mode == "websocket":
-            return None
-
-    try:
-        data = _BINANCE.get_symbol_ticker(symbol=pair)
-        price = float(data["price"])
-        logging.debug("Price update %s: %.2f", pair, price)
-        if price_var is not None and _TK_ROOT is not None:
-            _TK_ROOT.after(0, lambda val=price: price_var.set(str(val)))
+    price = _fetch_ws_price(pair)
+    if price is not None:
         return price
-    except Exception as exc:
-        logging.debug("Failed to fetch %s: %s", pair, exc)
-        return None
+
+    return None
 
 def get_latest_candle_batch(
     symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 100
@@ -284,30 +153,8 @@ def get_latest_candle_batch(
 
 def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
     """Retrieve recent candles from Binance Spot."""
-    pair = _normalize_symbol(symbol)
-    mode = current_feed_source
-
-    if mode in {"websocket", "auto"}:
-        # placeholder: websocket candle feed not yet implemented
-        if mode == "websocket":
-            return []
-
-    try:
-        raw = _BINANCE.get_klines(symbol=pair, interval=interval, limit=limit)
-        candles: List[Candle] = []
-        for row in raw:
-            candles.append({
-                "timestamp": int(row[0]),
-                "open": float(row[1]),
-                "high": float(row[2]),
-                "low": float(row[3]),
-                "close": float(row[4]),
-                "volume": float(row[5]),
-            })
-        return candles
-    except Exception as e:
-        logging.error("Binance candle fetch failed: %s", e)
-        return []
+    # candle data no longer fetched via REST
+    return []
 
 
 def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:

@@ -225,26 +225,12 @@ class TradingGUILogicMixin:
 
     def _update_feed_mode_display(self, ok: bool) -> None:
         """Update label showing the active data source."""
-        from data_provider import current_feed_source
-        websocket = getattr(self, "websocket_active", False)
-        mode = current_feed_source
         if not ok:
-            text = "❌ Kein Feed"
+            text = "❌ WebSocket getrennt"
             color = "red"
         else:
-            if mode == "websocket":
-                text = "WebSocket kommt an"
-                color = "green"
-            elif mode == "rest":
-                text = "REST kommt an"
-                color = "red"
-            else:  # auto
-                if websocket:
-                    text = "WebSocket kommt an"
-                    color = "green"
-                else:
-                    text = "REST kommt an"
-                    color = "red"
+            text = "WebSocket verbunden"
+            color = "green"
 
         if hasattr(self, "feed_mode_var"):
             self.feed_mode_var.set(text)

@@ -6,7 +6,6 @@ from api_key_manager import APICredentialManager
 from credential_checker import check_exchange_credentials
 from status_events import StatusDispatcher
 from config import SETTINGS
-from binance.client import Client
 
 # Order of exchanges in the selection box
 EXCHANGES = ["BitMEX"]
@@ -27,7 +26,8 @@ class APICredentialFrame(ttk.LabelFrame):
         self.status_vars: Dict[str, tk.StringVar] = {}
         self.status_labels: Dict[str, ttk.Label] = {}
 
-        self.data_source_mode = tk.StringVar(value=SETTINGS.get("data_source_mode", "rest"))
+        # fixed mode: WebSocket only
+        self.data_source_mode = tk.StringVar(value="websocket")
 
         ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
         box = ttk.Combobox(self, state="readonly", values=EXCHANGES, textvariable=self.active_exchange, width=10)
@@ -63,16 +63,7 @@ class APICredentialFrame(ttk.LabelFrame):
         control_row = ttk.Frame(self)
         control_row.grid(row=start_row + len(EXCHANGES), column=0, columnspan=4, sticky="w", pady=5)
         ttk.Button(control_row, text="Speichern", command=self._save).pack(side="left")
-        ttk.Label(control_row, text="Marktdatenquelle (Binance):").pack(side="left", padx=(10, 2))
-        ttk.OptionMenu(
-            control_row,
-            self.data_source_mode,
-            self.data_source_mode.get(),
-            "rest",
-            "websocket",
-            "auto",
-            command=lambda v: self._on_source_change(v),
-        ).pack(side="left")
+
 
         self.market_status = tk.StringVar(value="")
 
@@ -125,13 +116,6 @@ class APICredentialFrame(ttk.LabelFrame):
             self.select_callback(exch)
         self.check_market_feed()
 
-    def _on_source_change(self, mode: str) -> None:
-        from data_provider import switch_feed_source
-
-        SETTINGS["data_source_mode"] = mode
-        symbol = SETTINGS.get("symbol", "BTCUSDT")
-
-        switch_feed_source(mode, symbol)
 
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
@@ -150,11 +134,9 @@ class APICredentialFrame(ttk.LabelFrame):
         self.market_status_label.config(foreground=color)
 
     def check_market_feed(self) -> None:
-        try:
-            Client().get_symbol_ticker(symbol="BTCUSDT")
-            ok = True
-        except Exception:
-            ok = False
+        from data_provider import websocket_active
+
+        ok = websocket_active()
         self.update_market_status(ok)
 
     # ------------------------------------------------------------------
@@ -179,7 +161,7 @@ class APICredentialFrame(ttk.LabelFrame):
         else:
             SETTINGS.pop(f"{exch.lower()}_key", None)
             SETTINGS.pop(f"{exch.lower()}_secret", None)
-        SETTINGS["data_source_mode"] = self.data_source_mode.get()
+        SETTINGS["data_source_mode"] = "websocket"
 
         self.status_vars[exch].set("✅" if ok else "❌")
         self.status_labels[exch].config(foreground="green" if ok else "red")

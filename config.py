@@ -14,6 +14,6 @@ SETTINGS = {
     "capital": 1000,
     "version": "V10.4_Pro",
     "paper_mode": True,
-    # Datenquelle für Marktdaten: websocket | rest | auto
-    "data_source_mode": "auto",
+    # Datenquelle für Marktdaten: nur WebSocket
+    "data_source_mode": "websocket",
 }

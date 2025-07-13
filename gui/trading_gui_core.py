@@ -59,8 +59,8 @@ class TradingGUI(TradingGUILogicMixin):
 
 
         from config import SETTINGS
-        mode = SETTINGS.get("data_source_mode", "auto").lower()
-        self.websocket_active = mode == "websocket"
+        SETTINGS["data_source_mode"] = "websocket"
+        self.websocket_active = True
         self._update_feed_mode_display(False)
 
         # MARKTDATEN-MONITOR starten
