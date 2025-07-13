@@ -126,13 +126,12 @@ class APICredentialFrame(ttk.LabelFrame):
         self.check_market_feed()
 
     def _on_source_change(self, mode: str) -> None:
-        from data_provider import start_websocket
+        from data_provider import switch_feed_source
 
         SETTINGS["data_source_mode"] = mode
         symbol = SETTINGS.get("symbol", "BTCUSDT")
 
-        if mode != "rest":
-            start_websocket(symbol)
+        switch_feed_source(mode, symbol)
 
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
