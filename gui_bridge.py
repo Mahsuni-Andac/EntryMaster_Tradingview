@@ -25,6 +25,14 @@ class GUIBridge:
     def __init__(self, gui_instance=None):
         self.gui = gui_instance
 
+    def _get_gui_value(self, name: str, fallback):
+        if not self.gui or not hasattr(self.gui, name):
+            return fallback
+        try:
+            return type(fallback)(getattr(self.gui, name).get())
+        except Exception:
+            return fallback
+
     def get_leverage(self, score=0.8, atr=25, balance=1000, drawdown=0.0):
         """
         Entscheidet ob Auto/Manuell und gibt den korrekten Multiplikator/Leverage zurück.
@@ -42,86 +50,41 @@ class GUIBridge:
 
     @property
     def multiplier(self):
-        if self.gui and hasattr(self.gui, "multiplier_entry"):
-            try:
-                return float(self.gui.multiplier_entry.get())
-            except Exception:
-                return SETTINGS.get("multiplier", 20)
-        return SETTINGS.get("multiplier", 20)
+        return self._get_gui_value("multiplier_entry", SETTINGS.get("multiplier", 20))
 
     @property
     def auto_multiplier(self):
-        if self.gui and hasattr(self.gui, "auto_multiplier"):
-            try:
-                return bool(self.gui.auto_multiplier.get())
-            except Exception:
-                return SETTINGS.get("auto_multiplier", False)
-        return SETTINGS.get("auto_multiplier", False)
+        return self._get_gui_value("auto_multiplier", SETTINGS.get("auto_multiplier", False))
 
     @property
     def capital(self):
-        if self.gui and hasattr(self.gui, "capital_entry"):
-            try:
-                return float(self.gui.capital_entry.get())
-            except Exception:
-                return SETTINGS.get("capital", 1000)
-        return SETTINGS.get("capital", 1000)
+        return self._get_gui_value("capital_entry", SETTINGS.get("capital", 1000))
 
     @property
     def interval(self):
-        if self.gui and hasattr(self.gui, "interval"):
-            try:
-                return self.gui.interval.get()
-            except Exception:
-                return SETTINGS.get("interval", "15m")
-        return SETTINGS.get("interval", "15m")
+        return self._get_gui_value("interval", SETTINGS.get("interval", "15m"))
 
     @property
     def live_trading(self):
-        if self.gui and hasattr(self.gui, "live_trading"):
-            try:
-                return bool(self.gui.live_trading.get())
-            except Exception:
-                return not SETTINGS.get("paper_mode", True)
-        return not SETTINGS.get("paper_mode", True)
+        return self._get_gui_value("live_trading", not SETTINGS.get("paper_mode", True))
 
     # ----- Manuelle/Adaptive SL/TP Steuerung -----
 
     @property
     def manual_sl(self):
-        if self.gui and hasattr(self.gui, "manual_sl_var"):
-            try:
-                return float(self.gui.manual_sl_var.get())
-            except Exception:
-                return None
-        return None
+        return self._get_gui_value("manual_sl_var", None)
 
     @property
     def manual_tp(self):
-        if self.gui and hasattr(self.gui, "manual_tp_var"):
-            try:
-                return float(self.gui.manual_tp_var.get())
-            except Exception:
-                return None
-        return None
+        return self._get_gui_value("manual_tp_var", None)
 
     @property
     def manual_active(self):
-        if self.gui and hasattr(self.gui, "sl_tp_manual_active"):
-            try:
-                return bool(self.gui.sl_tp_manual_active.get())
-            except Exception:
-                return False
-        return False
+        return self._get_gui_value("sl_tp_manual_active", False)
 
     @property
     def auto_active(self):
-        if self.gui and hasattr(self.gui, "sl_tp_auto_active"):
-            try:
-                return bool(self.gui.sl_tp_auto_active.get())
-            except Exception:
-                return False
-        return False
+        return self._get_gui_value("sl_tp_auto_active", False)
 
     def set_manual_status(self, ok: bool):
         if self.gui and hasattr(self.gui, "set_manual_sl_status"):

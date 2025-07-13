@@ -45,6 +45,7 @@ class SystemMonitor:
         self._running = False
         self._feed_ok = True
         self._pause_reason: Optional[str] = None
+        self._last_checked_ts: Optional[float] = None
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -77,6 +78,10 @@ class SystemMonitor:
         while self._running:
             try:
                 ts = global_state.last_feed_time
+                if ts == self._last_checked_ts:
+                    time.sleep(self.interval)
+                    continue
+                self._last_checked_ts = ts
                 if ts is None:
                     self._handle_feed_down("Keine Marktdaten empfangen")
                 elif time.time() - ts > self.timeout:
