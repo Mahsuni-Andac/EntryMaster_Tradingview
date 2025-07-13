@@ -19,5 +19,14 @@ class GUICredentialFrameTest(unittest.TestCase):
         self.assertEqual(bitmex["entry1"].cget("state"), "normal")
         root.destroy()
 
+    def test_default_data_source(self):
+        try:
+            root = tk.Tk()
+        except tk.TclError:
+            self.skipTest("Tkinter not available")
+        frame = APICredentialFrame(root, APICredentialManager())
+        self.assertEqual(frame.data_source_mode.get(), "rest")
+        root.destroy()
+
 if __name__ == '__main__':
     unittest.main()

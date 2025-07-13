@@ -8,6 +8,7 @@ Handelsergebnisse.
 
 ## Eigenschaften
 * Preisfeed über **python-binance** (BTCUSDT)
+* Wählbare Marktdatenquelle: REST, WebSocket oder Auto
 * Orderausführung über die vorhandene **BitmexTrader**-Klasse
 * Symbolmapping: `BTCUSDT` → `XBTUSD` mittels `bitmex_symbol()`
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung

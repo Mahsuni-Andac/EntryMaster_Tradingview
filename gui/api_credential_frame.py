@@ -27,6 +27,8 @@ class APICredentialFrame(ttk.LabelFrame):
         self.status_vars: Dict[str, tk.StringVar] = {}
         self.status_labels: Dict[str, ttk.Label] = {}
 
+        self.data_source_mode = tk.StringVar(value=SETTINGS.get("data_source_mode", "rest"))
+
         ttk.Label(self, text="Trading-Exchange:").grid(row=0, column=0, sticky="w")
         box = ttk.Combobox(self, state="readonly", values=EXCHANGES, textvariable=self.active_exchange, width=10)
         box.grid(row=0, column=1, sticky="w")
@@ -58,7 +60,19 @@ class APICredentialFrame(ttk.LabelFrame):
             self.vars[exch]["entry1"] = entry1
             self.vars[exch]["entry2"] = entry2
 
-        ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
+        control_row = ttk.Frame(self)
+        control_row.grid(row=start_row + len(EXCHANGES), column=0, columnspan=4, sticky="w", pady=5)
+        ttk.Button(control_row, text="Speichern", command=self._save).pack(side="left")
+        ttk.Label(control_row, text="Marktdatenquelle (Binance):").pack(side="left", padx=(10, 2))
+        ttk.OptionMenu(
+            control_row,
+            self.data_source_mode,
+            self.data_source_mode.get(),
+            "rest",
+            "websocket",
+            "auto",
+            command=lambda v: self._on_source_change(v),
+        ).pack(side="left")
 
         self.market_status = tk.StringVar(value="")
 
@@ -106,6 +120,9 @@ class APICredentialFrame(ttk.LabelFrame):
             self.select_callback(exch)
         self.check_market_feed()
 
+    def _on_source_change(self, mode: str) -> None:
+        SETTINGS["data_source_mode"] = mode
+
     def log_price(self, text: str, error: bool = False) -> None:
         color = "red" if error else "green"
         self.price_terminal.config(state="normal", fg=color)
@@ -152,6 +169,7 @@ class APICredentialFrame(ttk.LabelFrame):
         else:
             SETTINGS.pop(f"{exch.lower()}_key", None)
             SETTINGS.pop(f"{exch.lower()}_secret", None)
+        SETTINGS["data_source_mode"] = self.data_source_mode.get()
 
         self.status_vars[exch].set("✅" if ok else "❌")
         self.status_labels[exch].config(foreground="green" if ok else "red")
