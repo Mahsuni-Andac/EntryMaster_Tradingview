@@ -217,6 +217,16 @@ def get_live_candles(symbol: str, interval: str, limit: int) -> List[Candle]:
 
 
 def fetch_latest_candle(symbol: str = "BTCUSDT", interval: str = "1m") -> Optional[Candle]:
-    """Convenience helper returning only the latest candle."""
+    """Convenience helper returning only the latest candle.
+
+    Checks that the returned candle contains complete OHLCV data. If the
+    candle is incomplete, ``None`` is returned and a warning is logged.
+    """
     candles = get_latest_candle_batch(symbol, interval, 1)
-    return candles[-1] if candles else None
+    candle = candles[-1] if candles else None
+    if candle and not all(
+        k in candle and candle[k] is not None for k in ("open", "high", "low", "close", "volume")
+    ):
+        logging.warning("fetch_latest_candle: incomplete data %s", candle)
+        return None
+    return candle
