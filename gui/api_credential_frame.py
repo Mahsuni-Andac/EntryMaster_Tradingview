@@ -61,8 +61,16 @@ class APICredentialFrame(ttk.LabelFrame):
         ttk.Button(self, text="Speichern", command=self._save).grid(row=start_row + len(EXCHANGES), column=0, pady=5, sticky="w")
 
         self.market_status = tk.StringVar(value="")
-        self.market_status_label = ttk.Label(self, textvariable=self.market_status, foreground="red")
-        self.market_status_label.grid(row=start_row + len(EXCHANGES) + 1, column=0, columnspan=3, sticky="w")
+
+        status_row = ttk.Frame(self)
+        status_row.grid(row=start_row + len(EXCHANGES) + 1, column=0, columnspan=4, sticky="w")
+
+        self.market_status_label = ttk.Label(status_row, textvariable=self.market_status, foreground="red")
+        self.market_status_label.pack(side="left")
+
+        self.system_status = tk.StringVar(value="")
+        self.system_status_label = ttk.Label(status_row, textvariable=self.system_status, foreground="green")
+        self.system_status_label.pack(side="left", padx=(10, 0))
 
         # disable all fields until user actively chooses an exchange
         self._select_exchange("")
