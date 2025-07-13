@@ -381,14 +381,53 @@ def run_bot_live(settings=None, app=None):
                 amount = min(capital, float(gui_bridge.capital))
 
                 sl, tp = None, None
-                if entry_type in ["long", "short"]:
-                    sl, tp = adaptive_sl.get_adaptive_sl_tp(
-                        entry_type, entry, candles, tp_multiplier=tp_mult
-                    )
+
+                if gui_bridge.manual_active:
+                    sl = gui_bridge.manual_sl
+                    tp = gui_bridge.manual_tp
+                    if sl is None or tp is None:
+                        gui_bridge.set_manual_status(False)
+                        sl, tp = None, None
+                    else:
+                        if entry_type == "long":
+                            valid = sl < entry and tp > entry
+                        else:
+                            valid = sl > entry and tp < entry
+                        if valid:
+                            gui_bridge.set_manual_status(True)
+                        else:
+                            gui_bridge.set_manual_status(False)
+                            sl, tp = None, None
+
+                if sl is None and tp is None and gui_bridge.auto_active:
+                    try:
+                        sl, tp = adaptive_sl.get_adaptive_sl_tp(
+                            entry_type, entry, candles, tp_multiplier=tp_mult
+                        )
+                        if sl is not None and tp is not None:
+                            if entry_type == "long":
+                                valid = sl < entry and tp > entry
+                            else:
+                                valid = sl > entry and tp < entry
+                            if valid:
+                                gui_bridge.set_auto_status(True)
+                            else:
+                                gui_bridge.set_auto_status(False)
+                                sl = tp = None
+                        else:
+                            gui_bridge.set_auto_status(False)
+                            sl = tp = None
+                    except Exception as e:
+                        print(f"❌ Adaptive SL Fehler: {e}")
+                        gui_bridge.set_auto_status(False)
+                        sl = tp = None
+
                 if sl is None or tp is None:
-                    atr = candle["high"] - candle["low"]
-                    sl = entry - atr * sl_mult if entry_type == "long" else entry + atr * sl_mult
-                    tp = entry + atr * tp_mult if entry_type == "long" else entry - atr * tp_mult
+                    print("⚠️ Kein gültiges SL/TP verfügbar, Trade verworfen")
+                    if hasattr(app, "log_event"):
+                        app.log_event("⚠️ Kein gültiges SL/TP verfügbar")
+                    time.sleep(1)
+                    continue
 
                 position = {
                     "side": entry_type,

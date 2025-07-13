@@ -85,6 +85,52 @@ class GUIBridge:
                 return not SETTINGS.get("paper_mode", True)
         return not SETTINGS.get("paper_mode", True)
 
+    # ----- Manuelle/Adaptive SL/TP Steuerung -----
+
+    @property
+    def manual_sl(self):
+        if self.gui and hasattr(self.gui, "manual_sl_var"):
+            try:
+                return float(self.gui.manual_sl_var.get())
+            except Exception:
+                return None
+        return None
+
+    @property
+    def manual_tp(self):
+        if self.gui and hasattr(self.gui, "manual_tp_var"):
+            try:
+                return float(self.gui.manual_tp_var.get())
+            except Exception:
+                return None
+        return None
+
+    @property
+    def manual_active(self):
+        if self.gui and hasattr(self.gui, "sl_tp_manual_active"):
+            try:
+                return bool(self.gui.sl_tp_manual_active.get())
+            except Exception:
+                return False
+        return False
+
+    @property
+    def auto_active(self):
+        if self.gui and hasattr(self.gui, "sl_tp_auto_active"):
+            try:
+                return bool(self.gui.sl_tp_auto_active.get())
+            except Exception:
+                return False
+        return False
+
+    def set_manual_status(self, ok: bool):
+        if self.gui and hasattr(self.gui, "set_manual_sl_status"):
+            self.gui.set_manual_sl_status(ok)
+
+    def set_auto_status(self, ok: bool):
+        if self.gui and hasattr(self.gui, "set_auto_sl_status"):
+            self.gui.set_auto_sl_status(ok)
+
 
 
     def update_live_pnl(self, pnl):
