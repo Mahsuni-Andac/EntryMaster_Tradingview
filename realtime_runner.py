@@ -382,8 +382,6 @@ def run_bot_live(settings=None, app=None):
                 time.sleep(1)
                 continue
 
-            global_state.last_feed_time = time.time()
-
             if not first_feed:
                 first_feed = True
                 if hasattr(app, "log_event"):
