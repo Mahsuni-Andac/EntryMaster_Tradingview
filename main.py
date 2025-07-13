@@ -22,6 +22,8 @@ from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
 from global_state import entry_time_global, ema_trend_global, atr_value_global
+from binance_ws import BinanceWebSocket
+from data_provider import init_price_var, price_var
 
 init(autoreset=True)
 setup_logging()
@@ -134,6 +136,13 @@ def main():
     load_settings_from_file()
     detect_available_exchanges(SETTINGS)
     root = tk.Tk()
+    init_price_var(root)
+
+    def update_price(p):
+        root.after(0, lambda: price_var.set(p))
+
+    ws = BinanceWebSocket(update_price)
+    ws.start()
     cred_manager = APICredentialManager()
     gui = EntryMasterGUI(root, cred_manager=cred_manager)
     gui_bridge = GUIBridge(gui_instance=gui)

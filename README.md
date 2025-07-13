@@ -16,6 +16,7 @@ Handelsergebnisse.
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
 * Umschaltbarer Live-Trading-Modus über die GUI
 * Keine Unterstützung für andere Börsen
+* ✅ **WebSocket Live Feed**: Der Bot nutzt einen stabilen WebSocket-Stream (BTCUSDT) von Binance zur Entscheidungsfindung. Kein REST notwendig. Vollständig in die GUI eingebunden.
 
 ## Installation
 1. Python 3.10 oder neuer installieren

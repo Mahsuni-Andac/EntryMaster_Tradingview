@@ -12,11 +12,10 @@ import logging
 from datetime import datetime
 from typing import Iterable, List, Optional, TypedDict
 
-import threading
 import time
 
 from binance.client import Client
-from binance import ThreadedWebsocketManager  # for optional WebSocket feed
+from binance_ws import BinanceWebSocket
 from tkinter import StringVar
 
 from config import SETTINGS
@@ -24,11 +23,10 @@ from config import SETTINGS
 _BINANCE = Client("", "")
 # WebSocket manager and price cache used when ``data_source_mode`` is
 # set to ``websocket`` or ``auto``.
-_WS_MANAGER: ThreadedWebsocketManager | None = None
+_WS_CLIENT: BinanceWebSocket | None = None
 _WS_PRICE: dict[str, float] = {}
 _WEBSOCKET_RUNNING: bool = False
 _WS_STARTED: bool = False
-_WS_LOCK = threading.Lock()
 
 # Tkinter variable updated by the WebSocket callback
 price_var: StringVar | None = None
@@ -42,11 +40,31 @@ def init_price_var(master=None) -> None:
 
 
 def start_websocket(symbol: str = "BTCUSDT") -> None:
-    """Public helper to start the websocket feed only once."""
-    global _WS_STARTED
-    if not _WS_STARTED:
-        _init_websocket(symbol)
-        _WS_STARTED = True
+    """Start the websocket feed once and cache the latest price."""
+    global _WS_STARTED, _WS_CLIENT
+    if _WS_STARTED:
+        return
+
+    def handle(price: str) -> None:
+        global _WEBSOCKET_RUNNING
+        try:
+            p = float(price)
+            _WS_PRICE[symbol] = p
+            _WEBSOCKET_RUNNING = True
+            if price_var is not None:
+                price_var.set(str(price))
+            try:
+                import global_state
+                global_state.last_feed_time = time.time()
+            except Exception:
+                pass
+        except Exception as e:  # pragma: no cover - just log
+            print("❌ WebSocket Fehler", e)
+
+    _WS_CLIENT = BinanceWebSocket(handle)
+    _WS_CLIENT.start()
+    _WS_STARTED = True
+    print("✅ WebSocket verbunden: Binance BTCUSDT")
 
 
 def is_websocket_running() -> bool:
@@ -59,66 +77,13 @@ def websocket_active() -> bool:
     return _WEBSOCKET_RUNNING
 
 
-def _init_websocket(symbol: str) -> None:
-    """Start a websocket price feed for *symbol* if not running."""
-    global _WS_MANAGER, _WEBSOCKET_RUNNING, _WS_STARTED
-    if _WS_MANAGER is not None and _WS_MANAGER.is_alive():
-        return
-    with _WS_LOCK:
-        if _WS_MANAGER is not None and _WS_MANAGER.is_alive():
-            return
-        try:
-            _WS_MANAGER = ThreadedWebsocketManager()
-            _WS_MANAGER.start()
-            _WS_STARTED = True
-
-            def handle(msg):
-                global _WEBSOCKET_RUNNING
-                if msg.get("e") == "error":
-                    _WEBSOCKET_RUNNING = False
-                    return
-                price = msg.get("c") or msg.get("p")
-                if price is not None:
-                    _WS_PRICE[symbol] = float(price)
-                    _WEBSOCKET_RUNNING = True
-                    if price_var is not None:
-                        price_var.set(str(price))
-                    try:
-                        import global_state
-                        global_state.last_feed_time = time.time()
-                    except Exception:
-                        pass
-
-            _WS_MANAGER.start_symbol_ticker_socket(callback=handle, symbol=symbol)
-        except Exception as exc:
-            logging.debug("WebSocket init failed: %s", exc)
-            _WS_MANAGER = None
-            _WEBSOCKET_RUNNING = False
-
-
-def stop_websocket() -> None:
-    """Stop the active websocket stream if running."""
-    global _WS_MANAGER, _WEBSOCKET_RUNNING, _WS_STARTED
-    with _WS_LOCK:
-        if _WS_MANAGER is not None:
-            try:
-                _WS_MANAGER.stop()
-            except Exception as exc:  # pragma: no cover - best effort cleanup
-                logging.debug("WebSocket stop failed: %s", exc)
-            _WS_MANAGER = None
-        _WEBSOCKET_RUNNING = False
-        _WS_STARTED = False
-        _WS_PRICE.clear()
-        if price_var is not None:
-            price_var.set("")
 
 
 def _fetch_ws_price(symbol: str) -> Optional[float]:
     """Return latest price from websocket if available."""
     global _WEBSOCKET_RUNNING
-    if not _WEBSOCKET_RUNNING or _WS_MANAGER is None or not _WS_MANAGER.is_alive():
-        stop_websocket()
-        _init_websocket(symbol)
+    if not _WS_STARTED:
+        start_websocket(symbol)
     price = _WS_PRICE.get(symbol)
     _WEBSOCKET_RUNNING = price is not None
     return price
