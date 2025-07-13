@@ -6,7 +6,7 @@ läuft wahlweise im Live- oder Paper-Modus. Eine kleine Tkinter-GUI dient zur
 Konfiguration und Anzeige der Handelsergebnisse.
 
 ## Eigenschaften
-* Preis- und Candlefeed ausschließlich über **python-binance** WebSocket (BTCUSDT)
+* Preis- und Candlefeed ausschließlich über eine eigene WebSocket-Anbindung an Binance (BTCUSDT)
 * Der Bot empfängt 1-Minuten-Candles via `btcusdt@kline_1m` und zeigt nur abgeschlossene Kerzen an. REST wurde komplett entfernt.
 * Optionaler Paper-Trading-Modus mit realistischer PnL-Berechnung
 * Umschaltbarer Live-Trading-Modus über die GUI
@@ -16,7 +16,7 @@ Konfiguration und Anzeige der Handelsergebnisse.
 1. Python 3.10 oder neuer installieren
 2. Abhängigkeiten installieren:
    ```bash
-   pip install python-binance websocket-client
+   pip install -r requirements.txt
    ```
 
 ## Beispielkonfiguration
