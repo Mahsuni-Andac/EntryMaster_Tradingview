@@ -25,6 +25,7 @@ _WS_STARTED: bool = False
 _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _CANDLE_WS_STARTED: bool = False
 _WS_CANDLES: list["Candle"] = []
+_CANDLE_CACHE: "Candle" | None = None
 _CANDLE_WARNING_SHOWN: bool = False
 
 # Tk root used for Tkinter variables when none is provided
@@ -109,7 +110,7 @@ def start_candle_websocket(symbol: str = "BTCUSDT", interval: str = "1m") -> Non
         )
 
     binance_ws.on_candle_callback = handle
-    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle)
+    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(handle, symbol=symbol, interval=interval)
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
 
@@ -170,10 +171,11 @@ class Candle(TypedDict):
 
 def update_candle_feed(candle: Candle) -> None:
     """Store *candle* in the internal cache and update feed timestamp."""
-    global _WS_CANDLES, _WEBSOCKET_RUNNING
+    global _WS_CANDLES, _WEBSOCKET_RUNNING, _CANDLE_CACHE
     _WS_CANDLES.append(candle)
     if len(_WS_CANDLES) > 1000:
         _WS_CANDLES.pop(0)
+    _CANDLE_CACHE = candle
     _WEBSOCKET_RUNNING = True
     try:
         import global_state
