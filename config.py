@@ -12,7 +12,6 @@ SETTINGS = {
     "multiplier": 20,
     "auto_multiplier": False,
     "capital": 1000,
-    "data_source_mode": "rest",  # rest | websocket | auto
     "version": "V10.4_Pro",
     "paper_mode": True,
     # Datenquelle für Marktdaten: websocket | rest | auto
