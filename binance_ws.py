@@ -114,8 +114,8 @@ class BinanceCandleWebSocket:
                 import global_state
 
                 global_state.last_feed_time = time.time()
-            except Exception:
-                pass
+            except Exception as e:
+                print("❌ Fehler beim Setzen von last_feed_time:", e)
 
             if self.on_candle:
                 # forward the candle to optional callback for further processing
