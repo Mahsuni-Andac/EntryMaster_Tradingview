@@ -54,6 +54,15 @@ Der WebSocket wird nur einmal gestartet und bleibt aktiv, bis der Modus geänder
 - **🟢 WebSocket aktiv** – Stream aktiv
 - **🔴 REST aktiv** – Fallback auf REST
 
+### 📡 Datenquelle: Binance BTCUSDT (Spot)
+Der EntryMaster-Bot nutzt immer BTCUSDT-Marktdaten von Binance Spot (nicht Futures). Der Preisfeed erfolgt standardmäßig über WebSocket für Echtzeit-Ticks. Sollte dieser ausfallen, greift der Bot automatisch auf REST zurück. Der Benutzer kann im GUI-Feld bei der API-Konfiguration manuell auswählen:
+
+- **Auto** → versucht WebSocket, fällt zurück auf REST
+- **WebSocket** → erzwingt Echtzeit-Ticks
+- **REST** → fallback-only (z. B. bei Netzrestriktionen)
+
+Wichtig: Der Preisfeed wird niemals über andere Börsen gespeist. BitMEX dient nur zur Orderausführung bei Live-Trading.
+
 ## Trading-Modi: Paper vs. Live
 
 - **Einstieg & Ausstieg erfolgen immer anhand echter Binance BTCUSDT Marktdaten**
