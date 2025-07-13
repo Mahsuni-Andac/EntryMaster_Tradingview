@@ -31,31 +31,83 @@ class Tooltip:
             tw.destroy()
 
 class NeonStatusPanel:
-    """Panel with neon status bulbs."""
+    """Panel with neon status bulbs.
+
+    The panel automatically creates a second column if the bulbs would exceed
+    the available vertical space.  This keeps every status fully visible even
+    when the window height is small.
+    """
+
+    BULB_SIZE = 20
+    PADDING = 10
 
     def __init__(self, parent):
+        self.parent = parent
         self.frame = tk.Frame(parent)
         bg = parent.cget("bg") if isinstance(parent, tk.Widget) else None
-        self.canvas = tk.Canvas(self.frame, width=30, bg=bg, highlightthickness=0)
+        self.canvas = tk.Canvas(
+            self.frame, width=30, bg=bg, highlightthickness=0
+        )
         self.canvas.pack(fill="y", expand=False)
-        self.items = {}
+
+        self.items: dict[str, dict] = {}
         self.tooltip = Tooltip(self.canvas)
+        self.max_rows = 0
+        self.canvas.bind("<Configure>", lambda e: self._layout())
+        self.frame.bind("<Configure>", lambda e: self._layout())
 
     def register(self, key: str, description: str):
-        index = len(self.items)
-        y = 10 + index * 30
-        item = self.canvas.create_oval(5, y, 25, y + 20, fill=NEON_COLORS["yellow"], outline="")
-        self.items[key] = {"item": item, "desc": description}
-        self.canvas.tag_bind(item, "<Enter>", lambda e, k=key: self._on_enter(e, k))
-        self.canvas.tag_bind(item, "<Leave>", lambda e: self._on_leave())
+        """Register a new bulb with the given key and tooltip."""
+        self.items[key] = {"item": None, "desc": description, "color": "yellow"}
+        self._layout()
 
     def set_status(self, key: str, color: str, desc: str | None = None):
         if key not in self.items:
             return
-        item = self.items[key]["item"]
-        self.canvas.itemconfigure(item, fill=NEON_COLORS.get(color, color))
+        info = self.items[key]
+        info["color"] = color
         if desc is not None:
-            self.items[key]["desc"] = desc
+            info["desc"] = desc
+        if info["item"] is not None:
+            self.canvas.itemconfigure(
+                info["item"], fill=NEON_COLORS.get(color, color)
+            )
+
+    # ------------------------------------------------------------------
+    def _layout(self):
+        """Arrange the bulbs in one or more columns."""
+        if not self.items:
+            return
+        height = self.frame.winfo_height()
+        if height <= 1:
+            # frame size not ready yet
+            self.frame.after(50, self._layout)
+            return
+
+        max_rows = max(1, height // (self.BULB_SIZE + self.PADDING))
+        if max_rows != self.max_rows:
+            self.max_rows = max_rows
+
+        cols = (len(self.items) + max_rows - 1) // max_rows
+        self.canvas.config(width=30 * cols, height=height)
+        self.canvas.delete("all")
+
+        for index, (key, info) in enumerate(self.items.items()):
+            col = index // max_rows
+            row = index % max_rows
+            x = 5 + col * 30
+            y = 10 + row * (self.BULB_SIZE + self.PADDING)
+            item = self.canvas.create_oval(
+                x,
+                y,
+                x + self.BULB_SIZE,
+                y + self.BULB_SIZE,
+                fill=NEON_COLORS.get(info["color"], info["color"]),
+                outline="",
+            )
+            info["item"] = item
+            self.canvas.tag_bind(item, "<Enter>", lambda e, k=key: self._on_enter(e, k))
+            self.canvas.tag_bind(item, "<Leave>", self._on_leave)
 
     # ------------------------------------------------------------------
     def _on_enter(self, event, key):

@@ -73,11 +73,15 @@ Preise sowie die Entwicklung des Paper-Trading-Kontos an. Über einen Schalter k
 - **Fehleranzeige im Log**:
   - Wenn ein Problem erkannt wird, erscheint unten im GUI-Log ein Eintrag mit Zeitstempel und Fehlerursache – aber nur einmal pro Fehler (kein Spam).
 
-- **Status-Glühbirnen (rechts)**:
-  - Zeigen kompakten Überblick über Systemelemente wie:
-    - BitMEX API verbunden
-    - Paper-Trading aktiv
-    - Preisfeed OK
-    - Konfiguration gespeichert
-  - Farbige Punkte mit Beschreibungstooltips
+### 🌐 Statusanzeige: System-Glühbirnen
+
+- Rechts in der GUI befindet sich eine eigene Status-Spalte mit Glühbirnen-Icons
+  für jede wichtige Komponente.
+- Der Status wird farblich angezeigt (Grün/Rot) und live aktualisiert.
+- Beispiele:
+  - ✅ Preisfeed OK
+  - ✅ Paper-Trading aktiv
+  - ❌ BitMEX API nicht gesetzt
+- Bei vielen Einträgen wird eine **zweite Spalte automatisch erzeugt**, um alle
+  Informationen sichtbar zu halten – ohne Scrollen oder Abschneiden.
 
