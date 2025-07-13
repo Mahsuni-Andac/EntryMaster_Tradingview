@@ -49,16 +49,26 @@ class BinanceWebSocket:
 class BinanceCandleWebSocket:
     """WebSocket manager for Binance candle streams."""
 
-    def __init__(self, on_candle):
+    def __init__(self, on_candle: Callable[[dict], None], symbol: str = "btcusdt", interval: str = "1m"):
         self.on_candle = on_candle
+        self.symbol = symbol.lower()
+        self.interval = interval
         self.thread: threading.Thread | None = None
         self.ws: WebSocketApp | None = None
         self._warning_printed = False
 
-    def _start_socket(self):
-        socket = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m"
-        self.ws = WebSocketApp(socket, on_message=self._on_message)
-        self.ws.run_forever()
+    def run(self) -> None:
+        """Open the websocket and keep the connection alive."""
+        url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
+        while True:
+            try:
+                self.ws = WebSocketApp(url, on_message=self._on_message)
+                self.ws.run_forever()
+            except Exception as e:
+                print("WebSocket Fehler:", e)
+                time.sleep(5)
+            else:
+                break
 
     def _on_message(self, ws, message):
         global last_candle_time
@@ -96,7 +106,7 @@ class BinanceCandleWebSocket:
     def start(self):
         if self.thread and self.thread.is_alive():
             return
-        self.thread = threading.Thread(target=self._start_socket, daemon=True)
+        self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
     def stop(self):
