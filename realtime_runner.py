@@ -5,6 +5,7 @@ import time
 import traceback
 from datetime import datetime
 import logging
+import queue
 import data_provider
 from requests.exceptions import RequestException
 from tkinter import messagebox
@@ -294,10 +295,6 @@ def _run_bot_live_inner(settings=None, app=None):
     print_start_banner(capital)
 
     interval_setting = settings.get("interval", BINANCE_INTERVAL)
-    if not data_provider._CANDLE_WS_STARTED:
-        start_candle_websocket(interval_setting)
-    else:
-        logging.info("Candle WebSocket already running")
 
     if app:
         settings["log_event"] = app.log_event
@@ -319,22 +316,11 @@ def _run_bot_live_inner(settings=None, app=None):
     start_capital = capital
     interval = interval_setting
     auto_multi = gui_bridge.auto_multiplier
-
-    ATR_REQUIRED = 14
-    candles_ready = wait_for_initial_candles(app, ATR_REQUIRED)
-    atr_tmp = calculate_atr(candles_ready, ATR_REQUIRED)
-    atr_value_global = atr_tmp
-    if app and hasattr(app, "update_status"):
-        app.update_status("✅ Bereit")
-    else:
-        gui_bridge.update_status("✅ Bereit")
-
+    leverage = multiplier
     live_requested = gui_bridge.live_trading
     paper_mode = settings.get("paper_mode", True)
     live_trading = live_requested and not paper_mode
     settings["paper_mode"] = not live_trading
-
-    leverage = multiplier
 
     cooldown = CooldownManager(settings.get("cooldown", 3))
     # REMOVED: SessionFilter
@@ -518,9 +504,36 @@ def _run_bot_live_inner(settings=None, app=None):
                     logging.info("➖ Ich warte auf ein Indikator Signal")
                     no_signal_printed = True
 
+    if not data_provider._CANDLE_WS_STARTED:
+        start_candle_websocket(interval_setting)
+    else:
+        logging.info("Candle WebSocket already running")
+
     candle_queue = get_candle_queue()
+    preload = candle_queue.qsize()
+    if preload:
+        flush_limit = min(preload, 5)
+        logging.info("\ud83d\udd04 Clean Flush %s Candles", flush_limit)
+        for _ in range(flush_limit):
+            try:
+                process_candle(candle_queue.get_nowait())
+            except queue.Empty:
+                break
+
     worker = SignalWorker(process_candle, queue_obj=candle_queue)
+    logging.info(
+        "Candle-Worker gestartet (%s Candles im Buffer)", worker.queue.qsize()
+    )
     worker.start()
+
+    ATR_REQUIRED = 14
+    candles_ready = wait_for_initial_candles(app, ATR_REQUIRED)
+    atr_tmp = calculate_atr(candles_ready, ATR_REQUIRED)
+    atr_value_global = atr_tmp
+    if app and hasattr(app, "update_status"):
+        app.update_status("✅ Bereit")
+    else:
+        gui_bridge.update_status("✅ Bereit")
 
     while capital > 0 and not getattr(app, "force_exit", False):
         if not worker.is_alive():
