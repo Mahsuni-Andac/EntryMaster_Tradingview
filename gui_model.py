@@ -52,8 +52,6 @@ class GUIModel:
         self.andac_opt_confirm_delay = tk.BooleanVar(master=root)
         self.andac_opt_mtf_confirm = tk.BooleanVar(master=root)
         self.andac_opt_volumen_strong = tk.BooleanVar(master=root)
-        self.andac_opt_session_filter = tk.BooleanVar(master=root)
-
         # REMOVED: SessionFilter variables
 
         self.use_doji_blocker = tk.BooleanVar(master=root)

@@ -79,10 +79,11 @@ def should_enter(candle, indicator, config) -> AndacSignal:
         short_final = short_valid
 
     # === Signal zurückgeben
+    engulf = bull_engulfing if long_final else baer_engulfing if short_final else False
     if long_final:
-        return AndacSignal(signal="long")
+        return AndacSignal(signal="long", rsi=rsi, vol_spike=vol_spike, engulfing=engulf)
     elif short_final:
-        return AndacSignal(signal="short")
+        return AndacSignal(signal="short", rsi=rsi, vol_spike=vol_spike, engulfing=engulf)
     else:
-        return AndacSignal(signal=None, reasons=["No signal conditions met"])
+        return AndacSignal(signal=None, rsi=rsi, vol_spike=vol_spike, engulfing=engulf, reasons=["No signal conditions met"])
 

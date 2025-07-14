@@ -36,7 +36,6 @@ def get_entry_status_text(position: dict, capital, app, leverage: int, settings:
         "DELAY": app.andac_opt_confirm_delay.get(),
         "MTF": app.andac_opt_mtf_confirm.get(),
         "VOL": app.andac_opt_volumen_strong.get(),
-        "SES": app.andac_opt_session_filter.get(),
     }
     filter_line = "🎛 Andac: " + "  ".join(f"{k}{'✅' if v else '❌'}" for k, v in filters.items())
 

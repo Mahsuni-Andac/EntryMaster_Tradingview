@@ -26,7 +26,6 @@
   "andac_opt_confirm_delay": false,
   "andac_opt_mtf_confirm": false,
   "andac_opt_volumen_strong": false,
-  "andac_opt_session_filter": false,
   "use_doji_blocker": false,
   "interval": "1m",
   "use_time_filter": false,
