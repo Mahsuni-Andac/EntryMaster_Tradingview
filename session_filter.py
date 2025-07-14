@@ -2,8 +2,9 @@
 
 from datetime import datetime, timedelta
 from typing import Tuple, Dict, List
+from typing import Optional
 
-_GLOBAL_FILTER: "SessionFilter" | None = None
+_GLOBAL_FILTER: Optional["SessionFilter"] = None
 
 class SessionFilter:
     def __init__(
