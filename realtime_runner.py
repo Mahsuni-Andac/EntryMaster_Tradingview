@@ -31,6 +31,7 @@ from gui_bridge import GUIBridge
 from trading_gui_core import TradingGUI
 from trading_gui_logic import TradingGUILogicMixin
 from config import SETTINGS
+from central_logger import log_triangle_signal
 from global_state import (
     entry_time_global,
     ema_trend_global,
@@ -395,6 +396,9 @@ def _run_bot_live_inner(settings=None, app=None):
         entry_type = andac_signal.signal
         stamp = datetime.now().strftime("%H:%M:%S")
         if entry_type:
+            triangle_msg = log_triangle_signal(entry_type, close_price)
+            if hasattr(app, "log_event"):
+                app.log_event(triangle_msg)
             msg = f"[{stamp}] Signal erkannt: {entry_type.upper()} ({BINANCE_SYMBOL} @ {close_price:.2f})"
             logging.info(msg)
             if hasattr(app, "log_event"):
