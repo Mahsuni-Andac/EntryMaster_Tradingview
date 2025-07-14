@@ -116,17 +116,5 @@ class GUIBridge:
         """Placeholder for GUI feedback based on filter score."""
         return
 
-    def configure_session_filter(
-        self,
-        enabled: bool,
-        allowed_sessions: list[str] | None = None,
-        use_utc: bool = True,
-        debug: bool = False,
-    ) -> None:
-        SETTINGS["use_session_filter"] = enabled
-        SETTINGS["session_filter"] = {
-            "allowed": allowed_sessions or ["london", "new_york"],
-            "use_utc": use_utc,
-            "debug": debug,
-        }
+    # REMOVED: SessionFilter configuration
 

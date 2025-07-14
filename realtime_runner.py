@@ -12,6 +12,7 @@ from tkinter import messagebox
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 from data_provider import (
     fetch_latest_candle,
@@ -25,7 +26,6 @@ from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
 from exit_handler import close_position
 from cooldown_manager import CooldownManager
-from session_filter import get_global_filter
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from trading_gui_core import TradingGUI
@@ -45,6 +45,22 @@ from andac_entry_master import AndacEntryMaster, AndacSignal
 from signal_worker import SignalWorker
 from entry_logic import should_enter
 from adaptive_sl_manager import AdaptiveSLManager
+
+
+# TIMEFILTER: GUI based time window check
+def is_within_active_timeframe(gui) -> bool:
+    if not gui.use_time_filter.get():
+        return True
+    now = datetime.now().time()
+    for start_var, end_var in getattr(gui, "time_filters", []):
+        try:
+            start = datetime.strptime(start_var.get(), "%H:%M").time()
+            end = datetime.strptime(end_var.get(), "%H:%M").time()
+            if start <= now <= end:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def update_indicators(candles):
@@ -315,7 +331,7 @@ def _run_bot_live_inner(settings=None, app=None):
     leverage = multiplier
 
     cooldown = CooldownManager(settings.get("cooldown", 3))
-    session_filter = get_global_filter(settings.get("session_filter"))
+    # REMOVED: SessionFilter
 
     andac_params = {
         "lookback": int(app.andac_lookback.get()),
@@ -368,7 +384,9 @@ def _run_bot_live_inner(settings=None, app=None):
         close_price = candle["close"]
         now = time.time()
 
-        if settings.get("use_session_filter") and not session_filter.is_allowed():
+        if not is_within_active_timeframe(app):
+            logger.info("⏳ Außerhalb der Handelszeit – kein Entry erlaubt")
+            time.sleep(1)
             return
 
         if hasattr(app, "auto_apply_recommendations") and app.auto_apply_recommendations.get():
