@@ -29,6 +29,7 @@ _FEED_CHECK_INTERVAL = 20
 _TK_ROOT: Tk | None = None
 price_var: StringVar | None = None
 _DEFAULT_INTERVAL = BINANCE_INTERVAL
+_LAST_CANDLE_TS: int | None = None
 
 
 def _interval_to_seconds(interval: str) -> int:
@@ -92,10 +93,13 @@ def _load_initial_candles(interval: str, limit: int = 14) -> bool:
     except Exception as exc:
         logger.error("REST Candle Fetch failed: %s", exc)
         return False
+    global _LAST_CANDLE_TS
     with _CANDLE_LOCK:
         _WS_CANDLES.extend(candles)
         if len(_WS_CANDLES) > _MAX_CANDLES:
             del _WS_CANDLES[:-_MAX_CANDLES]
+        if candles:
+            _LAST_CANDLE_TS = candles[-1]["timestamp"]
     for candle in candles:
         try:
             _CANDLE_QUEUE.put_nowait(candle)
@@ -263,7 +267,12 @@ def update_candle_feed(candle: Candle) -> None:
         logger.warning("Ungültige Candle empfangen: %s", candle)
         return
 
-    global _LAST_LEN_CHANGE_TS, _FEED_LAST_LEN
+    global _LAST_LEN_CHANGE_TS, _FEED_LAST_LEN, _LAST_CANDLE_TS
+    if _LAST_CANDLE_TS is not None and candle["timestamp"] <= _LAST_CANDLE_TS:
+        logger.debug("Doppelte Candle ignoriert: %s", candle)
+        return
+    _LAST_CANDLE_TS = candle["timestamp"]
+
     with _CANDLE_LOCK:
         _WS_CANDLES.append(candle)
         if len(_WS_CANDLES) > _MAX_CANDLES:
