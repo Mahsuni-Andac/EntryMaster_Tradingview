@@ -122,7 +122,7 @@ def bot_control(gui):
                 status = (
                     f"{farbe} Aktueller PnL: ${pnl:.1f} | Laufzeit: {laufzeit}s | ⏰ {uhrzeit} | 📅 {datum}\n"
                     f"💼 Kapital: ${capital:.2f} | 📊 Lev: x{leverage} | 📍 Trade: {trade_info}\n"
-                    f"📉 ATR: ${atr_value_global:.1f} | 📈 EMA: {ema_trend_global} | 🚀 Modus: {'LIVE' if gui.live_trading.get() else 'SIMULATION'}\n"
+                    f"📉 ATR: ${atr_value_global if atr_value_global is not None else 0.0:.1f} | 📈 EMA: {ema_trend_global} | 🚀 Modus: {'LIVE' if gui.live_trading.get() else 'SIMULATION'}\n"
                     f"{filter_line}"
                 )
                 print(status + Style.RESET_ALL)
