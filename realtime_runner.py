@@ -260,7 +260,6 @@ def wait_for_initial_candles(
 
 def run_bot_live(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
-    print_info("Debug: Überprüfe die Signalverarbeitung...")
 
     capital = SETTINGS.get("starting_capital", 1000)
     start_capital = capital

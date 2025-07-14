@@ -11,6 +11,7 @@ position_global: Optional[Dict[str, float]] = None
 last_feed_time: Optional[float] = None
 
 def reset_global_state() -> None:
+    """Reset all global trading state variables."""
     global entry_time_global, ema_trend_global, atr_value_global, position_global, last_feed_time
     entry_time_global = None
     ema_trend_global = "⬆️"

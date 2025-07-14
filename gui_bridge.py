@@ -3,10 +3,10 @@
 from config import SETTINGS
 
 def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_multi=20, min_multi=1, max_multi=50):
+    """Return a leverage suggestion based on score, ATR and drawdown."""
     score_factor = 1.0 + max(0, (score - 0.7) * 2)
     atr_factor = max(0.5, min(1.2, 30 / (atr + 1)))
     dd_factor = 1.0 if drawdown < 0.1 else 0.5
-    max_risk_usd = balance * (max_risk_pct / 100)
 
     smart_multi = base_multi * score_factor * atr_factor * dd_factor
     smart_multi = min(max(smart_multi, min_multi), max_multi)
@@ -34,16 +34,16 @@ class GUIBridge:
         except Exception:
             return fallback
 
-    def get_leverage(self, score=0.8, atr=25, balance=1000, drawdown=0.0):
+    def get_leverage(self, score=0.8, atr=25, balance=1000, drawdown=0.0):  # UNUSED
+        """Calculate leverage recommendation. Currently unused."""
         if self.auto_multiplier:
             return smart_auto_multiplier(
                 score=score,
                 atr=atr,
                 balance=balance,
-                drawdown=drawdown
+                drawdown=drawdown,
             )
-        else:
-            return self.multiplier
+        return self.multiplier
 
     @property
     def multiplier(self):
@@ -112,7 +112,8 @@ class GUIBridge:
         if self.gui:
             self.gui.running = False
 
-    def update_filter_feedback(self, score):
+    def update_filter_feedback(self, score):  # UNUSED
+        """Placeholder for GUI feedback based on filter score."""
         return
 
     def configure_session_filter(
