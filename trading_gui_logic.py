@@ -118,9 +118,9 @@ class TradingGUILogicMixin:
 
     def start_bot(self):
         try:
-            multiplier = float(self.multiplier_var.get())
+            multiplier = float(self.multiplier_var.get().replace(",", "."))
             auto_multi = self.auto_multiplier.get()
-            capital = float(self.capital_var.get())
+            capital = float(self.capital_var.get().replace(",", "."))
             if capital <= 0:
                 self.log_event("⚠️ Einsatz muss größer 0 sein")
                 return
@@ -341,8 +341,8 @@ class TradingGUILogicMixin:
 
     def toggle_manual_sl_tp(self):
         try:
-            sl = float(self.manual_sl_var.get())
-            tp = float(self.manual_tp_var.get())
+            sl = float(self.manual_sl_var.get().replace(",", "."))
+            tp = float(self.manual_tp_var.get().replace(",", "."))
         except Exception:
             self.sl_tp_manual_active.set(False)
             if hasattr(self, "manual_sl_button"):

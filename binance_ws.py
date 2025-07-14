@@ -103,7 +103,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
             if now - candle_ts > 90:
                 logger.warning(
-                    "⚠️ Candle veraltet – empfangen: %s, jetzt: %s", candle_ts, now
+                    f"⚠️ Veraltete Candle empfangen: Zeitdifferenz = {now - candle_ts:.2f}s"
                 )
                 return
 
