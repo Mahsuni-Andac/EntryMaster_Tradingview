@@ -192,6 +192,12 @@ class TradingGUI(TradingGUILogicMixin):
         self.capital_value.pack(side="left", padx=10)
         self.pnl_value = ttk.Label(top_info, text="📉 PnL: $0", foreground="black", font=("Arial", 11, "bold"))
         self.pnl_value.pack(side="left", padx=10)
+        self.total_pnl_label = ttk.Label(top_info, text="Gesamt PnL: $0", foreground="black", font=("Arial", 11, "bold"))
+        self.total_pnl_label.pack(side="left", padx=10)
+        self.last_trade_label = ttk.Label(top_info, text="Letzter Trade: ---", foreground="blue", font=("Arial", 10))
+        self.last_trade_label.pack(side="left", padx=10)
+        self.trade_count_label = ttk.Label(top_info, text="Trades 0/0", foreground="blue", font=("Arial", 10))
+        self.trade_count_label.pack(side="left", padx=10)
 
         self.api_status_label = ttk.Label(top_info, textvariable=self.api_status_var, foreground="red", font=("Arial", 11, "bold"))
         self.api_status_label.pack(side="left", padx=10)

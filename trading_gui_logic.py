@@ -182,6 +182,23 @@ class TradingGUILogicMixin:
         color = "green" if pnl >= 0 else "red"
         self.pnl_value.config(text=f"📉 PnL: {pnl:.2f} $", foreground=color)
 
+    def update_last_trade(self, side: str, entry: float, exit_price: float, pnl: float):
+        text = f"{side.upper()} {entry:.2f}->{exit_price:.2f} ({pnl:.2f}$)"
+        if hasattr(self, "last_trade_label"):
+            self.last_trade_label.config(text=text)
+
+    def update_stats(self, pnl: float):
+        if hasattr(self, "model"):
+            self.model.total_pnl += pnl
+            if pnl >= 0:
+                self.model.wins += 1
+            else:
+                self.model.losses += 1
+            if hasattr(self, "total_pnl_label"):
+                self.total_pnl_label.config(text=f"Gesamt PnL: {self.model.total_pnl:.2f} $")
+            if hasattr(self, "trade_count_label"):
+                self.trade_count_label.config(text=f"Trades {self.model.wins}/{self.model.losses}")
+
     def update_capital(self, capital):
         self.capital_value.config(text=f"💰 Kapital: ${capital:.2f}")
 
@@ -286,6 +303,7 @@ class TradingGUILogicMixin:
 
 
     def update_pnl(self, pnl):
+        self.update_stats(pnl)
         self.log_event(f"💰 Trade abgeschlossen: PnL {pnl:.2f} $")
 
     def log_event(self, msg):

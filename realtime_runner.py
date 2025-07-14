@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 import logging
 import queue
+import random
 import data_provider
 from requests.exceptions import RequestException
 from tkinter import messagebox
@@ -120,16 +121,14 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 if to_close < 1:
                     to_close = 1
 
-                size_close = to_close * position["leverage"] / entry
-                fee = current * size_close * FEE_RATE
-                gross_pnl = calculate_futures_pnl(
+                _, realized = simulate_trade(
                     entry,
-                    current,
-                    position["leverage"],
-                    to_close,
                     position["side"],
+                    current,
+                    to_close,
+                    position["leverage"],
+                    FEE_MODEL,
                 )
-                realized = gross_pnl - fee
                 old_cap = capital
                 capital += realized
                 check_plausibility(realized, old_cap, capital, to_close)
@@ -163,16 +162,14 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
 
     if hit_tp or hit_sl:
-        gross_pnl = calculate_futures_pnl(
+        _, pnl = simulate_trade(
             entry,
-            current,
-            position["leverage"],
-            position["amount"],
             position["side"],
+            current,
+            position["amount"],
+            position["leverage"],
+            FEE_MODEL,
         )
-        size_close = position["amount"] * position["leverage"] / entry
-        fee = current * size_close * FEE_RATE
-        pnl = gross_pnl - fee
         old_cap = capital
         capital += pnl
         check_plausibility(pnl, old_cap, capital, position["amount"])
@@ -181,6 +178,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
         app.update_pnl(pnl)
         app.update_capital(capital)
+        app.update_last_trade(position["side"], entry, current, pnl)
         log_msg = (
             f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
         )
@@ -208,8 +206,10 @@ from console_status import (
     print_info,
 )
 from pnl_utils import calculate_futures_pnl, check_plausibility
+from simulator import FeeModel, simulate_trade
 
-FEE_RATE = 0.0004
+FEE_MODEL = FeeModel()
+POSITION_SIZE = 0.2
 
 gui_bridge = None
 
@@ -461,7 +461,9 @@ def _run_bot_live_inner(settings=None, app=None):
             if entry_type:
                 no_signal_printed = False
                 entry = candle["close"]
-                amount = min(capital, float(gui_bridge.capital))
+                slip = random.uniform(*FEE_MODEL.slippage_range)
+                entry_exec = entry * (1 + slip) if entry_type == "long" else entry * (1 - slip)
+                amount = capital * POSITION_SIZE
                 sl = tp = None
 
                 if gui_bridge.manual_active:
@@ -495,7 +497,7 @@ def _run_bot_live_inner(settings=None, app=None):
 
                 position = {
                     "side": entry_type,
-                    "entry": entry,
+                    "entry": entry_exec,
                     "entry_time": now,
                     "sl": sl,
                     "tp": tp,
@@ -504,7 +506,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     "leverage": leverage,
                 }
 
-                entry_fee = amount * leverage * FEE_RATE
+                entry_fee = amount * leverage * FEE_MODEL.taker_fee
                 if entry_fee > 0:
                     capital -= entry_fee
                     app.log_event(f"💸 Entry Fee {entry_fee:.2f}$")
@@ -515,7 +517,7 @@ def _run_bot_live_inner(settings=None, app=None):
                 last_signal = entry_type
                 last_signal_time = now
 
-                msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry:.2f})"
+                msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry_exec:.2f})"
                 logging.info(msg)
                 if hasattr(app, "log_event"):
                     app.log_event(msg)
