@@ -21,7 +21,7 @@ from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
 from exit_handler import close_position
 from cooldown_manager import CooldownManager
-from session_filter import SessionFilter
+from session_filter import get_global_filter
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from trading_gui_core import TradingGUI
@@ -310,7 +310,7 @@ def run_bot_live(settings=None, app=None):
     leverage = multiplier
 
     cooldown = CooldownManager(settings.get("cooldown", 3))
-    session_filter = SessionFilter()
+    session_filter = get_global_filter(settings.get("session_filter"))
 
     andac_params = {
         "lookback": int(app.andac_lookback.get()),
@@ -404,6 +404,16 @@ def run_bot_live(settings=None, app=None):
 
             close_price = candle["close"]
             now = time.time()
+
+        if settings.get("use_session_filter") and not session_filter.is_allowed():
+            if not no_signal_printed:
+                msg = f"[{stamp}] Session nicht erlaubt"
+                print(msg)
+                if hasattr(app, "log_event"):
+                    app.log_event(msg)
+                no_signal_printed = True
+            time.sleep(1)
+            continue
 
         except Exception as e:
             print("❌ Fehler im Botlauf:", e)

@@ -17,6 +17,15 @@ class GUIBridge:
     def __init__(self, gui_instance=None):
         self.gui = gui_instance
 
+    def update_params(self, multiplier: float, auto_multi: bool, capital: float, interval: str) -> None:
+        """Store basic trading parameters from the GUI into SETTINGS."""
+        SETTINGS.update({
+            "multiplier": multiplier,
+            "auto_multiplier": auto_multi,
+            "capital": capital,
+            "interval": interval,
+        })
+
     def _get_gui_value(self, name: str, fallback):
         if not self.gui or not hasattr(self.gui, name):
             return fallback
@@ -105,3 +114,18 @@ class GUIBridge:
 
     def update_filter_feedback(self, score):
         return
+
+    def configure_session_filter(
+        self,
+        enabled: bool,
+        allowed_sessions: list[str] | None = None,
+        use_utc: bool = True,
+        debug: bool = False,
+    ) -> None:
+        SETTINGS["use_session_filter"] = enabled
+        SETTINGS["session_filter"] = {
+            "allowed": allowed_sessions or ["london", "new_york"],
+            "use_utc": use_utc,
+            "debug": debug,
+        }
+

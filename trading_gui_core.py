@@ -135,6 +135,9 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_volumen_strong = self.model.andac_opt_volumen_strong
         self.andac_opt_session_filter = self.model.andac_opt_session_filter
 
+        self.session_allowed = self.model.session_allowed
+        self.session_use_utc = self.model.session_use_utc
+
         self.use_doji_blocker = self.model.use_doji_blocker
 
         self.interval = self.model.interval
@@ -346,6 +349,8 @@ class TradingGUI(TradingGUILogicMixin):
         self._add_entry_group(right_col, "Lookback", [self.andac_lookback])
         self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
         self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
+        self._add_entry_group(right_col, "Sessions", [self.session_allowed])
+        ttk.Checkbutton(right_col, text="UTC", variable=self.session_use_utc).pack(anchor="w")
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
