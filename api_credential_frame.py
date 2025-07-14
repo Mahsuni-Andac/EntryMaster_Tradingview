@@ -6,8 +6,9 @@ from typing import Dict
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 from config import SETTINGS
+from bitmex_interface import set_credentials, check_credentials
 
-EXCHANGES = ["Binance"]
+EXCHANGES = ["BitMEX"]
 
 class APICredentialFrame(ttk.LabelFrame):
 
@@ -113,11 +114,15 @@ class APICredentialFrame(ttk.LabelFrame):
         if not key or not secret:
             ok, msg = False, "API Key und Secret erforderlich"
         else:
-            ok, msg = True, "API Daten gespeichert"
+            self.cred_manager.set_credentials(key, secret)
+            set_credentials(key, secret)
+            ok = check_credentials()
+            msg = "API Daten gespeichert" if ok else "API Test fehlgeschlagen"
         if ok:
             SETTINGS[f"{exch.lower()}_key"] = key
             SETTINGS[f"{exch.lower()}_secret"] = secret
         else:
+            self.cred_manager.clear()
             SETTINGS.pop(f"{exch.lower()}_key", None)
             SETTINGS.pop(f"{exch.lower()}_secret", None)
         SETTINGS["data_source_mode"] = "websocket"

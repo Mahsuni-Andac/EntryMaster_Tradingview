@@ -89,3 +89,29 @@ def get_open_position() -> Optional[dict]:
         logger.error("get_open_position failed: %s", exc)
         return None
 
+
+def set_credentials(key: str, secret: str) -> None:
+    """Set API credentials for subsequent requests."""
+    global API_KEY, API_SECRET
+    API_KEY = key
+    API_SECRET = secret
+
+
+def check_credentials() -> bool:
+    """Verify that the current credentials are valid."""
+    path = "/api/v1/position"
+    params = {"filter": json.dumps({"symbol": SYMBOL}), "count": 1}
+    query = "?" + "&".join(f"{k}={v}" for k, v in params.items())
+    try:
+        headers = _make_headers("GET", path + query)
+    except Exception as exc:
+        logger.error("check_credentials failed: %s", exc)
+        return False
+    url = BASE_URL + path
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=5)
+        return resp.status_code == 200
+    except Exception as exc:
+        logger.error("check_credentials failed: %s", exc)
+        return False
+
