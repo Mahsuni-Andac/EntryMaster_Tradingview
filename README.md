@@ -37,8 +37,6 @@ Der Bot verwendet eine fortgeschrittene Entry-Strategie:
 - ✅ **Trendfilter** (EMA)
 - ✅ **Volumenstärke-Erkennung**
 - ✅ **Makrophasen-Filter**
-- ✅ **Session-Filter**
-- ⚙️ **Session-Filter konfigurierbar über die GUI**
 - ✅ **Engulfing-Pattern**
 - ✅ **Multi-Timeframe-Bestätigung**
 - 🟢 Alle Signale werden geloggt, mit Gründen bei Verwerfung.
@@ -188,7 +186,6 @@ EntryMaster_Tradingview/
 
 - GUI-basierte Backtests
 - Weitere Assets (nur BTCUSDT bisher)
-- Session-Wizard zur Konfiguration
 - Optimierte Logging-Ausgabe & Reports
 
 ---

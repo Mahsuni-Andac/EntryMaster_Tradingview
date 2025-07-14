@@ -114,7 +114,6 @@ def bot_control(gui):
                     "DELAY": gui.andac_opt_confirm_delay.get(),
                     "MTF": gui.andac_opt_mtf_confirm.get(),
                     "VOL": gui.andac_opt_volumen_strong.get(),
-                    "SES": gui.andac_opt_session_filter.get(),
                 }
                 filter_line = "🎛 Andac: " + " ".join(
                     f"{k}{'✅' if v else '❌'}" for k, v in filter_status.items()

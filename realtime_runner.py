@@ -67,9 +67,10 @@ def is_within_active_timeframe(gui) -> bool:
 
 def update_indicators(candles):
     atr = calculate_atr(candles, 14)
-    close_list = [c["close"] for c in candles[-20:] if "close" in c]
-    ema = calculate_ema(close_list, 20)
-    return atr, ema
+    closes = [c["close"] for c in candles if "close" in c]
+    ema = calculate_ema(closes[-20:], 20)
+    rsi = AndacEntryMaster._rsi(closes, 14)
+    return atr, ema, rsi
 
 
 def handle_existing_position(position, candle, app, capital, live_trading,
@@ -326,10 +327,10 @@ def _run_bot_live_inner(settings=None, app=None):
     cooldown = CooldownManager(settings.get("cooldown", 3))
     # REMOVED: SessionFilter
 
-    andac_params = {
+    config = {
         "lookback": int(app.andac_lookback.get()),
         "puffer": float(app.andac_puffer.get()),
-        "vol_mult": float(app.andac_vol_mult.get()),
+        "volumen_factor": float(app.andac_vol_mult.get()),
         "opt_rsi_ema": app.andac_opt_rsi_ema.get(),
         "opt_safe_mode": app.andac_opt_safe_mode.get(),
         "opt_engulf": app.andac_opt_engulf.get(),
@@ -338,9 +339,7 @@ def _run_bot_live_inner(settings=None, app=None):
         "opt_confirm_delay": app.andac_opt_confirm_delay.get(),
         "opt_mtf_confirm": app.andac_opt_mtf_confirm.get(),
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
-        "opt_session_filter": app.andac_opt_session_filter.get(),
     }
-    andac_indicator = AndacEntryMaster(**andac_params)
     adaptive_sl = AdaptiveSLManager()
 
     candles = []
@@ -358,9 +357,10 @@ def _run_bot_live_inner(settings=None, app=None):
     no_signal_printed = False
     first_feed = False
     candle_warning_printed = False
+    previous_signal = None
 
     def process_candle(candle: dict) -> None:
-        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed, first_feed
+        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed, first_feed, previous_signal
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
@@ -369,7 +369,7 @@ def _run_bot_live_inner(settings=None, app=None):
         if len(candles) > 100:
             candles.pop(0)
 
-        atr_value, ema = update_indicators(candles)
+        atr_value, ema, rsi_val = update_indicators(candles)
         atr_value_global = atr_value
         settings["ema_value"] = ema
 
@@ -392,8 +392,33 @@ def _run_bot_live_inner(settings=None, app=None):
             except Exception as e:
                 logging.error("Auto recommendation failed: %s", e)
 
-        andac_signal: AndacSignal = should_enter(candle, andac_indicator)
+        lookback = config.get("lookback", 20)
+        recent = candles[-(lookback + 1):]
+        highs = [c["high"] for c in recent[:-1]]
+        lows = [c["low"] for c in recent[:-1]]
+        vols = [c.get("volume", 0.0) for c in recent[:-1]]
+        avg_volume = sum(vols) / len(vols) if vols else candle.get("volume", 0.0)
+        high_lb = max(highs) if highs else candle["high"]
+        low_lb = min(lows) if lows else candle["low"]
+        prev_close = recent[-2]["close"] if len(recent) > 1 else None
+        prev_open = recent[-2]["open"] if len(recent) > 1 else None
+
+        indicator = {
+            "rsi": rsi_val,
+            "atr": atr_value,
+            "avg_volume": avg_volume,
+            "high_lookback": high_lb,
+            "low_lookback": low_lb,
+            "prev_close": prev_close,
+            "prev_open": prev_open,
+            "mtf_ok": True,
+            "prev_bull_signal": previous_signal == "long",
+            "prev_baer_signal": previous_signal == "short",
+        }
+
+        andac_signal: AndacSignal = should_enter(candle, indicator, config)
         entry_type = andac_signal.signal
+        previous_signal = entry_type
         stamp = datetime.now().strftime("%H:%M:%S")
         if entry_type:
             triangle_msg = log_triangle_signal(entry_type, close_price)

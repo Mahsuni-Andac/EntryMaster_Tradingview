@@ -83,7 +83,6 @@ class TradingGUI(TradingGUILogicMixin):
             "auto_multi": ("Auto Multiplikator", self.auto_multiplier),
             "safe": ("Sicherheitsfilter", self.andac_opt_safe_mode),
             "vol": ("Volumenfilter", self.andac_opt_volumen_strong),
-            "session": ("Session Filter", self.andac_opt_session_filter),
             "paper": ("Paper-Trading aktiv", self.paper_mode),
             "saved": ("Konfiguration gespeichert", None),
         }
@@ -133,7 +132,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_confirm_delay = self.model.andac_opt_confirm_delay
         self.andac_opt_mtf_confirm = self.model.andac_opt_mtf_confirm
         self.andac_opt_volumen_strong = self.model.andac_opt_volumen_strong
-        self.andac_opt_session_filter = self.model.andac_opt_session_filter
 
         # REMOVED: SessionFilter variables
 
@@ -341,7 +339,6 @@ class TradingGUI(TradingGUILogicMixin):
             ("Bestätigungskerze", self.andac_opt_confirm_delay),
             ("MTF Bestätigung", self.andac_opt_mtf_confirm),
             ("Starkes Volumen", self.andac_opt_volumen_strong),
-            ("EU/NY Session", self.andac_opt_session_filter),
         ]:
             ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
 

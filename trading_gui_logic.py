@@ -42,7 +42,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
-                self.andac_opt_session_filter,
                 self.use_doji_blocker,
                 self.use_time_filter,
             ]
@@ -54,7 +53,6 @@ class TradingGUILogicMixin:
             if spike:
                 enable += [
                     self.andac_opt_safe_mode,
-                    self.andac_opt_session_filter,
                     self.use_doji_blocker,
                     self.andac_opt_volumen_strong,
                 ]
@@ -94,7 +92,6 @@ class TradingGUILogicMixin:
                 "opt_confirm_delay": self.andac_opt_confirm_delay.get(),
                 "opt_mtf_confirm": self.andac_opt_mtf_confirm.get(),
                 "opt_volumen_strong": self.andac_opt_volumen_strong.get(),
-                "opt_session_filter": self.andac_opt_session_filter.get(),
             })
 
             self.log_event("✅ Auto-Empfehlungen angewendet")
@@ -112,7 +109,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
-                self.andac_opt_session_filter,
                 self.use_time_filter,
                 self.use_doji_blocker,
             ]:
