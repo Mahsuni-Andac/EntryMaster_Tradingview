@@ -63,3 +63,18 @@ def log_messages(msg: str, level: int = logging.INFO) -> List[str]:
     for line in out:
         logging.log(level, line)
     return out
+
+
+def log_triangle_signal(signal_type: str, price: float) -> str:
+    """Log a colored triangle signal with timestamp and price."""
+    from datetime import datetime
+
+    stamp = datetime.now().strftime("%H:%M:%S")
+    if signal_type == "long":
+        msg = f"{stamp} \U0001F7E9 Dreieck (LONG) erkannt @ {price:.2f}"
+    elif signal_type == "short":
+        msg = f"{stamp} \U0001F7E5 Dreieck (SHORT) erkannt @ {price:.2f}"
+    else:
+        msg = f"{stamp} \u26AA\uFE0F Unbekanntes Signal"
+    logging.info(msg)
+    return msg
