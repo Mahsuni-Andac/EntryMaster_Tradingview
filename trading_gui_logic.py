@@ -196,12 +196,12 @@ class TradingGUILogicMixin:
             if hasattr(self, "feed_status_var"):
                 self.feed_status_var.set("")
             if hasattr(self, "neon_panel"):
-                self.neon_panel.set_status("feed", "green", "Feed OK")
+                self.neon_panel.set_status("feed", "green", "Binance WebSocket OK")
             if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
                 self.api_frame.update_market_status(True)
         else:
             stamp = datetime.now().strftime("%H:%M:%S")
-            text = f"Feed ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
+            text = f"Binance WebSocket ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
             if hasattr(self, "feed_status_var"):
                 self.feed_status_var.set(text)
             if hasattr(self, "feed_status_label"):
@@ -215,10 +215,10 @@ class TradingGUILogicMixin:
 
     def _update_feed_mode_display(self, ok: bool) -> None:
         if not ok:
-            text = "❌ WebSocket getrennt"
+            text = "Binance WebSocket ❌"
             color = "red"
         else:
-            text = "WebSocket verbunden"
+            text = "Binance WebSocket OK"
             color = "green"
 
         if hasattr(self, "feed_mode_var"):
