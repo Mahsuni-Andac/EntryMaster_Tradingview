@@ -65,7 +65,7 @@ class SystemMonitor:
                 self._last_checked_ts = ts
                 if ts is None:
                     self._handle_feed_down("Keine Marktdaten empfangen")
-                elif time.time() - ts > self.timeout:
+                elif time.time() - ts > 30:
                     self._handle_feed_down("Marktdaten aktualisieren sich nicht")
                 else:
                     self._handle_feed_up()

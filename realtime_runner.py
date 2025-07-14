@@ -501,7 +501,9 @@ def run_bot_live(settings=None, app=None):
                 if sl is None or tp is None:
                     print("⚠️ Kein gültiges SL/TP verfügbar, Trade verworfen")
                     if hasattr(app, "log_event"):
-                        app.log_event("⚠️ Kein gültiges SL/TP verfügbar")
+                        app.log_event(
+                            "⚠️ Kein gültiges SL/TP verfügbar – SL/TP liegt außerhalb des gültigen Bereichs oder ATR zu klein"
+                        )
                     time.sleep(1)
                     continue
 
