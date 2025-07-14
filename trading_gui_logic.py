@@ -3,6 +3,7 @@
 import json
 import os
 import tkinter as tk
+from tkinter import messagebox
 from datetime import datetime
 
 TUNING_FILE = "tuning_config.json"
@@ -121,14 +122,18 @@ class TradingGUILogicMixin:
             multiplier = float(self.multiplier_var.get().replace(",", "."))
             auto_multi = self.auto_multiplier.get()
             capital = float(self.capital_var.get().replace(",", "."))
-            if capital <= 0:
-                self.log_event("⚠️ Einsatz muss größer 0 sein")
-                return
-            interval = self.interval.get()
-            if hasattr(self, "bridge") and self.bridge is not None:
-                self.bridge.update_params(multiplier, auto_multi, capital, interval)
+        except ValueError as e:
+            messagebox.showerror("Eingabefehler", f"Ungültige Zahl: {e}")
+            return
         except Exception as e:
             self.log_event(f"⚠️ Fehler bei Eingaben: {e}")
+            return
+        if capital <= 0:
+            self.log_event("⚠️ Einsatz muss größer 0 sein")
+            return
+        interval = self.interval.get()
+        if hasattr(self, "bridge") and self.bridge is not None:
+            self.bridge.update_params(multiplier, auto_multi, capital, interval)
         if hasattr(self, "callback"):
             self.callback()
 

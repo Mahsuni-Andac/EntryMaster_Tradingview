@@ -276,7 +276,9 @@ def run_bot_live(settings=None, app=None):
         settings["log_event"] = app.log_event
         set_gui_bridge(app)
         start_capital = capital
-
+        if hasattr(app, "sl_tp_status_var"):
+            app.sl_tp_status_var.set("")
+    
     risk_manager = RiskManager(app, start_capital)
     cfg = {}
     for key in ("max_loss", "max_drawdown", "max_trades"):
@@ -478,8 +480,14 @@ def run_bot_live(settings=None, app=None):
                             valid = sl > entry and tp < entry
                         if valid:
                             gui_bridge.set_manual_status(True)
+                            if hasattr(app, "sl_tp_status_var"):
+                                app.sl_tp_status_var.set("Aktiv")
+                                app.sl_tp_status_label.config(foreground="green")
                         else:
                             gui_bridge.set_manual_status(False)
+                            if hasattr(app, "sl_tp_status_var"):
+                                app.sl_tp_status_var.set("❌ verworfen")
+                                app.sl_tp_status_label.config(foreground="red")
                             sl, tp = None, None
 
                 if sl is None and tp is None and gui_bridge.auto_active:
@@ -494,15 +502,27 @@ def run_bot_live(settings=None, app=None):
                                 valid = sl > entry and tp < entry
                             if valid:
                                 gui_bridge.set_auto_status(True)
+                                if hasattr(app, "sl_tp_status_var"):
+                                    app.sl_tp_status_var.set("Aktiv")
+                                    app.sl_tp_status_label.config(foreground="green")
                             else:
                                 gui_bridge.set_auto_status(False)
+                                if hasattr(app, "sl_tp_status_var"):
+                                    app.sl_tp_status_var.set("❌ verworfen")
+                                    app.sl_tp_status_label.config(foreground="red")
                                 sl = tp = None
                         else:
                             gui_bridge.set_auto_status(False)
+                            if hasattr(app, "sl_tp_status_var"):
+                                app.sl_tp_status_var.set("❌ verworfen")
+                                app.sl_tp_status_label.config(foreground="red")
                             sl = tp = None
                     except Exception as e:
                         print(f"❌ Adaptive SL Fehler: {e}")
                         gui_bridge.set_auto_status(False)
+                        if hasattr(app, "sl_tp_status_var"):
+                            app.sl_tp_status_var.set("❌ verworfen (ATR zu klein)")
+                            app.sl_tp_status_label.config(foreground="red")
                         sl = tp = None
 
                 if sl is None or tp is None:
@@ -511,6 +531,9 @@ def run_bot_live(settings=None, app=None):
                         app.log_event(
                             "⚠️ Kein gültiges SL/TP verfügbar – SL/TP liegt außerhalb des gültigen Bereichs oder ATR zu klein"
                         )
+                    if hasattr(app, "sl_tp_status_var"):
+                        app.sl_tp_status_var.set("❌ verworfen (ATR zu klein)")
+                        app.sl_tp_status_label.config(foreground="red")
                     time.sleep(1)
                     continue
 

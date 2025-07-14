@@ -167,6 +167,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.manual_tp_var = self.model.manual_tp_var
         self.sl_tp_auto_active = self.model.sl_tp_auto_active
         self.sl_tp_manual_active = self.model.sl_tp_manual_active
+        self.sl_tp_status_var = self.model.sl_tp_status_var
 
         self.api_status_var = tk.StringVar(value="BitMEX API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
@@ -312,6 +313,8 @@ class TradingGUI(TradingGUILogicMixin):
         self.auto_sl_button.grid(row=2, column=0, columnspan=2, sticky="we", pady=(5,0))
         self.manual_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Manuell aktiv", command=self.toggle_manual_sl_tp)
         self.manual_sl_button.grid(row=3, column=0, columnspan=2, sticky="we")
+        self.sl_tp_status_label = ttk.Label(manual_frame, textvariable=self.sl_tp_status_var, foreground="green")
+        self.sl_tp_status_label.grid(row=4, column=0, columnspan=2, sticky="w")
 
         self._build_andac_options(andac)
         self._build_controls(self.main_frame)
