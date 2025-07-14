@@ -76,7 +76,8 @@ def update_indicators(candles):
 
 def handle_existing_position(position, candle, app, capital, live_trading,
                              cooldown, risk_manager, last_printed_pnl,
-                             last_printed_price, settings, now):
+                             last_printed_price, settings, now,
+                             signal=None, current_index=None):
     current = candle["close"]
     entry = position["entry"]
     pnl_live = calculate_futures_pnl(
@@ -161,7 +162,21 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
     hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
 
-    if hit_tp or hit_sl:
+    timed_exit = False
+    if current_index is not None and position.get("entry_index") is not None:
+        if current_index - position["entry_index"] >= MAX_HOLD_CANDLES:
+            timed_exit = True
+
+    opp_exit = False
+    if signal and signal in ("long", "short"):
+        opp_exit = (
+            (position["side"] == "long" and signal == "short") or
+            (position["side"] == "short" and signal == "long")
+        )
+
+    should_close = hit_tp or hit_sl or timed_exit or opp_exit
+
+    if should_close:
         _, pnl = simulate_trade(
             entry,
             position["side"],
@@ -179,9 +194,24 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         app.update_pnl(pnl)
         app.update_capital(capital)
         app.update_last_trade(position["side"], entry, current, pnl)
-        log_msg = (
-            f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
-        )
+
+        if hit_tp:
+            reason = "TP erreicht"
+        elif hit_sl:
+            reason = "SL erreicht"
+        elif timed_exit:
+            reason = f"Timed Exit: {position['side'].upper()} geschlossen nach {MAX_HOLD_CANDLES} Kerzen"
+        else:
+            reason = "Gegensignal"
+
+        if timed_exit or opp_exit:
+            stamp = datetime.now().strftime("%H:%M:%S")
+            log_msg = f"[{stamp}] {reason} bei {current:.2f} | PnL {pnl:.2f}"
+        else:
+            log_msg = (
+                f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
+            )
+
         logging.info(log_msg)
         app.log_event(log_msg)
         if live_trading:
@@ -195,6 +225,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
         position = None
         entry_time_global = None
+        return position, capital, last_printed_pnl, last_printed_price, True
 
     return position, capital, last_printed_pnl, last_printed_price, False
 
@@ -208,7 +239,8 @@ from console_status import (
 from pnl_utils import calculate_futures_pnl, check_plausibility
 from simulator import FeeModel, simulate_trade
 
-FEE_MODEL = FeeModel()
+MAX_HOLD_CANDLES = 10
+FEE_MODEL = FeeModel(taker_fee=0.0004)
 POSITION_SIZE = 0.2
 
 gui_bridge = None
@@ -448,6 +480,8 @@ def _run_bot_live_inner(settings=None, app=None):
                 last_printed_price,
                 settings,
                 now,
+                entry_type,
+                len(candles) - 1,
             )
             position, capital, last_printed_pnl, last_printed_price, closed = position_data
             if closed:
@@ -499,6 +533,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     "side": entry_type,
                     "entry": entry_exec,
                     "entry_time": now,
+                    "entry_index": len(candles) - 1,
                     "sl": sl,
                     "tp": tp,
                     "amount": amount,
