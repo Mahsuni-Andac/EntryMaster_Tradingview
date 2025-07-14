@@ -134,7 +134,10 @@ class TradingGUILogicMixin:
 
     def emergency_exit(self):
         try:
-            self.running = False
+            if hasattr(self, "model"):
+                self.model.running = False
+            else:
+                self.running = False
             if hasattr(self, "close_all_positions"):
                 self.close_all_positions()
             self.log_event("❗️ Notausstieg ausgelöst! Alle Positionen werden geschlossen.")
@@ -142,8 +145,12 @@ class TradingGUILogicMixin:
             print(f"❌ Fehler beim Notausstieg: {e}")
 
     def emergency_flat_position(self):
-        self.force_exit = True
-        self.running = False
+        if hasattr(self, "model"):
+            self.model.force_exit = True
+            self.model.running = False
+        else:
+            self.force_exit = True
+            self.running = False
         self.log_event("⛔ Trade abbrechen: Die Position wird jetzt geschlossen.")
         
         if hasattr(self, 'position') and self.position is not None:
@@ -153,8 +160,12 @@ class TradingGUILogicMixin:
             self.log_event("❌ Keine offene Position zum Abbrechen gefunden.")
 
     def abort_trade(self):
-        self.force_exit = True
-        self.running = False
+        if hasattr(self, "model"):
+            self.model.force_exit = True
+            self.model.running = False
+        else:
+            self.force_exit = True
+            self.running = False
 
     def update_live_trade_pnl(self, pnl):
         color = "green" if pnl >= 0 else "red"
@@ -167,7 +178,10 @@ class TradingGUILogicMixin:
         if getattr(self, "_last_api_status", (None, None)) == (ok, reason):
             return
         self._last_api_status = (ok, reason)
-        self.api_ok = ok
+        if hasattr(self, "model"):
+            self.model.api_ok = ok
+        else:
+            self.api_ok = ok
         stamp = datetime.now().strftime("%H:%M:%S")
         if ok:
             text = "BitMEX API ✅"
@@ -188,7 +202,10 @@ class TradingGUILogicMixin:
         if getattr(self, "_last_feed_status", (None, None)) == (ok, reason):
             return
         self._last_feed_status = (ok, reason)
-        self.feed_ok = ok
+        if hasattr(self, "model"):
+            self.model.feed_ok = ok
+        else:
+            self.feed_ok = ok
         self._update_feed_mode_display(ok)
         if ok:
             if hasattr(self, "feed_status_label") and self.feed_status_label.winfo_ismapped():
@@ -340,18 +357,16 @@ class TradingGUILogicMixin:
             return var.get()
 
     def toggle_manual_sl_tp(self):
-        try:
-            sl = float(self.manual_sl_var.get().replace(",", "."))
-            tp = float(self.manual_tp_var.get().replace(",", "."))
-        except Exception:
-            self.sl_tp_manual_active.set(False)
+        ok = False
+        if hasattr(self, "model"):
+            sl = self.manual_sl_var.get()
+            tp = self.manual_tp_var.get()
+            ok = self.model.toggle_manual_sl_tp(sl, tp)
+        if not ok:
             if hasattr(self, "manual_sl_button"):
                 self.manual_sl_button.config(fg="red")
             self.log_event("❌ Ungültige manuelle SL/TP Werte")
             return
-
-        self.sl_tp_manual_active.set(True)
-        self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
             self.manual_sl_button.config(fg="blue")
         if hasattr(self, "auto_sl_button"):
@@ -359,8 +374,11 @@ class TradingGUILogicMixin:
         self.log_event("📝 Manuelle SL/TP aktiviert")
 
     def activate_auto_sl_tp(self):
-        self.sl_tp_auto_active.set(True)
-        self.sl_tp_manual_active.set(False)
+        if hasattr(self, "model"):
+            self.model.activate_auto_sl_tp()
+        else:
+            self.sl_tp_auto_active.set(True)
+            self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
             self.auto_sl_button.config(fg="blue")
         if hasattr(self, "manual_sl_button"):
@@ -368,24 +386,34 @@ class TradingGUILogicMixin:
         self.log_event("⚙️ Adaptive SL/TP aktiviert")
 
     def set_auto_sl_status(self, ok: bool) -> None:
-        self.sl_tp_auto_active.set(ok)
-        if ok:
-            self.sl_tp_manual_active.set(False)
+        if hasattr(self, "model"):
+            self.model.set_auto_sl_status(ok)
+        else:
+            self.sl_tp_auto_active.set(ok)
+            if ok:
+                self.sl_tp_manual_active.set(False)
         if hasattr(self, "auto_sl_button"):
             color = "green" if ok else "red"
             self.auto_sl_button.config(fg=color)
 
     def set_manual_sl_status(self, ok: bool) -> None:
-        self.sl_tp_manual_active.set(ok)
-        if ok:
-            self.sl_tp_auto_active.set(False)
+        if hasattr(self, "model"):
+            self.model.set_manual_sl_status(ok)
+        else:
+            self.sl_tp_manual_active.set(ok)
+            if ok:
+                self.sl_tp_auto_active.set(False)
         if hasattr(self, "manual_sl_button"):
             color = "green" if ok else "red"
             self.manual_sl_button.config(fg=color)
 
 def stop_and_reset(self):
-    self.force_exit = True
-    self.running = False
+    if hasattr(self, "model"):
+        self.model.force_exit = True
+        self.model.running = False
+    else:
+        self.force_exit = True
+        self.running = False
     try:
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
     except Exception as e:

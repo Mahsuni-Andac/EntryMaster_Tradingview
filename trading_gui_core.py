@@ -6,42 +6,46 @@ from datetime import datetime
 import logging
 
 from trading_gui_logic import TradingGUILogicMixin
+from gui_model import GUIModel
 from api_credential_frame import APICredentialFrame, EXCHANGES
 from neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 
 class TradingGUI(TradingGUILogicMixin):
+    def __getattr__(self, item):
+        model = self.__dict__.get("model")
+        if model and hasattr(model, item):
+            return getattr(model, item)
+        raise AttributeError(item)
+
+    def __setattr__(self, key, value):
+        model = self.__dict__.get("model")
+        if key != "model" and model and hasattr(model, key):
+            setattr(model, key, value)
+        else:
+            super().__setattr__(key, value)
     def __init__(self, root, cred_manager: APICredentialManager | None = None):
         self.root = root
         self.root.title("🧞‍♂️ EntryMaster_Tradingview – Kapital-Safe Edition")
 
         self.cred_manager = cred_manager or APICredentialManager()
 
-        self.running = False
-        self.force_exit = False
-        self.live_pnl = 0.0
-
-        self.auto_apply_recommendations = tk.BooleanVar(value=False)
-        self.auto_multiplier = tk.BooleanVar(value=False)
-
-        self.apc_enabled = tk.BooleanVar(value=False)
-        self.apc_rate = tk.StringVar(value="10")
-        self.apc_interval = tk.StringVar(value="60")
-        self.apc_min_profit = tk.StringVar(value="0")
+        # hold all Tk variables and runtime flags
+        self.model = GUIModel(root)
         self.apc_status_label = None
-
-        self.max_loss_enabled = tk.BooleanVar(value=True)
-        self.max_loss_value = tk.StringVar(value="10")
         self.max_loss_status_label = None
+
 
         self.multiplier_entry = None
         self.capital_entry = None
         self.log_box = None
         self.auto_status_label = None
-        self.live_trading = tk.BooleanVar(value=False)
-        self.paper_mode = tk.BooleanVar(value=True)
-        self.trading_mode = tk.StringVar(value="paper")
+
+        # references to model variables for convenience
+        self.live_trading = self.model.live_trading
+        self.paper_mode = self.model.paper_mode
+        self.trading_mode = self.model.trading_mode
         self.mode_label = None
 
         self._init_variables()
@@ -55,7 +59,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         from config import SETTINGS
         SETTINGS["data_source_mode"] = "websocket"
-        self.websocket_active = True
+        self.model.websocket_active = True
         self._update_feed_mode_display(False)
 
         self.market_interval_ms = 1000
@@ -113,29 +117,30 @@ class TradingGUI(TradingGUILogicMixin):
         self._update_mode_label()
 
     def _init_variables(self):
-        self.multiplier_var = tk.StringVar(value="20")
-        self.capital_var = tk.StringVar(value="1000")
-        
-        self.andac_lookback = tk.StringVar(value="20")
-        self.andac_puffer = tk.StringVar(value="10.0")
-        self.andac_vol_mult = tk.StringVar(value="1.2")
+        # use variables from the model
+        self.multiplier_var = self.model.multiplier_var
+        self.capital_var = self.model.capital_var
 
-        self.andac_opt_rsi_ema = tk.BooleanVar()
-        self.andac_opt_safe_mode = tk.BooleanVar()
-        self.andac_opt_engulf = tk.BooleanVar()
-        self.andac_opt_engulf_bruch = tk.BooleanVar()
-        self.andac_opt_engulf_big = tk.BooleanVar()
-        self.andac_opt_confirm_delay = tk.BooleanVar()
-        self.andac_opt_mtf_confirm = tk.BooleanVar()
-        self.andac_opt_volumen_strong = tk.BooleanVar()
-        self.andac_opt_session_filter = tk.BooleanVar()
+        self.andac_lookback = self.model.andac_lookback
+        self.andac_puffer = self.model.andac_puffer
+        self.andac_vol_mult = self.model.andac_vol_mult
 
-        self.use_doji_blocker = tk.BooleanVar()
+        self.andac_opt_rsi_ema = self.model.andac_opt_rsi_ema
+        self.andac_opt_safe_mode = self.model.andac_opt_safe_mode
+        self.andac_opt_engulf = self.model.andac_opt_engulf
+        self.andac_opt_engulf_bruch = self.model.andac_opt_engulf_bruch
+        self.andac_opt_engulf_big = self.model.andac_opt_engulf_big
+        self.andac_opt_confirm_delay = self.model.andac_opt_confirm_delay
+        self.andac_opt_mtf_confirm = self.model.andac_opt_mtf_confirm
+        self.andac_opt_volumen_strong = self.model.andac_opt_volumen_strong
+        self.andac_opt_session_filter = self.model.andac_opt_session_filter
 
-        self.interval = tk.StringVar(value="1m")
-        self.use_time_filter = tk.BooleanVar()
-        self.time_start = tk.StringVar(value="08:00")
-        self.time_end = tk.StringVar(value="18:00")
+        self.use_doji_blocker = self.model.use_doji_blocker
+
+        self.interval = self.model.interval
+        self.use_time_filter = self.model.use_time_filter
+        self.time_start = self.model.time_start
+        self.time_end = self.model.time_end
 
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -158,18 +163,18 @@ class TradingGUI(TradingGUILogicMixin):
         self.safe_chk_rec = ttk.Label(self.root, text="", foreground="green")
         self.auto_status_label = None
 
-        self.manual_sl_var = tk.StringVar(value="")
-        self.manual_tp_var = tk.StringVar(value="")
-        self.sl_tp_auto_active = tk.BooleanVar(value=False)
-        self.sl_tp_manual_active = tk.BooleanVar(value=False)
+        self.manual_sl_var = self.model.manual_sl_var
+        self.manual_tp_var = self.model.manual_tp_var
+        self.sl_tp_auto_active = self.model.sl_tp_auto_active
+        self.sl_tp_manual_active = self.model.sl_tp_manual_active
 
         self.api_status_var = tk.StringVar(value="BitMEX API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
         self.api_status_label = None
         self.feed_status_label = None
-        self.feed_ok = False
-        self.api_ok = False
-        self.websocket_active = False
+        self.feed_ok = self.model.feed_ok
+        self.api_ok = self.model.api_ok
+        self.websocket_active = self.model.websocket_active
 
         self.exchange_status_vars = {ex: tk.StringVar(value="⚪") for ex in EXCHANGES}
         self.exchange_status_labels = {}
@@ -366,8 +371,8 @@ class TradingGUI(TradingGUILogicMixin):
         self.log_box.pack(pady=12)
 
     def stop_and_reset(self):
-        self.force_exit = True
-        self.running = False
+        self.model.force_exit = True
+        self.model.running = False
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
 
     def _add_checkbox_entry(self, parent, label, var, entries=[]):
@@ -396,9 +401,14 @@ class TradingGUI(TradingGUILogicMixin):
     def _collect_setting_vars(self):
         self.setting_vars = {
             name: var
-            for name, var in vars(self).items()
+            for name, var in vars(self.model).items()
             if isinstance(var, (tk.BooleanVar, tk.StringVar))
         }
+        self.setting_vars.update({
+            name: var
+            for name, var in vars(self).items()
+            if isinstance(var, (tk.BooleanVar, tk.StringVar))
+        })
         if hasattr(self, "api_frame"):
             for ex, data in self.api_frame.vars.items():
                 for key, var in data.items():
@@ -507,7 +517,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         symbol = BINANCE_SYMBOL
         price = fetch_last_price()
-        self.websocket_active = WebSocketStatus.is_running()
+        self.model.websocket_active = WebSocketStatus.is_running()
 
         stamp = datetime.now().strftime("%H:%M:%S")
         line = (

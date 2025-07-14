@@ -38,6 +38,7 @@ import global_state
 from indicator_utils import calculate_ema, calculate_atr
 
 from andac_entry_master import AndacEntryMaster, AndacSignal
+from entry_logic import should_enter
 from adaptive_sl_manager import AdaptiveSLManager
 
 
@@ -277,6 +278,12 @@ def run_bot_live(settings=None, app=None):
         start_capital = capital
 
     risk_manager = RiskManager(app, start_capital)
+    cfg = {}
+    for key in ("max_loss", "max_drawdown", "max_trades"):
+        if key in settings:
+            cfg[key] = settings[key]
+    if cfg:
+        risk_manager.configure(**cfg)
 
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
@@ -408,7 +415,7 @@ def run_bot_live(settings=None, app=None):
             except Exception as e:
                 print(f"⚠️ Automatisches Anwenden fehlgeschlagen: {e}")
 
-        andac_signal: AndacSignal = andac_indicator.evaluate(candle)
+        andac_signal: AndacSignal = should_enter(candle, andac_indicator)
         entry_type = andac_signal.signal
         stamp = datetime.now().strftime("%H:%M:%S")
         if entry_type:
