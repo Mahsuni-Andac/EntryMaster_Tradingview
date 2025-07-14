@@ -21,6 +21,7 @@ _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _WS_CANDLES: list[Candle] = []
 _CANDLE_LOCK = threading.Lock()
 _CANDLE_QUEUE: queue.Queue[Candle] = queue.Queue(maxsize=100)
+_PRELOAD_QUEUE_LIMIT = 2
 _MAX_CANDLES = 1000
 _CANDLE_WS_STARTED: bool = False
 _FEED_MONITOR_THREAD: threading.Thread | None = None
@@ -86,7 +87,7 @@ def _fetch_rest_candles(interval: str, limit: int = 14) -> list["Candle"]:
     return candles
 
 
-def _load_initial_candles(interval: str, limit: int = 14) -> bool:
+def _load_initial_candles(interval: str, limit: int = 14, queue_limit: int = _PRELOAD_QUEUE_LIMIT) -> bool:
     StatusDispatcher.dispatch("feed", False, "REST-API-Call-14")
     try:
         candles = _fetch_rest_candles(interval, limit)
@@ -100,7 +101,8 @@ def _load_initial_candles(interval: str, limit: int = 14) -> bool:
             del _WS_CANDLES[:-_MAX_CANDLES]
         if candles:
             _LAST_CANDLE_TS = candles[-1]["timestamp"]
-    for candle in candles:
+    for candle in candles[-queue_limit:]:
+        candle["source"] = "preload"
         try:
             _CANDLE_QUEUE.put_nowait(candle)
         except queue.Full:
@@ -127,7 +129,7 @@ def start_candle_websocket(interval: str | None = None) -> None:
         stop_candle_websocket()
         logger.info("Candle-WebSocket neu gestartet")
 
-    if not _load_initial_candles(interval, 14):
+    if not _load_initial_candles(interval, 14, _PRELOAD_QUEUE_LIMIT):
         raise RuntimeError("Initial candle download failed")
 
     logger.info("WebSocket Candle-Stream gestartet")
@@ -272,6 +274,7 @@ def update_candle_feed(candle: Candle) -> None:
         logger.debug("Doppelte Candle ignoriert: %s", candle)
         return
     _LAST_CANDLE_TS = candle["timestamp"]
+    candle["source"] = "ws"
 
     with _CANDLE_LOCK:
         _WS_CANDLES.append(candle)

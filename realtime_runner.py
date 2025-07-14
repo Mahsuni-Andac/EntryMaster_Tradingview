@@ -504,15 +504,18 @@ def _run_bot_live_inner(settings=None, app=None):
                     logging.info("➖ Ich warte auf ein Indikator Signal")
                     no_signal_printed = True
 
+    candle_queue = get_candle_queue()
+    worker = SignalWorker(process_candle, queue_obj=candle_queue)
+    worker.start()
+
     if not data_provider._CANDLE_WS_STARTED:
         start_candle_websocket(interval_setting)
     else:
         logging.info("Candle WebSocket already running")
 
-    candle_queue = get_candle_queue()
     preload = candle_queue.qsize()
     if preload:
-        flush_limit = min(preload, 5)
+        flush_limit = min(preload, 2)
         logging.info("\ud83d\udd04 Clean Flush %s Candles", flush_limit)
         for _ in range(flush_limit):
             try:
@@ -520,11 +523,9 @@ def _run_bot_live_inner(settings=None, app=None):
             except queue.Empty:
                 break
 
-    worker = SignalWorker(process_candle, queue_obj=candle_queue)
     logging.info(
         "Candle-Worker gestartet (%s Candles im Buffer)", worker.queue.qsize()
     )
-    worker.start()
 
     ATR_REQUIRED = 14
     candles_ready = wait_for_initial_candles(app, ATR_REQUIRED)

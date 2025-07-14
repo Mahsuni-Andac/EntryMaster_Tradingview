@@ -32,5 +32,27 @@ class FeedParserTest(unittest.TestCase):
         self.assertEqual(candle["low"], 9.0)
         self.assertEqual(candle["volume"], 100.0)
 
+    def test_ws_deduplication(self):
+        import global_state
+        global_state.reset_global_state()
+        ws = BinanceCandleWebSocket()
+        collected = []
+        ws.on_candle = collected.append
+        ts = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+        msg = json.dumps({
+            "k": {
+                "t": ts,
+                "x": True,
+                "o": "1",
+                "h": "1",
+                "l": "1",
+                "c": "1",
+                "v": "1",
+            }
+        })
+        ws._on_message(None, msg)
+        ws._on_message(None, msg)  # duplicate
+        self.assertEqual(len(collected), 1)
+
 if __name__ == '__main__':
     unittest.main()

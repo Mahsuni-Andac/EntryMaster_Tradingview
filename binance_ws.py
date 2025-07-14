@@ -131,6 +131,10 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 )
                 return
 
+            if global_state.last_candle_ts is not None and candle_ts <= global_state.last_candle_ts:
+                logger.debug("Doppelte Candle verworfen: %s", candle_ts)
+                return
+
             candle = {
                 "timestamp": candle_ts,
                 "open": float(k.get("o")),
@@ -138,6 +142,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 "low": float(k.get("l")),
                 "close": float(k.get("c")),
                 "volume": float(k.get("v")),
+                "source": "ws",
             }
 
             logger.debug("Candle received: %s", candle)
@@ -147,6 +152,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
             if self.on_candle:
                 try:
                     self.on_candle(candle)
+                    global_state.last_candle_ts = candle_ts
                 except Exception as exc:
                     if not self._warning_printed:
                         logger.warning("Fehler beim Weiterleiten der Candle: %s", exc)

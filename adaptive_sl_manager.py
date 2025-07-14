@@ -1,6 +1,7 @@
 # adaptive_sl_manager.py
 
 import numpy as np
+import math
 
 class AdaptiveSLManager:
     def __init__(self, atr_period=14, wick_lookback=7, atr_buffer=0.15):
@@ -23,8 +24,8 @@ class AdaptiveSLManager:
             )
             trs.append(tr)
         atr = float(np.mean(trs))
-        if atr < 1e-5:
-            print("⚠️ ATR sehr niedrig – mögliche Feed-Störung")
+        if atr is None or atr < 1e-5 or math.isnan(atr):
+            raise ValueError("ATR zu klein oder ungültig")
         return atr
 
     def find_swing_low(self, candles):
