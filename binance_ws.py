@@ -74,6 +74,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
             try:
                 self.ws = WebSocketApp(
                     self.url,
+                    on_open=self._on_open,
                     on_message=self._on_message,
                     on_error=self._on_error,
                     on_close=self._on_close,
@@ -136,3 +137,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
     def _on_close(self, ws, status_code, msg):
         logger.info("Candle-WS geschlossen: %s %s", status_code, msg)
+
+    def _on_open(self, ws):
+        logger.info("Binance WebSocket verbunden")

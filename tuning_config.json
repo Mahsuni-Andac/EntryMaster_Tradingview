@@ -42,7 +42,7 @@
   "api_ok": false,
   "websocket_active": true,
   "system_status_var": "\u2705 Alle Systeme laufen fehlerfrei",
-  "feed_mode_var": "WebSocket verbunden",
+  "feed_mode_var": "Binance WebSocket OK",
   "market_interval_ms": 1000,
   "time_filters": [
     [
