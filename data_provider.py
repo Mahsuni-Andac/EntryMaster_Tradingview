@@ -30,6 +30,20 @@ _TK_ROOT: Tk | None = None
 price_var: StringVar | None = None
 _DEFAULT_INTERVAL = BINANCE_INTERVAL
 
+
+def _interval_to_seconds(interval: str) -> int:
+    """Convert timeframe string like '1m' or '5h' to seconds."""
+    try:
+        if interval.endswith('m'):
+            return int(interval[:-1]) * 60
+        if interval.endswith('h'):
+            return int(interval[:-1]) * 3600
+        if interval.endswith('d'):
+            return int(interval[:-1]) * 86400
+    except Exception:
+        pass
+    return 60
+
 class WebSocketStatus:
     running = False
 
@@ -154,10 +168,15 @@ def stop_candle_websocket() -> None:
 
 _FEED_STUCK_COUNT = 0
 _FEED_LAST_LEN = 0
+_LAST_LEN_CHANGE_TS: float | None = None
+_MONITOR_START_TS: float | None = None
 
 
 def _monitor_loop() -> None:
-    global _FEED_MONITOR_STARTED, _FEED_STUCK_COUNT, _FEED_LAST_LEN
+    global _FEED_MONITOR_STARTED, _FEED_STUCK_COUNT, _FEED_LAST_LEN, _LAST_LEN_CHANGE_TS
+
+    timeframe_sec = _interval_to_seconds(_DEFAULT_INTERVAL)
+    start_ts = _MONITOR_START_TS or time.time()
 
     while _FEED_MONITOR_STARTED:
         time.sleep(_FEED_CHECK_INTERVAL)
@@ -167,16 +186,23 @@ def _monitor_loop() -> None:
             last_ts = global_state.last_feed_time
             last_candle_time = get_last_candle_time()
 
-            alive = last_ts is not None and time.time() - last_ts <= 30
-            recent = last_candle_time is not None and time.time() - last_candle_time <= 65
+            with _CANDLE_LOCK:
+                current_len = len(_WS_CANDLES)
 
-            current_len = len(_WS_CANDLES)
-            new_candle = current_len != _FEED_LAST_LEN
-            _FEED_LAST_LEN = current_len
+            if current_len != _FEED_LAST_LEN:
+                _FEED_LAST_LEN = current_len
 
-            if not new_candle and not recent and not alive:
+            last_update = _LAST_LEN_CHANGE_TS or start_ts
+            if last_candle_time:
+                last_update = max(last_update, last_candle_time)
+
+            diff = time.time() - last_update
+
+            if diff > timeframe_sec * 2:
                 logger.warning(
-                    "FEED ERROR: Candle-Feed steht (len=%s)", current_len
+                    "❌ Keine neue Candle seit %.0fs bei %s-Intervall – FEED ERROR",
+                    diff,
+                    _DEFAULT_INTERVAL,
                 )
                 _FEED_STUCK_COUNT += 1
                 if _FEED_STUCK_COUNT >= 2:
@@ -185,17 +211,22 @@ def _monitor_loop() -> None:
                         start_candle_websocket()
                     _FEED_STUCK_COUNT = 0
             else:
+                logger.info("🕒 Letzte Candle vor %.0fs – alles OK", diff)
                 _FEED_STUCK_COUNT = 0
         except Exception as exc:
             logger.error("Feed-Monitor Fehler: %s", exc)
 
 def monitor_feed() -> None:
-    global _FEED_MONITOR_STARTED, _FEED_MONITOR_THREAD
+    global _FEED_MONITOR_STARTED, _FEED_MONITOR_THREAD, _MONITOR_START_TS, _FEED_LAST_LEN, _LAST_LEN_CHANGE_TS
     if _FEED_MONITOR_STARTED and _FEED_MONITOR_THREAD and _FEED_MONITOR_THREAD.is_alive():
         return
 
     logger.info("Candle-Feed Monitor gestartet")
     _FEED_MONITOR_STARTED = True
+    _MONITOR_START_TS = time.time()
+    with _CANDLE_LOCK:
+        _FEED_LAST_LEN = len(_WS_CANDLES)
+    _LAST_LEN_CHANGE_TS = None
     _FEED_MONITOR_THREAD = threading.Thread(
         target=_monitor_loop, daemon=True
     )
@@ -232,10 +263,13 @@ def update_candle_feed(candle: Candle) -> None:
         logger.warning("Ungültige Candle empfangen: %s", candle)
         return
 
+    global _LAST_LEN_CHANGE_TS, _FEED_LAST_LEN
     with _CANDLE_LOCK:
         _WS_CANDLES.append(candle)
         if len(_WS_CANDLES) > _MAX_CANDLES:
             _WS_CANDLES.pop(0)
+        _FEED_LAST_LEN = len(_WS_CANDLES)
+        _LAST_LEN_CHANGE_TS = time.time()
     try:
         _CANDLE_QUEUE.put_nowait(candle)
     except queue.Full:
