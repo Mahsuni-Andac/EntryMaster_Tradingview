@@ -10,12 +10,7 @@ SETTINGS = {
     "leverage": 20,
     "stop_loss_atr_multiplier": 0.5,
     "take_profit_atr_multiplier": 1.5,
-    "use_session_filter": False,
-    "session_filter": {
-        "allowed": ["london", "new_york"],
-        "use_utc": True,
-        "debug": False,
-    },
+    # REMOVED: SessionFilter configuration
     "multiplier": 20,
     "auto_multiplier": False,
     "capital": 1000,

@@ -22,7 +22,6 @@ def print_full_filter_overview(settings):  # UNUSED
         ("EMA", settings.get("ema_filter", False)),
         ("TrailingSL", settings.get("trailing_sl", False)),
         ("Doji", settings.get("doji_filter", False)),
-        ("Session", settings.get("session_filter", False)),
         ("Engulfing", settings.get("engulfing_filter", False)),
         ("BigMove", settings.get("big_move_filter", False)),
         ("Breakout", settings.get("breakout_filter", False)),
@@ -50,7 +49,7 @@ def options_snapshot(settings):  # UNUSED
     """Return the current on/off state of all filter options."""
     keys = (
         "rsi_filter", "volume_filter", "ema_filter", "trailing_sl",
-        "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
+        "doji_filter", "engulfing_filter", "big_move_filter",
         "breakout_filter", "time_filter", "atr_filter", "momentum_filter", "wick_filter",
         "rejection_filter", "reentry_filter", "sl_intel", "capital_safe",
         "session_block", "entry_master", "adaptive_sl"
@@ -67,7 +66,6 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     filter_status.append("EMA✅" if settings.get("ema_filter", False) else "EMA❌")
     filter_status.append("TrailingSL✅" if settings.get("trailing_sl", False) else "TrailingSL❌")
     filter_status.append("Doji✅" if settings.get("doji_filter", False) else "Doji❌")
-    filter_status.append("Session✅" if settings.get("session_filter", False) else "Session❌")
     filter_status.append("Engulfing✅" if settings.get("engulfing_filter", False) else "Engulfing❌")
     filter_status.append("BigMove✅" if settings.get("big_move_filter", False) else "BigMove❌")
     filter_status.append("Breakout✅" if settings.get("breakout_filter", False) else "Breakout❌")

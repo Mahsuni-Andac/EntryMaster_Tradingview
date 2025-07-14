@@ -11,12 +11,19 @@ TUNING_FILE = "tuning_config.json"
 class TradingGUILogicMixin:
     def apply_recommendations(self):
         try:
-            from session_filter import SessionFilter
+            from datetime import datetime
             from global_state import ema_trend_global, atr_value_global
             from config import SETTINGS
 
             volatility = atr_value_global
-            session = SessionFilter().get_current_session()
+            # REMOVED: SessionFilter
+            hour = datetime.utcnow().hour
+            if 6 <= hour < 14:
+                session = "london"
+            elif 13 <= hour < 21:
+                session = "new_york"
+            else:
+                session = "asia"
             performance = getattr(self, "live_pnl", 0.0)
             trend = ema_trend_global
 
@@ -134,9 +141,6 @@ class TradingGUILogicMixin:
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
             self.bridge.update_params(multiplier, auto_multi, capital, interval)
-            allowed = [s.strip() for s in self.session_allowed.get().split(",") if s.strip()] if hasattr(self, "session_allowed") else None
-            use_utc = self.session_use_utc.get() if hasattr(self, "session_use_utc") else True
-            self.bridge.configure_session_filter(self.andac_opt_session_filter.get(), allowed, use_utc)
         if hasattr(self, "callback"):
             self.callback()
 

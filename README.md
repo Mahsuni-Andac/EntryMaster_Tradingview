@@ -161,7 +161,6 @@ EntryMaster_Tradingview/
 ├── pnl_utils.py
 ├── realtime_runner.py
 ├── risk_manager.py
-├── session_filter.py
 ├── status_block.py
 ├── status_events.py
 ├── strategy.py
