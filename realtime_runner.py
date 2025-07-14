@@ -6,7 +6,6 @@ import traceback
 from datetime import datetime
 import logging
 import data_provider
-import queue
 from requests.exceptions import RequestException
 from tkinter import messagebox
 
@@ -45,6 +44,7 @@ from andac_entry_master import AndacEntryMaster, AndacSignal
 from signal_worker import SignalWorker
 from entry_logic import should_enter
 from adaptive_sl_manager import AdaptiveSLManager
+from status_events import StatusDispatcher
 
 
 # TIMEFILTER: GUI based time window check
@@ -150,8 +150,14 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         except Exception as e:
             logging.error("Fehler bei Auto Partial Close: %s", e)
 
-    hit_tp = current >= position["tp"] if position["side"] == "long" else current <= position["tp"]
-    hit_sl = current <= position["sl"] if position["side"] == "long" else current >= position["sl"]
+    tp_price = position.get("tp")
+    sl_price = position.get("sl")
+    if tp_price is None or sl_price is None:
+        logging.warning("SL/TP Werte fehlen, überspringe Positionsprüfung")
+        return position, capital, last_printed_pnl, last_printed_price, False
+
+    hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
+    hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
 
     if hit_tp or hit_sl:
         gross_pnl = calculate_futures_pnl(
@@ -367,7 +373,11 @@ def _run_bot_live_inner(settings=None, app=None):
     candle_warning_printed = False
 
     def process_candle(candle: dict) -> None:
-        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed
+        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed, first_feed
+        if not first_feed:
+            first_feed = True
+            if hasattr(app, "log_event"):
+                app.log_event("✅ Erster Marktdaten-Feed empfangen")
         candles.append(candle)
         if len(candles) > 100:
             candles.pop(0)
@@ -509,7 +519,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     no_signal_printed = True
 
     candle_queue = get_candle_queue()
-    worker = SignalWorker(process_candle)
+    worker = SignalWorker(process_candle, queue_obj=candle_queue)
     worker.start()
 
     while capital > 0 and not getattr(app, "force_exit", False):
@@ -528,36 +538,17 @@ def _run_bot_live_inner(settings=None, app=None):
         if risk_manager.check_loss_limit() or risk_manager.check_drawdown_limit():
             time.sleep(1)
             continue
-
-        try:
-            candle = candle_queue.get(timeout=1)
-        except queue.Empty:
-            continue
-        try:
-            stamp = datetime.now().strftime("%H:%M:%S")
+        backlog = worker.queue.qsize()
+        if backlog > 5:
+            if not candle_warning_printed:
+                logging.warning("⚠️ Candle-Backlog > %s – mögliche Latenz!", backlog)
+                StatusDispatcher.dispatch("feed", False, "Candle-Lag")
+                candle_warning_printed = True
+        else:
+            if backlog == 0:
+                StatusDispatcher.dispatch("feed", True)
             candle_warning_printed = False
-
-            if not all(
-                k in candle and candle[k] is not None
-                for k in ("open", "high", "low", "close", "volume")
-            ):
-                print("⚠️ Candle-Daten unvollständig oder fehlerhaft", candle)
-                time.sleep(1)
-                continue
-
-            if not first_feed:
-                first_feed = True
-                if hasattr(app, "log_event"):
-                    app.log_event("✅ Erster Marktdaten-Feed empfangen")
-
-            worker.submit(candle)
-            continue
-
-        except Exception as e:
-            print("❌ Fehler im Botlauf:", e)
-            traceback.print_exc()
-            time.sleep(2)
-            continue
+        time.sleep(0.1)
 
     reason = "Kapital aufgebraucht" if capital <= 0 else "Loop beendet"
     print_stop_banner(reason)

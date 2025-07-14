@@ -12,9 +12,14 @@ from status_events import StatusDispatcher
 class SignalWorker:
     """Process candle data on a separate thread."""
 
-    def __init__(self, handler: Callable[[dict], Any], maxsize: int = 100) -> None:
+    def __init__(
+        self,
+        handler: Callable[[dict], Any],
+        queue_obj: queue.Queue | None = None,
+        maxsize: int = 100,
+    ) -> None:
         self.handler = handler
-        self.queue: queue.Queue[dict] = queue.Queue(maxsize=maxsize)
+        self.queue: queue.Queue[dict] = queue_obj or queue.Queue(maxsize=maxsize)
         self._running = False
         self.thread: threading.Thread | None = None
         self.logger = logging.getLogger(__name__)

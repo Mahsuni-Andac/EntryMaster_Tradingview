@@ -16,6 +16,9 @@ class TradingGUILogicMixin:
             from config import SETTINGS
 
             volatility = atr_value_global
+            if volatility is None:
+                self.log_event("⚠️ ATR noch nicht verfügbar - Empfehlungen übersprungen")
+                return
             # REMOVED: SessionFilter
             hour = datetime.utcnow().hour
             if 6 <= hour < 14:
