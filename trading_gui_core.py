@@ -163,7 +163,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.sl_tp_auto_active = tk.BooleanVar(value=False)
         self.sl_tp_manual_active = tk.BooleanVar(value=False)
 
-        self.api_status_var = tk.StringVar(value="API ❌")
+        self.api_status_var = tk.StringVar(value="BitMEX API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
         self.api_status_label = None
         self.feed_status_label = None

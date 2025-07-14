@@ -1,6 +1,6 @@
 # EntryMaster Trading Bot
 
-**EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot. Die Marktanalyse nutzt ausschließlich **Binance Spot** Live-Marktdaten per **WebSocket**, während alle echten Trades über **BitMEX** ausgeführt werden. Der Bot kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
+**EntryMaster** ist ein professioneller BTC/USDT-Trading-Bot. Die Marktanalyse nutzt Candle-Daten der **Binance**-WebSocket, während sämtliche Orders ausschließlich über die **BitMEX REST-API** auf **XBTUSD** ausgeführt werden. Der Bot kombiniert eine leistungsstarke Entry-Strategie (Andac Entry Master) mit adaptivem Risiko-Management, einem benutzerfreundlichen GUI-Interface und einem vollständig simulierbaren Paper-Trading-Modus.
 
 Dieses Repository folgt drei Prinzipien:
 - Alle Dateien liegen direkt im Hauptordner
@@ -11,7 +11,8 @@ Dieses Repository folgt drei Prinzipien:
 
 ## 🚀 Funktionen im Überblick
 
-- 📡 **WebSocket-only Betrieb**: Preis- und Candle-Daten ausschließlich via `wss://stream.binance.com` – kein REST-Zugriff.
+- 📡 **Binance-WebSocket** liefert Kerzen zur Entscheidungsfindung (`wss://stream.binance.com`).
+- 📄 **Orders ausschließlich über BitMEX REST** auf `XBTUSD`.
 - ⏱️ **1-Minuten-Candles** (`kline_1m`) für präzise Entry-/Exit-Entscheidungen.
 - ✅ **Nur abgeschlossene Candles** (`kline['x'] == True`) werden verarbeitet.
 - 📊 **Adaptive SL/TP-Logik**: auf Basis von ATR und Candle-Historie.

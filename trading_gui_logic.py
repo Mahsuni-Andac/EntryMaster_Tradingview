@@ -168,24 +168,21 @@ class TradingGUILogicMixin:
             return
         self._last_api_status = (ok, reason)
         self.api_ok = ok
+        stamp = datetime.now().strftime("%H:%M:%S")
         if ok:
-            if hasattr(self, "api_status_label") and self.api_status_label.winfo_ismapped():
-                self.api_status_label.pack_forget()
-            if hasattr(self, "api_status_var"):
-                self.api_status_var.set("")
-            if hasattr(self, "neon_panel"):
-                self.neon_panel.set_status("api", "green", "API OK")
+            text = "BitMEX API ✅"
+            color = "green"
         else:
-            stamp = datetime.now().strftime("%H:%M:%S")
-            text = f"API ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
-            if hasattr(self, "api_status_var"):
-                self.api_status_var.set(text)
-            if hasattr(self, "api_status_label"):
-                self.api_status_label.config(foreground="red")
-                if not self.api_status_label.winfo_ismapped():
-                    self.api_status_label.pack(side="left", padx=10)
-            if hasattr(self, "neon_panel"):
-                self.neon_panel.set_status("api", "red", text)
+            text = f"BitMEX API ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
+            color = "red"
+        if hasattr(self, "api_status_var"):
+            self.api_status_var.set(text)
+        if hasattr(self, "api_status_label"):
+            self.api_status_label.config(foreground=color)
+            if not self.api_status_label.winfo_ismapped():
+                self.api_status_label.pack(side="left", padx=10)
+        if hasattr(self, "neon_panel"):
+            self.neon_panel.set_status("api", color, text)
 
     def update_feed_status(self, ok: bool, reason: str | None = None) -> None:
         if getattr(self, "_last_feed_status", (None, None)) == (ok, reason):
@@ -261,7 +258,7 @@ class TradingGUILogicMixin:
     def log_event(self, msg):
         from central_logger import log_messages
 
-        ignore = ["Only Binance spot data supported", "Antwort unvollständig"]
+        ignore = ["Antwort unvollständig"]
         if any(txt in msg for txt in ignore):
             return
 

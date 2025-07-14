@@ -36,7 +36,7 @@
   "manual_tp_var": "",
   "sl_tp_auto_active": false,
   "sl_tp_manual_active": false,
-  "api_status_var": "API \u274c",
+  "api_status_var": "BitMEX API \u274c",
   "feed_status_var": "",
   "feed_ok": true,
   "api_ok": false,
