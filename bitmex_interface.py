@@ -51,10 +51,27 @@ def place_order(side: str, quantity: float, reduce_only: bool = False) -> Option
     url = BASE_URL + path
     try:
         resp = requests.post(url, headers=headers, data=data, timeout=10)
-        resp.raise_for_status()
+    except Exception as exc:
+        logger.error("❌ BitMEX-Order fehlgeschlagen: %s | Daten: %s", exc, order)
+        return None
+
+    if resp.status_code != 200:
+        try:
+            error_info = resp.json()
+        except Exception:
+            error_info = resp.text
+        logger.error(
+            "❌ BitMEX-Order fehlgeschlagen: %s %s | Daten: %s",
+            resp.status_code,
+            error_info,
+            order,
+        )
+        return None
+
+    try:
         return resp.json()
     except Exception as exc:
-        logger.error("place_order failed: %s", exc)
+        logger.error("❌ BitMEX-Order fehlgeschlagen: %s | Daten: %s", exc, order)
         return None
 
 

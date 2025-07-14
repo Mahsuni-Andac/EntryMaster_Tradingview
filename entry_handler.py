@@ -14,7 +14,12 @@ logger = logging.getLogger(__name__)
 def open_position(side: str, quantity: float, reduce_only: bool = False) -> Optional[dict]:
     """Open a position on BitMEX."""
     try:
-        return bm.place_order(side, quantity, reduce_only=reduce_only)
+        result = bm.place_order(side, quantity, reduce_only=reduce_only)
+        if result is None:
+            logger.error(
+                "❌ BitMEX-Order fehlgeschlagen | Daten: side=%s qty=%s", side, quantity
+            )
+        return result
     except Exception as exc:
         logger.error("open_position failed: %s", exc)
         return None

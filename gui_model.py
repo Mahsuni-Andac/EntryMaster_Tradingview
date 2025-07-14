@@ -67,6 +67,7 @@ class GUIModel:
         self.manual_tp_var = tk.StringVar(master=root, value="")
         self.sl_tp_auto_active = tk.BooleanVar(master=root, value=False)
         self.sl_tp_manual_active = tk.BooleanVar(master=root, value=False)
+        self.sl_tp_status_var = tk.StringVar(master=root, value="")
 
         # connection status
         self.feed_ok: bool = False
