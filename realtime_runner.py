@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 import logging
 import data_provider
+import queue
 from requests.exceptions import RequestException
 from tkinter import messagebox
 
@@ -18,6 +19,7 @@ from data_provider import (
     get_last_candle_time,
     get_live_candles,
     start_candle_websocket,
+    get_candle_queue,
 )
 from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
@@ -488,6 +490,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     logging.info("➖ Ich warte auf ein Indikator Signal")
                     no_signal_printed = True
 
+    candle_queue = get_candle_queue()
     worker = SignalWorker(process_candle)
     worker.start()
 
@@ -509,21 +512,12 @@ def _run_bot_live_inner(settings=None, app=None):
             continue
 
         try:
-            candle = fetch_latest_candle()
-            price = fetch_last_price()
+            candle = candle_queue.get(timeout=1)
+        except queue.Empty:
+            continue
+        try:
             stamp = datetime.now().strftime("%H:%M:%S")
-            if price is None and hasattr(app, "log_event"):
-                app.log_event("Keine Marktdaten – Exchange: BINANCE")
-            if not candle:
-                last_candle = get_last_candle_time()
-                if last_candle is None or time.time() - last_candle > 5:
-                    if not candle_warning_printed:
-                        print("⚠️ Keine Candle-Daten.")
-                        candle_warning_printed = True
-                time.sleep(1)
-                continue
-            else:
-                candle_warning_printed = False
+            candle_warning_printed = False
 
             if not all(
                 k in candle and candle[k] is not None
