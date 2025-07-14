@@ -11,5 +11,11 @@ class SLTPLogicTest(unittest.TestCase):
         self.assertLess(sl, 100)
         self.assertGreater(tp, 100)
 
+    def test_calculate_atr_invalid(self):
+        manager = AdaptiveSLManager()
+        candles = [{"high": 1, "low": 1, "close": 1}] * 15
+        with self.assertRaises(ValueError):
+            manager.calculate_atr(candles)
+
 if __name__ == "__main__":
     unittest.main()
