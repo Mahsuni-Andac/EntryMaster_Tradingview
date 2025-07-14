@@ -54,6 +54,9 @@ class GUIModel:
         self.andac_opt_volumen_strong = tk.BooleanVar(master=root)
         self.andac_opt_session_filter = tk.BooleanVar(master=root)
 
+        self.session_allowed = tk.StringVar(master=root, value="london,new_york")
+        self.session_use_utc = tk.BooleanVar(master=root, value=True)
+
         self.use_doji_blocker = tk.BooleanVar(master=root)
 
         # timing

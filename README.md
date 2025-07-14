@@ -38,6 +38,7 @@ Der Bot verwendet eine fortgeschrittene Entry-Strategie:
 - ✅ **Volumenstärke-Erkennung**
 - ✅ **Makrophasen-Filter**
 - ✅ **Session-Filter**
+- ⚙️ **Session-Filter konfigurierbar über die GUI**
 - ✅ **Engulfing-Pattern**
 - ✅ **Multi-Timeframe-Bestätigung**
 - 🟢 Alle Signale werden geloggt, mit Gründen bei Verwerfung.

@@ -134,6 +134,9 @@ class TradingGUILogicMixin:
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
             self.bridge.update_params(multiplier, auto_multi, capital, interval)
+            allowed = [s.strip() for s in self.session_allowed.get().split(",") if s.strip()] if hasattr(self, "session_allowed") else None
+            use_utc = self.session_use_utc.get() if hasattr(self, "session_use_utc") else True
+            self.bridge.configure_session_filter(self.andac_opt_session_filter.get(), allowed, use_utc)
         if hasattr(self, "callback"):
             self.callback()
 
