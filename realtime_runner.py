@@ -269,8 +269,9 @@ def _run_bot_live_inner(settings=None, app=None):
 
     print_start_banner(capital)
 
+    interval_setting = settings.get("interval", BINANCE_INTERVAL)
     if not data_provider._CANDLE_WS_STARTED:
-        start_candle_websocket()
+        start_candle_websocket(interval_setting)
     else:
         logging.info("Candle WebSocket already running")
 
@@ -292,7 +293,7 @@ def _run_bot_live_inner(settings=None, app=None):
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
     start_capital = capital
-    interval = BINANCE_INTERVAL
+    interval = interval_setting
     auto_multi = gui_bridge.auto_multiplier
 
     ATR_REQUIRED = 14

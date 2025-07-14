@@ -214,15 +214,21 @@ class TradingGUILogicMixin:
             self.model.feed_ok = ok
         else:
             self.feed_ok = ok
-        self._update_feed_mode_display(ok)
-        color = "green" if ok else "red"
-        text = "✅ Feed stabil" if ok else "❌ Kein Feed"
-        if not ok and reason:
-            if "Reconnect" in reason:
-                color = "orange"
-                text = f"🔄 {reason}"
-            else:
-                text = f"❌ {reason}"
+        if reason == "REST-API-Call-14":
+            color = "orange"
+            text = reason
+            if hasattr(self, "feed_mode_var"):
+                self.feed_mode_var.set(reason)
+        else:
+            self._update_feed_mode_display(ok)
+            color = "green" if ok else "red"
+            text = "✅ Feed stabil" if ok else "❌ Kein Feed"
+            if not ok and reason:
+                if "Reconnect" in reason:
+                    color = "orange"
+                    text = f"🔄 {reason}"
+                else:
+                    text = f"❌ {reason}"
 
         if hasattr(self, "feed_status_var"):
             self.feed_status_var.set(text if not ok else "")

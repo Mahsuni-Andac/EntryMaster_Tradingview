@@ -11,6 +11,9 @@ import queue
 import binance_ws
 from tkinter import Tk, StringVar
 from config import BINANCE_SYMBOL, BINANCE_INTERVAL
+import requests
+from status_events import StatusDispatcher
+from config_manager import config
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,7 @@ _FEED_MONITOR_STARTED: bool = False
 _FEED_CHECK_INTERVAL = 20
 _TK_ROOT: Tk | None = None
 price_var: StringVar | None = None
+_DEFAULT_INTERVAL = BINANCE_INTERVAL
 
 class WebSocketStatus:
     running = False
@@ -43,8 +47,55 @@ def init_price_var(master: Tk) -> None:
     if price_var is None:
         price_var = StringVar(master=master, value="--")
 
-def start_candle_websocket() -> None:
-    global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT
+
+def _fetch_rest_candles(interval: str, limit: int = 14) -> list["Candle"]:
+    url = (
+        f"https://api.binance.com/api/v3/klines?symbol={BINANCE_SYMBOL}"
+        f"&interval={interval}&limit={limit}"
+    )
+    resp = requests.get(url, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
+    candles: list[Candle] = []
+    for row in data:
+        candles.append(
+            {
+                "timestamp": int(row[0] // 1000),
+                "open": float(row[1]),
+                "high": float(row[2]),
+                "low": float(row[3]),
+                "close": float(row[4]),
+                "volume": float(row[5]),
+            }
+        )
+    return candles
+
+
+def _load_initial_candles(interval: str, limit: int = 14) -> bool:
+    StatusDispatcher.dispatch("feed", False, "REST-API-Call-14")
+    try:
+        candles = _fetch_rest_candles(interval, limit)
+    except Exception as exc:
+        logger.error("REST Candle Fetch failed: %s", exc)
+        return False
+    with _CANDLE_LOCK:
+        _WS_CANDLES.extend(candles)
+        if len(_WS_CANDLES) > _MAX_CANDLES:
+            del _WS_CANDLES[:-_MAX_CANDLES]
+    for candle in candles:
+        try:
+            _CANDLE_QUEUE.put_nowait(candle)
+        except queue.Full:
+            pass
+    return True
+
+def start_candle_websocket(interval: str | None = None) -> None:
+    global _CANDLE_WS_STARTED, _CANDLE_WS_CLIENT, _DEFAULT_INTERVAL
+
+    if interval:
+        _DEFAULT_INTERVAL = interval
+    else:
+        interval = _DEFAULT_INTERVAL
 
     if (
         _CANDLE_WS_STARTED
@@ -58,9 +109,13 @@ def start_candle_websocket() -> None:
         stop_candle_websocket()
         logger.info("Candle-WebSocket neu gestartet")
 
+    if not _load_initial_candles(interval, 14):
+        raise RuntimeError("Initial candle download failed")
+
     logger.info("WebSocket Candle-Stream gestartet")
     _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(
-        update_candle_feed
+        update_candle_feed,
+        interval=interval,
     )
     _CANDLE_WS_CLIENT.start()
     _CANDLE_WS_STARTED = True
