@@ -122,7 +122,7 @@ class RiskManager:
 
     def handle_consecutive_loss(self, threshold: int = 3, cooldown_min: int = 30) -> None:
         if self.loss_count >= threshold:
-            print(f"🚨 {self.loss_count} Verluste in Folge! (Extra-Cooldown wäre hier möglich)")
+            # CLEANUP: removed old debug print
             self.loss_count = 0
 
 

@@ -14,7 +14,7 @@ import global_state
 
 def _beep() -> None:
     try:
-        print("\a", end="", flush=True)
+        print("\a", end="", flush=True)  # CLEANUP: simple console beep
     except Exception:
         pass
 

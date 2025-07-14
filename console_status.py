@@ -14,7 +14,8 @@ def _throttle_warn(key, seconds=30):
         return True
     return False
 
-def print_full_filter_overview(settings):
+def print_full_filter_overview(settings):  # UNUSED
+    """Print a table of all filter settings to the console."""
     groups = [
         ("RSI", settings.get("rsi_filter", False)),
         ("Volume", settings.get("volume_filter", False)),
@@ -45,7 +46,8 @@ def print_full_filter_overview(settings):
             print("")
     print("\n")
 
-def options_snapshot(settings):
+def options_snapshot(settings):  # UNUSED
+    """Return the current on/off state of all filter options."""
     keys = (
         "rsi_filter", "volume_filter", "ema_filter", "trailing_sl",
         "doji_filter", "session_filter", "engulfing_filter", "big_move_filter",
@@ -55,7 +57,8 @@ def options_snapshot(settings):
     )
     return tuple(settings.get(k) for k in keys)
 
-def print_no_signal_status(settings, position=None, price=None, session_name=None, saved_profit=None, only_active_filters=True):
+def print_no_signal_status(settings, position=None, price=None, session_name=None, saved_profit=None, only_active_filters=True):  # UNUSED
+    """Output detailed status information when no entry signal is present."""
     nowstr = datetime.now().strftime("[%H:%M:%S]")
     print(f"{nowstr} ➖ Ich warte auf ein Indikator Signal" + (f" | Session: {session_name}" if session_name else ""))
     filter_status = []
@@ -99,7 +102,8 @@ def print_no_signal_status(settings, position=None, price=None, session_name=Non
     print(f"💵 Balance: {balance} | 💎 Gespart: {saved_profit if saved_profit is not None else '-'} | 📈 {symbol} Preis: {price} | 🎯 SL: {sl} | TP: {tp} | Lev: x{leverage}")
     print("")
 
-def print_entry_status(position, settings):
+def print_entry_status(position, settings):  # UNUSED
+    """Log entry details to the console."""
     direction = position.get("direction", position.get("side", "?"))
     entry = position.get("entry", "-")
     sl = position.get("sl", "-")
@@ -108,7 +112,8 @@ def print_entry_status(position, settings):
     print(f"🚀 {symbol} ENTRY ({direction.upper()}): Entry {entry} | SL {sl} | TP {tp}")
     print("")
 
-def print_position_status(position, price, session_name=None):
+def print_position_status(position, price, session_name=None):  # UNUSED
+    """Show current position and SL/TP on console."""
     direction = position.get("direction", position.get("side", "?"))
     nowstr = datetime.now().strftime("[%H:%M:%S]")
     session_txt = f" | Session: {session_name}" if session_name else ""
@@ -116,7 +121,8 @@ def print_position_status(position, price, session_name=None):
     print(f"🎯 SL: {position['sl']:.2f} | TP: {position['tp']:.2f}")
     print("")
 
-def print_pnl_status(pnl, balance=None, saved=None):
+def print_pnl_status(pnl, balance=None, saved=None):  # UNUSED
+    """Print current PnL with optional balance information."""
     msg = f"📉 PnL: {pnl:.2f} $"
     if balance is not None:
         msg += f" | 💰 Balance: {balance:.2f}"
@@ -125,7 +131,8 @@ def print_pnl_status(pnl, balance=None, saved=None):
     print(msg)
     print("")
 
-def print_trade_closed(position, price, pnl, saved_profit=None, duration=None, session_name=None):
+def print_trade_closed(position, price, pnl, saved_profit=None, duration=None, session_name=None):  # UNUSED
+    """Output trade closing information to the console."""
     direction = position.get("direction", position.get("side", "?")).upper()
     symbol = position.get("symbol", "-")
     entry = position.get("entry", "-")
@@ -139,7 +146,8 @@ def print_trade_closed(position, price, pnl, saved_profit=None, duration=None, s
           + (f" | Dauer: {duration}min" if duration else "") + session_txt)
     print("")
 
-def print_error(msg, exception=None):
+def print_error(msg, exception=None):  # UNUSED
+    """Display an error message."""
     print(f"❌ Fehler: {msg}")
     if exception:
         print(str(exception))
@@ -150,7 +158,8 @@ def print_warning(msg, warn_key="default", seconds=30):
         print(f"⚠️ {msg}")
         print("")
 
-def print_info(msg):
+def print_info(msg):  # UNUSED
+    """Display an informational message."""
     print(f"ℹ️ {msg}")
     print("")
 
