@@ -6,7 +6,7 @@ from typing import Optional, Dict
 
 entry_time_global: Optional[float] = None
 ema_trend_global: str = "⬆️"
-atr_value_global: float = 42.7
+atr_value_global: float | None = None
 position_global: Optional[Dict[str, float]] = None
 last_feed_time: Optional[float] = None
 

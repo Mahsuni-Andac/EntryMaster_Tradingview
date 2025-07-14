@@ -1,6 +1,7 @@
 # central_logger.py
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 import time
 from typing import List
 
@@ -23,7 +24,7 @@ def setup_logging(level: int = logging.INFO, logfile: str = "bot.log") -> None:
         level=level,
         format="%(asctime)s %(levelname)s %(message)s",
         handlers=[
-            logging.FileHandler(logfile, encoding="utf-8"),
+            RotatingFileHandler(logfile, maxBytes=1_000_000, backupCount=3, encoding='utf-8'),
             SafeStreamHandler(sys.stdout),
         ],
     )

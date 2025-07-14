@@ -137,3 +137,6 @@ class APICredentialFrame(ttk.LabelFrame):
         StatusDispatcher.dispatch("api", ok, None if ok else "Keine API aktiv")
         self.check_market_feed()
 
+
+    def _test_api(self):
+        print("🔍 Teste API-Zugriff (Platzhalter)")

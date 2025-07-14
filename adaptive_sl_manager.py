@@ -22,7 +22,10 @@ class AdaptiveSLManager:
                 abs(low - prev_close)
             )
             trs.append(tr)
-        return float(np.mean(trs))
+        atr = float(np.mean(trs))
+        if atr < 1e-5:
+            print("⚠️ ATR sehr niedrig – mögliche Feed-Störung")
+        return atr
 
     def find_swing_low(self, candles):
         lows = [c["low"] for c in candles[-self.wick_lookback:]]

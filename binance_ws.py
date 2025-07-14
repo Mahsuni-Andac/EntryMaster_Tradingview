@@ -101,7 +101,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
             candle_ts = k.get("t") // 1000
             now = int(datetime.now(tz=timezone.utc).timestamp())
 
-            if now - candle_ts > 65:
+            if now - candle_ts > 90:
                 logger.warning(
                     "⚠️ Candle veraltet – empfangen: %s, jetzt: %s", candle_ts, now
                 )
