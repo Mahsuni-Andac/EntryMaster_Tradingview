@@ -516,7 +516,7 @@ def _run_bot_live_inner(settings=None, app=None):
     preload = candle_queue.qsize()
     if preload:
         flush_limit = min(preload, 2)
-        logging.info("\ud83d\udd04 Clean Flush %s Candles", flush_limit)
+        logging.info("\U0001F504 Clean Flush %s Candles", flush_limit)
         for _ in range(flush_limit):
             try:
                 process_candle(candle_queue.get_nowait())
