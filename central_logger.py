@@ -1,6 +1,7 @@
 # central_logger.py
 import logging
 import sys
+import io
 from logging.handlers import RotatingFileHandler
 import time
 from typing import List
@@ -13,13 +14,17 @@ class SafeStreamHandler(logging.StreamHandler):
             super().emit(record)
         except UnicodeEncodeError:
             msg = self.format(record)
-            fallback = msg.encode("ascii", "replace").decode("ascii") + " [ASCII-Fallback]"
+            fallback = msg.encode("utf-8", "replace").decode("utf-8")
             stream = self.stream
             stream.write(fallback + self.terminator)
             self.flush()
 
 
 def setup_logging(level: int = logging.INFO, logfile: str = "bot.log") -> None:
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     logging.basicConfig(
         level=level,
         format="%(asctime)s %(levelname)s %(message)s",
