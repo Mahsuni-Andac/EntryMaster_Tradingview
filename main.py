@@ -11,6 +11,7 @@ from colorama import Fore, Style, init
 from central_logger import setup_logging
 
 from config import SETTINGS
+from config_manager import config
 from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
 from trading_gui_core import TradingGUI
@@ -18,6 +19,8 @@ from trading_gui_logic import TradingGUILogicMixin
 from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
 from realtime_runner import run_bot_live
+from tkinter import messagebox
+from requests.exceptions import RequestException
 from global_state import entry_time_global, ema_trend_global, atr_value_global
 import data_provider
 
@@ -32,13 +35,33 @@ class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
     pass
 
 def load_settings_from_file(filename="tuning_config.json"):
+    """Load settings into the central config manager."""
     if not os.path.exists(filename):
         return
     try:
         with open(filename, "r", encoding="utf-8") as f:
-            SETTINGS.update(json.load(f))
+            data = json.load(f)
+        SETTINGS.update(data)
+        config.load_json(filename)
     except Exception as e:
         print(f"⚠️ Konnte {filename} nicht laden: {e}")
+
+def safe_run_bot_live(settings, gui):
+    """Start run_bot_live with GUI-friendly error handling."""
+    try:
+        run_bot_live(settings, gui)
+    except RequestException:
+        messagebox.showerror(
+            "Startfehler",
+            "❌ API-Zugang ungültig oder Server nicht erreichbar.",
+        )
+        gui.running = False
+    except (KeyError, ValueError) as exc:
+        messagebox.showerror("Startfehler", f"❌ Konfigurationsfehler: {exc}")
+        gui.running = False
+    except Exception as exc:
+        messagebox.showerror("Startfehler", f"❌ Botstart fehlgeschlagen: {exc}")
+        gui.running = False
 
 def bot_control(gui):
     while True:
@@ -50,7 +73,7 @@ def bot_control(gui):
                 mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
                 print(f"🚀 Bot gestartet: {mode_text}")
                 gui.running = True
-                threading.Thread(target=run_bot_live, args=(SETTINGS, gui), daemon=True).start()
+                threading.Thread(target=safe_run_bot_live, args=(SETTINGS, gui), daemon=True).start()
             else:
                 print("⚠️ Bot läuft bereits")
         elif cmd == "stop":
@@ -123,10 +146,11 @@ def on_gui_start(gui):
     mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
     print(f"🚀 Bot gestartet: {mode_text}")
     gui.running = True
-    threading.Thread(target=run_bot_live, args=(SETTINGS, gui), daemon=True).start()
+    threading.Thread(target=safe_run_bot_live, args=(SETTINGS, gui), daemon=True).start()
 
 def main():
     load_settings_from_file()
+    config.load_env()
 
     # Candle WebSocket will start automatically when needed
     cred_manager = APICredentialManager()

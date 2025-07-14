@@ -8,6 +8,9 @@ import logging
 from typing import Callable, Optional
 from datetime import datetime, timezone
 from config import BINANCE_SYMBOL, BINANCE_INTERVAL
+from status_events import StatusDispatcher
+import global_state
+from config_manager import config
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +70,20 @@ class BinanceCandleWebSocket(BaseWebSocket):
         url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
         super().__init__(url, self._on_message)
         self._warning_printed = False
+        self.backoff = [5, 10, 30]
+        self.max_retries = int(config.get("ws_max_retries", 5))
+        self._retry_count = 0
 
     def _run(self) -> None:
         time.sleep(2)
+        interval_sec = 60
+        try:
+            interval_sec = int(self.interval.rstrip('m')) * 60
+        except Exception:
+            pass
         while self._running:
             try:
+                StatusDispatcher.dispatch("feed", False, "🔄 Reconnect läuft…") if self._retry_count else None
                 self.ws = WebSocketApp(
                     self.url,
                     on_open=self._on_open,
@@ -80,9 +92,20 @@ class BinanceCandleWebSocket(BaseWebSocket):
                     on_close=self._on_close,
                 )
                 self.ws.run_forever(ping_interval=20, ping_timeout=10)
+                StatusDispatcher.dispatch("feed", True)
+                self._retry_count = 0
             except Exception as e:
                 logger.error("WebSocket Fehler: %s", e)
-                time.sleep(5)
+                self._retry_count += 1
+            if not self._running:
+                break
+            if global_state.last_feed_time and time.time() - global_state.last_feed_time > interval_sec * 2:
+                logger.warning("Feed zu alt, versuche Reconnect")
+            delay = self.backoff[min(self._retry_count, len(self.backoff) - 1)]
+            if self._retry_count >= self.max_retries:
+                StatusDispatcher.dispatch("feed", False, "❌ Kein Feed")
+                self._retry_count = 0
+            time.sleep(delay)
 
     def _on_message(self, ws, message):
         global last_candle_time

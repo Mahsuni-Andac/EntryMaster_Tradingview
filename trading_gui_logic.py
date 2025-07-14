@@ -215,28 +215,27 @@ class TradingGUILogicMixin:
         else:
             self.feed_ok = ok
         self._update_feed_mode_display(ok)
-        if ok:
-            if hasattr(self, "feed_status_label") and self.feed_status_label.winfo_ismapped():
+        color = "green" if ok else "red"
+        text = "✅ Feed stabil" if ok else "❌ Kein Feed"
+        if not ok and reason:
+            if "Reconnect" in reason:
+                color = "orange"
+                text = f"🔄 {reason}"
+            else:
+                text = f"❌ {reason}"
+
+        if hasattr(self, "feed_status_var"):
+            self.feed_status_var.set(text if not ok else "")
+        if hasattr(self, "feed_status_label"):
+            self.feed_status_label.config(foreground=color)
+            if not ok and not self.feed_status_label.winfo_ismapped():
+                self.feed_status_label.pack(side="left", padx=10)
+            elif ok and self.feed_status_label.winfo_ismapped():
                 self.feed_status_label.pack_forget()
-            if hasattr(self, "feed_status_var"):
-                self.feed_status_var.set("")
-            if hasattr(self, "neon_panel"):
-                self.neon_panel.set_status("feed", "green", "Binance WebSocket OK")
-            if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
-                self.api_frame.update_market_status(True)
-        else:
-            stamp = datetime.now().strftime("%H:%M:%S")
-            text = f"Binance WebSocket ❌" + (f" – {reason} ({stamp})" if reason else f" ({stamp})")
-            if hasattr(self, "feed_status_var"):
-                self.feed_status_var.set(text)
-            if hasattr(self, "feed_status_label"):
-                self.feed_status_label.config(foreground="red")
-                if not self.feed_status_label.winfo_ismapped():
-                    self.feed_status_label.pack(side="left", padx=10)
-            if hasattr(self, "neon_panel"):
-                self.neon_panel.set_status("feed", "red", text)
-            if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
-                self.api_frame.update_market_status(False)
+        if hasattr(self, "neon_panel"):
+            self.neon_panel.set_status("feed", color, text)
+        if hasattr(self, "api_frame") and hasattr(self.api_frame, "update_market_status"):
+            self.api_frame.update_market_status(ok)
 
     def _update_feed_mode_display(self, ok: bool) -> None:
         if not ok:
