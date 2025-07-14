@@ -15,6 +15,9 @@ class GUIModel:
         self.running: bool = False
         self.force_exit: bool = False
         self.live_pnl: float = 0.0
+        self.total_pnl: float = 0.0
+        self.wins: int = 0
+        self.losses: int = 0
 
         # general options
         self.auto_apply_recommendations = tk.BooleanVar(master=root, value=False)
