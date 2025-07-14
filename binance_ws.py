@@ -63,10 +63,11 @@ class BinanceCandleWebSocket(BaseWebSocket):
     def __init__(
         self,
         on_candle: Optional[Callable[[dict], None]] = None,
+        interval: str | None = None,
     ):
         self.on_candle = on_candle
         self.symbol = BINANCE_SYMBOL.lower()
-        self.interval = BINANCE_INTERVAL
+        self.interval = interval or BINANCE_INTERVAL
         url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
         super().__init__(url, self._on_message)
         self._warning_printed = False
