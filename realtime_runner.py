@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime
 import logging
 import data_provider
+from requests.exceptions import RequestException
+from tkinter import messagebox
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
@@ -38,6 +40,7 @@ import global_state
 from indicator_utils import calculate_ema, calculate_atr
 
 from andac_entry_master import AndacEntryMaster, AndacSignal
+from signal_worker import SignalWorker
 from entry_logic import should_enter
 from adaptive_sl_manager import AdaptiveSLManager
 
@@ -258,7 +261,7 @@ def wait_for_initial_candles(
             last_logged = count
         time.sleep(1)
 
-def run_bot_live(settings=None, app=None):
+def _run_bot_live_inner(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
 
     capital = SETTINGS.get("starting_capital", 1000)
@@ -344,7 +347,152 @@ def run_bot_live(settings=None, app=None):
     first_feed = False
     candle_warning_printed = False
 
+    def process_candle(candle: dict) -> None:
+        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed
+        candles.append(candle)
+        if len(candles) > 100:
+            candles.pop(0)
+
+        atr_value, ema = update_indicators(candles)
+        atr_value_global = atr_value
+        settings["ema_value"] = ema
+
+        if ema is not None:
+            ema_trend_global = "⬆️" if candle["close"] > ema else "⬇️"
+        else:
+            ema_trend_global = "❓"
+
+        close_price = candle["close"]
+        now = time.time()
+
+        if settings.get("use_session_filter") and not session_filter.is_allowed():
+            return
+
+        if hasattr(app, "auto_apply_recommendations") and app.auto_apply_recommendations.get():
+            try:
+                app.apply_recommendations()
+            except Exception as e:
+                logging.error("Auto recommendation failed: %s", e)
+
+        andac_signal: AndacSignal = should_enter(candle, andac_indicator)
+        entry_type = andac_signal.signal
+        stamp = datetime.now().strftime("%H:%M:%S")
+        if entry_type:
+            msg = f"[{stamp}] Signal erkannt: {entry_type.upper()} ({BINANCE_SYMBOL} @ {close_price:.2f})"
+            logging.info(msg)
+            if hasattr(app, "log_event"):
+                app.log_event(msg)
+        elif andac_signal.reasons:
+            reason_msg = ", ".join(andac_signal.reasons)
+            msg = f"[{stamp}] Signal verworfen: {reason_msg}"
+            logging.info(msg)
+            if hasattr(app, "log_event"):
+                app.log_event(msg)
+
+        if position:
+            position_data = handle_existing_position(
+                position,
+                candle,
+                app,
+                capital,
+                live_trading,
+                cooldown,
+                risk_manager,
+                last_printed_pnl,
+                last_printed_price,
+                settings,
+                now,
+            )
+            position, capital, last_printed_pnl, last_printed_price, closed = position_data
+            if closed:
+                return
+            no_signal_printed = False
+            return
+
+        if not position:
+            if cooldown.in_cooldown(now):
+                return
+            if entry_type:
+                no_signal_printed = False
+                entry = candle["close"]
+                amount = min(capital, float(gui_bridge.capital))
+                sl = tp = None
+
+                if gui_bridge.manual_active:
+                    sl = gui_bridge.manual_sl
+                    tp = gui_bridge.manual_tp
+                    if sl is None or tp is None:
+                        gui_bridge.set_manual_status(False)
+                        sl = tp = None
+                    else:
+                        valid = sl < entry and tp > entry if entry_type == "long" else sl > entry and tp < entry
+                        if valid:
+                            gui_bridge.set_manual_status(True)
+                        else:
+                            gui_bridge.set_manual_status(False)
+                            sl = tp = None
+
+                if sl is None and tp is None and gui_bridge.auto_active:
+                    try:
+                        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles, tp_multiplier=tp_mult)
+                        valid = (sl < entry and tp > entry) if entry_type == "long" else (sl > entry and tp < entry)
+                        if not valid:
+                            gui_bridge.set_auto_status(False)
+                            sl = tp = None
+                    except Exception as e:
+                        logging.error("Adaptive SL Fehler: %s", e)
+                        gui_bridge.set_auto_status(False)
+                        sl = tp = None
+
+                if sl is None or tp is None:
+                    return
+
+                position = {
+                    "side": entry_type,
+                    "entry": entry,
+                    "entry_time": now,
+                    "sl": sl,
+                    "tp": tp,
+                    "amount": amount,
+                    "initial_amount": amount,
+                    "leverage": leverage,
+                }
+
+                entry_fee = amount * leverage * FEE_RATE
+                if entry_fee > 0:
+                    capital -= entry_fee
+                    app.log_event(f"💸 Entry Fee {entry_fee:.2f}$")
+
+                position_global = position
+                entry_time_global = now
+                app.position = position
+                last_signal = entry_type
+                last_signal_time = now
+
+                msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry:.2f})"
+                logging.info(msg)
+                if hasattr(app, "log_event"):
+                    app.log_event(msg)
+
+                if amount > 0 and live_trading:
+                    try:
+                        direction = "BUY" if entry_type == "long" else "SELL"
+                        res = open_position(direction, amount)
+                        if res is None:
+                            raise RuntimeError("Order placement failed")
+                    except Exception as e:
+                        logging.error("Orderplatzierung fehlgeschlagen: %s", e)
+            else:
+                if not no_signal_printed:
+                    logging.info("➖ Ich warte auf ein Indikator Signal")
+                    no_signal_printed = True
+
+    worker = SignalWorker(process_candle)
+    worker.start()
+
     while capital > 0 and not getattr(app, "force_exit", False):
+        if not worker.is_alive():
+            worker.start()
         if not getattr(app, "running", False):
             time.sleep(1)
             continue
@@ -389,29 +537,7 @@ def run_bot_live(settings=None, app=None):
                 if hasattr(app, "log_event"):
                     app.log_event("✅ Erster Marktdaten-Feed empfangen")
 
-            candles.append(candle)
-            if len(candles) > 100:
-                candles.pop(0)
-
-            atr_value_global, ema = update_indicators(candles)
-            settings["ema_value"] = ema
-
-            if ema is not None:
-                ema_trend_global = "⬆️" if candle["close"] > ema else "⬇️"
-            else:
-                ema_trend_global = "❓"
-
-            close_price = candle["close"]
-            now = time.time()
-
-        if settings.get("use_session_filter") and not session_filter.is_allowed():
-            if not no_signal_printed:
-                msg = f"[{stamp}] Session nicht erlaubt"
-                print(msg)
-                if hasattr(app, "log_event"):
-                    app.log_event(msg)
-                no_signal_printed = True
-            time.sleep(1)
+            worker.submit(candle)
             continue
 
         except Exception as e:
@@ -420,181 +546,25 @@ def run_bot_live(settings=None, app=None):
             time.sleep(2)
             continue
 
-        if hasattr(app, "auto_apply_recommendations") and app.auto_apply_recommendations.get():
-            try:
-                app.apply_recommendations()
-            except Exception as e:
-                print(f"⚠️ Automatisches Anwenden fehlgeschlagen: {e}")
-
-        andac_signal: AndacSignal = should_enter(candle, andac_indicator)
-        entry_type = andac_signal.signal
-        stamp = datetime.now().strftime("%H:%M:%S")
-        if entry_type:
-            log_msg = (
-                f"[{stamp}] Signal erkannt: {entry_type.upper()} "
-                f"({BINANCE_SYMBOL} @ {close_price:.2f})"
-            )
-            print(log_msg)
-            if hasattr(app, "log_event"):
-                app.log_event(log_msg)
-        elif andac_signal.reasons:
-            reason_msg = ", ".join(andac_signal.reasons)
-            log_msg = f"[{stamp}] Signal verworfen: {reason_msg}"
-            print(log_msg)
-            if hasattr(app, "log_event"):
-                app.log_event(log_msg)
-
-        if position:
-            position, capital, last_printed_pnl, last_printed_price, closed = handle_existing_position(
-                position,
-                candle,
-                app,
-                capital,
-                live_trading,
-                cooldown,
-                risk_manager,
-                last_printed_pnl,
-                last_printed_price,
-                settings,
-                now,
-            )
-            if closed:
-                continue
-            no_signal_printed = False
-            continue
-
-        if not position:
-            if cooldown.in_cooldown(now):
-                print("🕒 In Cooldown nach SL")
-                time.sleep(1)
-                continue
-            if entry_type:
-                no_signal_printed = False
-                entry = candle["close"]
-                now = time.time()
-                amount = min(capital, float(gui_bridge.capital))
-
-                sl, tp = None, None
-
-                if gui_bridge.manual_active:
-                    sl = gui_bridge.manual_sl
-                    tp = gui_bridge.manual_tp
-                    if sl is None or tp is None:
-                        gui_bridge.set_manual_status(False)
-                        sl, tp = None, None
-                    else:
-                        if entry_type == "long":
-                            valid = sl < entry and tp > entry
-                        else:
-                            valid = sl > entry and tp < entry
-                        if valid:
-                            gui_bridge.set_manual_status(True)
-                            if hasattr(app, "sl_tp_status_var"):
-                                app.sl_tp_status_var.set("Aktiv")
-                                app.sl_tp_status_label.config(foreground="green")
-                        else:
-                            gui_bridge.set_manual_status(False)
-                            if hasattr(app, "sl_tp_status_var"):
-                                app.sl_tp_status_var.set("❌ verworfen")
-                                app.sl_tp_status_label.config(foreground="red")
-                            sl, tp = None, None
-
-                if sl is None and tp is None and gui_bridge.auto_active:
-                    try:
-                        sl, tp = adaptive_sl.get_adaptive_sl_tp(
-                            entry_type, entry, candles, tp_multiplier=tp_mult
-                        )
-                        if sl is not None and tp is not None:
-                            if entry_type == "long":
-                                valid = sl < entry and tp > entry
-                            else:
-                                valid = sl > entry and tp < entry
-                            if valid:
-                                gui_bridge.set_auto_status(True)
-                                if hasattr(app, "sl_tp_status_var"):
-                                    app.sl_tp_status_var.set("Aktiv")
-                                    app.sl_tp_status_label.config(foreground="green")
-                            else:
-                                gui_bridge.set_auto_status(False)
-                                if hasattr(app, "sl_tp_status_var"):
-                                    app.sl_tp_status_var.set("❌ verworfen")
-                                    app.sl_tp_status_label.config(foreground="red")
-                                sl = tp = None
-                        else:
-                            gui_bridge.set_auto_status(False)
-                            if hasattr(app, "sl_tp_status_var"):
-                                app.sl_tp_status_var.set("❌ verworfen")
-                                app.sl_tp_status_label.config(foreground="red")
-                            sl = tp = None
-                    except Exception as e:
-                        print(f"❌ Adaptive SL Fehler: {e}")
-                        gui_bridge.set_auto_status(False)
-                        if hasattr(app, "sl_tp_status_var"):
-                            app.sl_tp_status_var.set("❌ verworfen (ATR zu klein)")
-                            app.sl_tp_status_label.config(foreground="red")
-                        sl = tp = None
-
-                if sl is None or tp is None:
-                    print("⚠️ Kein gültiges SL/TP verfügbar, Trade verworfen")
-                    if hasattr(app, "log_event"):
-                        app.log_event(
-                            "⚠️ Kein gültiges SL/TP verfügbar – SL/TP liegt außerhalb des gültigen Bereichs oder ATR zu klein"
-                        )
-                    if hasattr(app, "sl_tp_status_var"):
-                        app.sl_tp_status_var.set("❌ verworfen (ATR zu klein)")
-                        app.sl_tp_status_label.config(foreground="red")
-                    time.sleep(1)
-                    continue
-
-                position = {
-                    "side": entry_type,
-                    "entry": entry,
-                    "entry_time": now,
-                    "sl": sl,
-                    "tp": tp,
-                    "amount": amount,
-                    "initial_amount": amount,
-                    "leverage": leverage,
-                }
-
-                entry_fee = amount * leverage * FEE_RATE
-                if entry_fee > 0:
-                    old_cap = capital
-                    capital -= entry_fee
-                    app.log_event(
-                        f"💸 Entry Fee {entry_fee:.2f}$ | Balance {old_cap:.2f} -> {capital:.2f}"
-                    )
-                position_global = position
-                entry_time_global = now
-                app.position = position
-                last_signal = entry_type
-                last_signal_time = now
-
-                stamp = datetime.now().strftime("%H:%M:%S")
-                trade_msg = (
-                    f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry:.2f})"
-                )
-                print(trade_msg)
-                if hasattr(app, "log_event"):
-                    app.log_event(trade_msg)
-
-                print(f"{'🟢' if entry_type == 'long' else '🔴'} {entry_type.upper()} Entry erkannt!")
-                print_entry_status(position, capital, app, leverage, settings)
-
-
-
-                if amount > 0 and live_trading:
-                    try:
-                        direction = "BUY" if entry_type == "long" else "SELL"
-                        res = open_position(direction, amount)
-                        if res is None:
-                            raise RuntimeError("Order placement failed")
-                    except Exception as e:
-                        print(f"❌ Fehler bei Orderplatzierung: {e}")
-            else:
-                if not no_signal_printed:
-                    print("➖ Ich warte auf ein Indikator Signal")
-                    no_signal_printed = True
-
     reason = "Kapital aufgebraucht" if capital <= 0 else "Loop beendet"
     print_stop_banner(reason)
+
+def run_bot_live(settings=None, app=None):
+    """Wrapper for _run_bot_live_inner with error handling."""
+    try:
+        _run_bot_live_inner(settings, app)
+    except RequestException:
+        if app:
+            messagebox.showerror(
+                "Startfehler",
+                "❌ API-Zugang ungültig oder Server nicht erreichbar.",
+            )
+        logging.error("API error during bot start", exc_info=True)
+    except (KeyError, ValueError) as exc:
+        if app:
+            messagebox.showerror("Startfehler", f"❌ Konfigurationsfehler: {exc}")
+        logging.error("Configuration error during bot start", exc_info=True)
+    except Exception as exc:
+        if app:
+            messagebox.showerror("Startfehler", f"❌ Botstart fehlgeschlagen: {exc}")
+        logging.error("Unexpected error during bot start", exc_info=True)

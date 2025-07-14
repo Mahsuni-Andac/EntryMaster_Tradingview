@@ -6,6 +6,7 @@ import logging
 from typing import List, Optional, TypedDict
 import time
 import threading
+import queue
 
 import binance_ws
 from tkinter import Tk, StringVar
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 _CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
 _WS_CANDLES: list[Candle] = []
 _CANDLE_LOCK = threading.Lock()
+_CANDLE_QUEUE: queue.Queue[Candle] = queue.Queue(maxsize=100)
 _MAX_CANDLES = 1000
 _CANDLE_WS_STARTED: bool = False
 _FEED_MONITOR_THREAD: threading.Thread | None = None
@@ -179,6 +181,10 @@ def update_candle_feed(candle: Candle) -> None:
         _WS_CANDLES.append(candle)
         if len(_WS_CANDLES) > _MAX_CANDLES:
             _WS_CANDLES.pop(0)
+    try:
+        _CANDLE_QUEUE.put_nowait(candle)
+    except queue.Full:
+        logger.warning("⚠️ Feed überlastet – Candles könnten verloren gehen")
 
     if price_var and _TK_ROOT:
         try:
@@ -187,6 +193,10 @@ def update_candle_feed(candle: Candle) -> None:
             pass
 
     WebSocketStatus.set_running(True)
+
+def get_candle_queue() -> queue.Queue[Candle]:
+    """Return the queue containing live candles."""
+    return _CANDLE_QUEUE
 
 def fetch_last_price() -> Optional[float]:
     candle = fetch_latest_candle()
