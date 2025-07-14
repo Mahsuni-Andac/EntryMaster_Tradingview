@@ -12,12 +12,16 @@ class SafeStreamHandler(logging.StreamHandler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             super().emit(record)
-        except UnicodeEncodeError:
-            msg = self.format(record)
-            fallback = msg.encode("utf-8", "replace").decode("utf-8")
-            stream = self.stream
-            stream.write(fallback + self.terminator)
-            self.flush()
+        except (UnicodeEncodeError, ValueError, OSError):
+            try:
+                msg = self.format(record)
+                fallback = msg.encode("utf-8", "replace").decode("utf-8")
+                stream = self.stream
+                if stream:
+                    stream.write(fallback + self.terminator)
+                    self.flush()
+            except Exception:
+                pass  # finaler Fallback: Fehler beim Logging selbst ignorieren
 
 
 def setup_logging(level: int = logging.INFO, logfile: str = "bot.log") -> None:
