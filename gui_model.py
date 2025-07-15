@@ -33,6 +33,9 @@ class GUIModel:
         # risk limits
         self.max_loss_enabled = tk.BooleanVar(master=root, value=True)
         self.max_loss_value = tk.StringVar(master=root, value="60")
+        self.risk_trade_pct = tk.StringVar(master=root, value="3.0")
+        self.max_drawdown_pct = tk.StringVar(master=root, value="15.0")
+        self.cooldown_minutes = tk.StringVar(master=root, value="2")
 
         # trading mode
         self.live_trading = tk.BooleanVar(master=root, value=False)

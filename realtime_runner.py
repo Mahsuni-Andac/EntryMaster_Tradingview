@@ -485,7 +485,13 @@ def _run_bot_live_inner(settings=None, app=None):
     
     risk_manager = RiskManager(app, start_capital)
     cfg = {}
-    for key in ("max_loss", "max_drawdown", "max_trades"):
+    for key in (
+        "max_loss",
+        "max_drawdown",
+        "max_trades",
+        "risk_per_trade",
+        "drawdown_pct",
+    ):
         if key in settings:
             cfg[key] = settings[key]
     if cfg:
@@ -870,7 +876,11 @@ def _run_bot_live_inner(settings=None, app=None):
             time.sleep(1)
             continue
         risk_manager.update_capital(capital)
-        if risk_manager.check_loss_limit() or risk_manager.check_drawdown_limit():
+        if (
+            risk_manager.check_loss_limit()
+            or risk_manager.check_drawdown_limit()
+            or risk_manager.check_drawdown_pct_limit()
+        ):
             time.sleep(1)
             continue
         backlog = worker.queue.qsize()

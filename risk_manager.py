@@ -22,6 +22,8 @@ class RiskManager:
         self.max_drawdown: float | None = None
         self.max_trades: int | None = None
         self.trade_count: int = 0
+        self.max_risk_pct: float | None = None
+        self.drawdown_pct: float | None = None
 
     def configure(self, **kwargs) -> None:
         """Update risk thresholds dynamically."""
@@ -31,11 +33,32 @@ class RiskManager:
             self.max_drawdown = kwargs["max_drawdown"]
         if "max_trades" in kwargs:
             self.max_trades = kwargs["max_trades"]
+        if "risk_per_trade" in kwargs:
+            self.max_risk_pct = kwargs["risk_per_trade"]
+        if "drawdown_pct" in kwargs:
+            self.drawdown_pct = kwargs["drawdown_pct"]
 
     def update_loss(self, realized_pnl: float) -> None:
         self.running_loss += realized_pnl
         if realized_pnl < 0:
             self.loss_count += 1
+            limit = self.max_risk_pct
+            if limit is None:
+                try:
+                    limit = float(self.gui.risk_trade_pct.get())
+                except Exception:
+                    limit = None
+            if limit:
+                max_risk = self.current_capital * limit / 100
+                if abs(realized_pnl) >= max_risk:
+                    msg = (
+                        f"Handel gestoppt: Risiko pro Trade \u00fcberschritten ({limit}% )"
+                    )
+                    if hasattr(self.gui, "log_event"):
+                        self.gui.log_event(f"🛑 {msg}")
+                    print_warning(msg, warn_key="risk_pct")
+                    print_stop_banner(msg)
+                    self.gui.running = False
         else:
             self.loss_count = 0
 
@@ -90,6 +113,28 @@ class RiskManager:
             if hasattr(self.gui, "log_event"):
                 self.gui.log_event(f"🛑 {msg}")
             print_warning(msg, warn_key="max_drawdown")
+            print_stop_banner(msg)
+            self.gui.running = False
+            return True
+        return False
+
+    def check_drawdown_pct_limit(self) -> bool:
+        limit = self.drawdown_pct
+        if limit is None:
+            try:
+                limit = float(self.gui.max_drawdown_pct.get())
+            except Exception:
+                return False
+        if limit <= 0 or self.highest_capital <= 0:
+            return False
+        dd_pct = (
+            (self.highest_capital - self.current_capital) / self.highest_capital * 100
+        )
+        if dd_pct >= limit:
+            msg = f"Handel gestoppt: Drawdown {dd_pct:.2f}% \u00fcber Limit ({limit}%)"
+            if hasattr(self.gui, "log_event"):
+                self.gui.log_event(f"🛑 {msg}")
+            print_warning(msg, warn_key="drawdown_pct")
             print_stop_banner(msg)
             self.gui.running = False
             return True
