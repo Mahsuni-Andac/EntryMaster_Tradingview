@@ -16,6 +16,7 @@ def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_
 class GUIBridge:
     def __init__(self, gui_instance=None):
         self.gui = gui_instance
+        self.model = getattr(gui_instance, "model", None)
 
     def update_params(self, multiplier: float, auto_multi: bool, capital: float, interval: str) -> None:
         """Store basic trading parameters from the GUI into SETTINGS."""
@@ -117,4 +118,33 @@ class GUIBridge:
         return
 
     # REMOVED: SessionFilter configuration
+
+    def update_filter_params(self):
+        def get_safe_float(var, default=0.0):
+            try:
+                return float(var.get())
+            except Exception:
+                return default
+
+        def get_safe_int(var, default=0):
+            try:
+                return int(var.get())
+            except Exception:
+                return default
+
+        if not self.model:
+            return
+
+        lookback_var = getattr(self.model, "lookback_var", None)
+        toleranz_var = getattr(self.model, "toleranz_var", None)
+        volume_var = getattr(self.model, "volume_var", None)
+        breakout_var = getattr(self.model, "breakout_var", None)
+
+        SETTINGS.update({
+            "lookback": get_safe_int(lookback_var, 3),
+            "toleranz": get_safe_float(toleranz_var, 0.01),
+            "min_volume": get_safe_float(volume_var, 0.0),
+            "breakout_only": breakout_var.get() if breakout_var else False,
+        })
+
 

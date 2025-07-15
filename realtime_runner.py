@@ -268,6 +268,8 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             app.update_trade_display()
 
     opp_exit = False
+    if app:
+        app.update_filter_params()
     if signal and signal in ("long", "short"):
         opp_exit = (
             (position["side"] == "long" and signal == "short") or
