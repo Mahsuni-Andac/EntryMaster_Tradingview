@@ -1,35 +1,23 @@
 import unittest
-from entry_logic import should_enter
+from entry_logic import should_enter, _MASTER
 
 class EntryLogicTest(unittest.TestCase):
     def test_entry_signal_rsi_engulfing(self):
-        indicator = {
-            "rsi": 55,
-            "atr": 2,
-            "avg_volume": 1100,
-            "high_lookback": 110,
-            "low_lookback": 90,
-            "prev_close": 102,
-            "prev_open": 108,
-            "mtf_ok": True,
-            "prev_bull_signal": False,
-            "prev_baer_signal": False,
-        }
+        global _MASTER
+        _MASTER = None
         config = {
             "lookback": 1,
             "puffer": 1,
             "volumen_factor": 1.2,
             "opt_engulf": True,
-            "opt_engulf_bruch": False,
-            "opt_engulf_big": False,
-            "opt_confirm_delay": False,
-            "opt_mtf_confirm": False,
-            "opt_volumen_strong": False,
-            "opt_safe_mode": False,
-            "opt_rsi_ema": False,
         }
-        candle = {"open":100, "high":112, "low":98, "close":110, "volume":9000}
-        signal = should_enter(candle, indicator, config)
+
+        filler = {"open":100, "high":100, "low":99, "close":100, "volume":1000}
+        prev = {"open":108, "high":110, "low":90, "close":102, "volume":1000}
+        should_enter(filler, {}, config)
+        should_enter(prev, {}, config)
+        candle = {"open":100, "high":112, "low":98, "close":110, "volume":2000}
+        signal = should_enter(candle, {}, config)
         self.assertEqual(signal.signal, "long")
 
 if __name__ == '__main__':

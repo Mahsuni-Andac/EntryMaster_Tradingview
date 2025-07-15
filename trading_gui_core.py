@@ -146,7 +146,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_mtf_confirm = self.model.andac_opt_mtf_confirm
         self.andac_opt_volumen_strong = self.model.andac_opt_volumen_strong
 
-        # REMOVED: SessionFilter variables
+        self.andac_opt_session_filter = self.model.andac_opt_session_filter
 
         self.use_doji_blocker = self.model.use_doji_blocker
 
@@ -423,16 +423,16 @@ class TradingGUI(TradingGUILogicMixin):
             ("Engulfing", self.andac_opt_engulf),
             ("Engulfing + Breakout", self.andac_opt_engulf_bruch),
             ("Engulfing > ATR", self.andac_opt_engulf_big),
-            ("Bestätigungskerze", self.andac_opt_confirm_delay),
+            ("Bestätigungskerze (Delay)", self.andac_opt_confirm_delay),
             ("MTF Bestätigung", self.andac_opt_mtf_confirm),
             ("Starkes Volumen", self.andac_opt_volumen_strong),
+            ("Session 7-20 UTC", self.andac_opt_session_filter),
         ]:
             ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
 
         self._add_entry_group(right_col, "Lookback", [self.andac_lookback])
         self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
         self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
-        # REMOVED: SessionFilter GUI elements
 
     def _build_expert_options(self, parent):
         ttk.Label(parent, text="⚙️ Experteneinstellungen", font=("Arial", 11, "bold")).pack(pady=(0, 5))

@@ -26,6 +26,8 @@ SETTINGS = {
     "max_loss": 60,
     "cooldown": 2,
     "cooldown_after_exit": 120,
+    "sl_tp_mode": "adaptive",
+    "opt_session_filter": False,
     "sl_tp_manual_active": True,
     "manual_sl": 0.75,
     "manual_tp": 1.5,
