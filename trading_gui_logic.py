@@ -146,9 +146,6 @@ class TradingGUILogicMixin:
         cooldown = int(self.cooldown_minutes.get() or 2)
 
         try:
-            volume_factor = float(self.volume_factor.get())
-            trend_strength = int(self.trend_strength.get())
-            min_body_percent = float(self.min_candle_body_percent.get())
             entry_cooldown = int(self.entry_cooldown_seconds.get())
             cooldown_after_exit = int(self.cooldown_after_exit.get())
             sl_tp_mode = self.sl_tp_mode.get().lower()
@@ -156,9 +153,6 @@ class TradingGUILogicMixin:
             fee_percent = float(self.fee_model.get())
         except Exception:
             self.log_event("❗ Ungültige Expertenwerte – Standardwerte werden verwendet.")
-            volume_factor = 1.2
-            trend_strength = 2
-            min_body_percent = 0.4
             entry_cooldown = 60
             cooldown_after_exit = 120
             sl_tp_mode = "adaptive"
@@ -186,9 +180,6 @@ class TradingGUILogicMixin:
                 "risk_per_trade": risk_pct,
                 "drawdown_pct": drawdown_pct,
                 "cooldown": cooldown,
-                "volume_factor": volume_factor,
-                "trend_strength": trend_strength,
-                "min_body_percent": min_body_percent,
                 "entry_cooldown": entry_cooldown,
                 "cooldown_after_exit": cooldown_after_exit,
                 "sl_tp_mode": sl_tp_mode,
@@ -202,10 +193,6 @@ class TradingGUILogicMixin:
             "use_adaptive_sl": sl_tp_mode == "adaptive",
             "require_closed_candles": self.require_closed_candles.get(),
             "cooldown_after_exit": cooldown_after_exit,
-            "min_body_percent": min_body_percent,
-            "volume_factor": volume_factor,
-            "use_rsi": self.use_rsi.get(),
-            "use_macd": self.use_macd.get(),
             "sl_mode": sl_tp_mode,
             "opt_session_filter": self.andac_opt_session_filter.get(),
         }
