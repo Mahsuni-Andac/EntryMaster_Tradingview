@@ -76,9 +76,9 @@ class TradingGUI(TradingGUILogicMixin):
 
         self.root.update_idletasks()
         width = self.root.winfo_width()
-        height = int(self.root.winfo_height() * 0.8) - 30
+        height = int(self.root.winfo_height() * 0.9) - 30
         if height < 200:
-            height = int(self.root.winfo_height() * 0.8)
+            height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
 
         self.update_trade_display()
@@ -265,7 +265,6 @@ class TradingGUI(TradingGUILogicMixin):
         expert_container = ttk.Frame(notebook)
         notebook.add(container, text="Einstellungen")
         notebook.add(expert_container, text="Experteneinstellungen")
-        notebook.select(expert_container)
         risk = ttk.Frame(container)
         left = ttk.Frame(container)
         right = ttk.Frame(container)
