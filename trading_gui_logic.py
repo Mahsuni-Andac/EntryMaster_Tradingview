@@ -5,6 +5,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
+import logging
 
 TUNING_FILE = "tuning_config.json"
 
@@ -177,6 +178,59 @@ class TradingGUILogicMixin:
         else:
             self.force_exit = True
             self.running = False
+
+    def manual_yolo_entry(self):
+        from config import SETTINGS
+        from data_provider import get_live_candles, fetch_last_price
+        from realtime_runner import simulate_trade
+        from tkinter import messagebox
+        import time
+
+        candles = get_live_candles(10)
+        if len(candles) < 10:
+            messagebox.showwarning("Nicht genug Daten", "Mindestens 10 Candles nötig.")
+            return
+
+        last_10 = candles[-10:]
+        avg_open = sum(c["open"] for c in last_10) / 10
+        avg_close = sum(c["close"] for c in last_10) / 10
+        direction = "long" if avg_close > avg_open else "short"
+
+        price = fetch_last_price()
+        if price is None:
+            messagebox.showerror("Keine Daten", "Preis konnte nicht ermittelt werden.")
+            return
+
+        capital = SETTINGS.get("capital", 1000)
+        leverage = SETTINGS.get("leverage", 20)
+        amount = capital * leverage / price
+
+        sl = price * (0.995 if direction == "long" else 1.005)
+        tp = price * (1.01 if direction == "long" else 0.99)
+
+        position = {
+            "entry": price,
+            "amount": amount,
+            "side": direction,
+            "tp": tp,
+            "sl": sl,
+            "leverage": leverage,
+            "entry_index": 0,
+        }
+
+        logging.info(
+            f"[{time.strftime('%H:%M:%S')}] \U0001F680 Trend-Entry (10C): {direction.upper()} @ {price:.2f}"
+        )
+
+        if SETTINGS.get("paper_mode", True):
+            current_index = 0
+            SETTINGS["capital"] = simulate_trade(position, price, current_index, SETTINGS, capital)
+            self.update_capital(SETTINGS["capital"])
+        else:
+            from entry_handler import open_position
+            res = open_position("BUY" if direction == "long" else "SELL", amount)
+            if not res:
+                messagebox.showerror("Fehlgeschlagen", "Live-Order konnte nicht gesendet werden.")
 
     def update_live_trade_pnl(self, pnl):
         color = "green" if pnl >= 0 else "red"
