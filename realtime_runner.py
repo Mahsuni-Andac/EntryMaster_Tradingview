@@ -30,7 +30,7 @@ from data_provider import (
 )
 from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
-from exit_handler import close_position, close_partial_position
+from exit_handler import close_position, close_partial_position as api_close_partial_position
 from cooldown_manager import CooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
@@ -133,12 +133,12 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             result = False
             if live_trading:
                 try:
-                    result = close_partial_position(partial_volume, partial_order_type)
+                    result = api_close_partial_position(partial_volume, partial_order_type)
                     if result is None:
                         logging.error("\u2757 Partial Close fehlgeschlagen – keine Position reduziert!")
                     if not result:
                         app.log_event("❗️Retry Partial Close...")
-                        result = close_partial_position(partial_volume, partial_order_type)
+                        result = api_close_partial_position(partial_volume, partial_order_type)
                 except Exception as e:
                     app.log_event(f"❌ Fehler beim Partial Close: {e}")
             else:
@@ -193,7 +193,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 app.log_event(log_msg)
                 app.apc_status_label.config(text=log_msg, foreground="blue")
                 if live_trading:
-                    live_partial_close(position["side"], to_close)
+                    live_partial_close(position, capital, app, settings)
                 if position["amount"] <= 0:
                     position = None
                     position_open = False
@@ -349,13 +349,18 @@ POSITION_SIZE = 0.2
 
 gui_bridge = None
 
-def live_partial_close(side: str, qty: float, order_type: str = "Market") -> None:
-    reduce_side = "SELL" if side == "long" else "BUY"
-    res = open_position(reduce_side, qty, reduce_only=True, order_type=order_type)
-    if res is not None:
-        print(f"⚡️ LIVE-Teilschließung: {qty} {reduce_side} via Reduce Only Market")
+def live_partial_close(position, capital, app, settings):
+    partial_pct = settings.get("partial_pct", 0.5)
+    partial_amount = position["amount"] * partial_pct
+    result = api_close_partial_position(
+        partial_amount,
+        settings.get("partial_order_type", "market"),
+    )
+    if result:
+        if hasattr(app, "send_status_to_gui"):
+            app.send_status_to_gui("partial_closed", result)
     else:
-        print("❌ Fehler beim Live-Teilverkauf")
+        logging.error("❗ Auto Partial Close fehlgeschlagen.")
 
 def set_gui_bridge(gui_instance):
     global gui_bridge
