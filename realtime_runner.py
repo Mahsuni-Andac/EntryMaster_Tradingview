@@ -130,7 +130,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     ):
         hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
         if hit_tp:
-            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
+            logging.info("💰 TP erreicht – Exit ausgelöst.")
             partial_volume = round(position.get("amount", 0) * partial_pct, 3)
             result = False
             if live_trading:
@@ -240,7 +240,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         elif high >= tp_price:
             hit_tp = True
             exit_price = tp_price
-            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
+            logging.info("💰 TP erreicht – Exit ausgelöst.")
     else:
         if high >= sl_price:
             hit_sl = True
@@ -249,7 +249,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         elif low <= tp_price:
             hit_tp = True
             exit_price = tp_price
-            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
+            logging.info("💰 TP erreicht – Exit ausgelöst.")
 
     timed_exit = False
     hold_duration = 0
@@ -277,7 +277,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         )
         if opp_exit:
             logging.info(
-                f"\ud83d\udcc9 Gegensignal erkannt ({signal}) – Exit ausgelöst."
+                f"📉 Gegensignal erkannt ({signal}) – Exit ausgelöst."
             )
 
     should_close = hit_tp or hit_sl or timed_exit or opp_exit
@@ -322,7 +322,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             log_msg = f"[{stamp}] {reason}"
             logger.info(log_msg)
             logger.info(
-                f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+                f"💸 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
             )
         elif opp_exit:
             stamp = datetime.now().strftime("%H:%M:%S")
@@ -668,7 +668,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     f"[{now_time()}] \u23F1 Timed Exit: {direction} @ {exit_price:.2f} nach {hold_duration} Kerzen"
                 )
                 logger.info(
-                    f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+                    f"💸 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
                 )
                 return
 
