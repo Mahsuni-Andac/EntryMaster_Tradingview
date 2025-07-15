@@ -269,7 +269,13 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
     opp_exit = False
     if app:
-        app.update_filter_params()
+        try:
+            if hasattr(app, "update_filter_params"):
+                app.update_filter_params()
+            else:
+                logging.debug("🔁 update_filter_params() nicht verfügbar – übersprungen.")
+        except Exception as e:
+            logging.warning(f"⚠️ update_filter_params() fehlgeschlagen: {e}")
     if signal and signal in ("long", "short"):
         opp_exit = (
             (position["side"] == "long" and signal == "short") or
