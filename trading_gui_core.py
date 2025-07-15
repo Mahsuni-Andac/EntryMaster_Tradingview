@@ -53,6 +53,10 @@ class TradingGUI(TradingGUILogicMixin):
         self.trading_mode = self.model.trading_mode
         self.mode_label = None
 
+        self.style = ttk.Style()
+        self.style.configure("AutoSL.TButton", foreground="black")
+        self.style.configure("ManualSL.TButton", foreground="black")
+
         self._init_variables()
         self._build_gui()
         self._init_neon_panel()
@@ -322,9 +326,19 @@ class TradingGUI(TradingGUILogicMixin):
         ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8).grid(row=0, column=1)
         ttk.Label(manual_frame, text="TP:").grid(row=1, column=0, sticky="w")
         ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8).grid(row=1, column=1)
-        self.auto_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Auto aktiv", command=self.activate_auto_sl_tp)
+        self.auto_sl_button = ttk.Button(
+            manual_frame,
+            text="🔒 SL/TP Auto aktiv",
+            command=self.activate_auto_sl_tp,
+            style="AutoSL.TButton",
+        )
         self.auto_sl_button.grid(row=2, column=0, columnspan=2, sticky="we", pady=(5,0))
-        self.manual_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Manuell aktiv", command=self.toggle_manual_sl_tp)
+        self.manual_sl_button = ttk.Button(
+            manual_frame,
+            text="🔒 SL/TP Manuell aktiv",
+            command=self.toggle_manual_sl_tp,
+            style="ManualSL.TButton",
+        )
         self.manual_sl_button.grid(row=3, column=0, columnspan=2, sticky="we")
         self.sl_tp_status_label = ttk.Label(manual_frame, textvariable=self.sl_tp_status_var, foreground="green")
         self.sl_tp_status_label.grid(row=4, column=0, columnspan=2, sticky="w")
