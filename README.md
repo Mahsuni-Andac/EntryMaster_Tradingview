@@ -83,7 +83,7 @@ python main.py
 ```
 
 - GUI öffnet sich automatisch.
-- Paper-Konto startet mit $1.000 Kapital (einstellbar).
+ - Paper-Konto startet mit $2.000 Kapital (einstellbar).
 - Candle-Feed und Signale starten sofort.
 - Alle Trades simuliert (kein echter Markt-Zugriff).
 - Status: `✅ Marktdaten kommen an`

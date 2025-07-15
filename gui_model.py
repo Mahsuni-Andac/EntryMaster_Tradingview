@@ -25,14 +25,14 @@ class GUIModel:
         self.auto_multiplier = tk.BooleanVar(master=root, value=False)
 
         # Auto Partial Close
-        self.apc_enabled = tk.BooleanVar(master=root, value=False)
-        self.apc_rate = tk.StringVar(master=root, value="10")
+        self.apc_enabled = tk.BooleanVar(master=root, value=True)
+        self.apc_rate = tk.StringVar(master=root, value="25")
         self.apc_interval = tk.StringVar(master=root, value="60")
-        self.apc_min_profit = tk.StringVar(master=root, value="0")
+        self.apc_min_profit = tk.StringVar(master=root, value="20")
 
         # risk limits
         self.max_loss_enabled = tk.BooleanVar(master=root, value=True)
-        self.max_loss_value = tk.StringVar(master=root, value="10")
+        self.max_loss_value = tk.StringVar(master=root, value="60")
 
         # trading mode
         self.live_trading = tk.BooleanVar(master=root, value=False)
@@ -40,8 +40,8 @@ class GUIModel:
         self.trading_mode = tk.StringVar(master=root, value="paper")
 
         # basic parameters
-        self.multiplier_var = tk.StringVar(master=root, value="20")
-        self.capital_var = tk.StringVar(master=root, value="1000")
+        self.multiplier_var = tk.StringVar(master=root, value="10")
+        self.capital_var = tk.StringVar(master=root, value="2000")
 
         # strategy options
         self.andac_lookback = tk.StringVar(master=root, value="20")
