@@ -3,11 +3,13 @@
 
 from typing import Optional
 import bitmex_interface as bm
+from utils import retry_on_failure
 
 def close_position() -> Optional[dict]:
     """Close any open BitMEX position."""
     return bm.close_position()
 
+@retry_on_failure(retries=3)
 def close_partial_position(volume: float, order_type: str = "Market") -> Optional[dict]:
     """
     Closes part of the current position by specified volume.

@@ -128,11 +128,14 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     ):
         hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
         if hit_tp:
+            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
             partial_volume = round(position.get("amount", 0) * partial_pct, 3)
             result = False
             if live_trading:
                 try:
                     result = close_partial_position(partial_volume, partial_order_type)
+                    if result is None:
+                        logging.error("\u2757 Partial Close fehlgeschlagen – keine Position reduziert!")
                     if not result:
                         app.log_event("❗️Retry Partial Close...")
                         result = close_partial_position(partial_volume, partial_order_type)
@@ -218,16 +221,20 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         if low <= sl_price:
             hit_sl = True
             exit_price = sl_price
+            logging.info("\u26d4 SL erreicht – Exit ausgelöst.")
         elif high >= tp_price:
             hit_tp = True
             exit_price = tp_price
+            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
     else:
         if high >= sl_price:
             hit_sl = True
             exit_price = sl_price
+            logging.info("\u26d4 SL erreicht – Exit ausgelöst.")
         elif low <= tp_price:
             hit_tp = True
             exit_price = tp_price
+            logging.info("\ud83d\udcb0 TP erreicht – Exit ausgelöst.")
 
     timed_exit = False
     hold_duration = 0
@@ -251,6 +258,10 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             (position["side"] == "long" and signal == "short") or
             (position["side"] == "short" and signal == "long")
         )
+        if opp_exit:
+            logging.info(
+                f"\ud83d\udcc9 Gegensignal erkannt ({signal}) – Exit ausgelöst."
+            )
 
     should_close = hit_tp or hit_sl or timed_exit or opp_exit
 
