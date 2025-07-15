@@ -459,7 +459,14 @@ def wait_for_initial_candles(
 def _run_bot_live_inner(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
 
-    capital = SETTINGS.get("starting_capital", 1000)
+    if app:
+        set_gui_bridge(app)
+    else:
+        set_gui_bridge(None)
+
+    capital = float(gui_bridge.capital) if gui_bridge else settings.get(
+        "capital", SETTINGS.get("starting_capital", 1000)
+    )
     start_capital = capital
 
     print_start_banner(capital)
@@ -472,7 +479,6 @@ def _run_bot_live_inner(settings=None, app=None):
 
     if app:
         settings["log_event"] = app.log_event
-        set_gui_bridge(app)
         start_capital = capital
         if hasattr(app, "sl_tp_status_var"):
             app.sl_tp_status_var.set("")
