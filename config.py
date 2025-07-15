@@ -20,6 +20,8 @@ SETTINGS = {
     "auto_partial_close": True,
     "partial_close_pct": 0.25,
     "apc_min_profit": 20,
+    "risk_per_trade": 3.0,
+    "drawdown_pct": 15.0,
     "max_drawdown": 300,
     "max_loss": 60,
     "cooldown": 2,

@@ -18,14 +18,29 @@ class GUIBridge:
         self.gui = gui_instance
         self.model = getattr(gui_instance, "model", None)
 
-    def update_params(self, multiplier: float, auto_multi: bool, capital: float, interval: str) -> None:
-        """Store basic trading parameters from the GUI into SETTINGS."""
+    def update_params(
+        self,
+        multiplier: float,
+        auto_multi: bool,
+        capital: float,
+        interval: str,
+        risk_pct: float | None = None,
+        drawdown_pct: float | None = None,
+        cooldown: int | None = None,
+    ) -> None:
+        """Store trading parameters from the GUI into SETTINGS."""
         SETTINGS.update({
             "multiplier": multiplier,
             "auto_multiplier": auto_multi,
             "capital": capital,
             "interval": interval,
         })
+        if risk_pct is not None:
+            SETTINGS["risk_per_trade"] = risk_pct
+        if drawdown_pct is not None:
+            SETTINGS["drawdown_pct"] = drawdown_pct
+        if cooldown is not None:
+            SETTINGS["cooldown"] = cooldown
 
     def _get_gui_value(self, name: str, fallback):
         if not self.gui or not hasattr(self.gui, name):

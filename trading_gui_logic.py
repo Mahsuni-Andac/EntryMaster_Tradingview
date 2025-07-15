@@ -138,9 +138,29 @@ class TradingGUILogicMixin:
         if capital <= 0:
             self.log_event("⚠️ Einsatz muss größer 0 sein")
             return
+        risk_pct = self._get_safe_float(self.risk_trade_pct, 3.0)
+        drawdown_pct = self._get_safe_float(self.max_drawdown_pct, 15.0)
+        cooldown = int(self.cooldown_minutes.get() or 2)
+
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
-            self.bridge.update_params(multiplier, auto_multi, capital, interval)
+            self.bridge.update_params(
+                multiplier,
+                auto_multi,
+                capital,
+                interval,
+                risk_pct,
+                drawdown_pct,
+                cooldown,
+            )
+        from config import SETTINGS
+        SETTINGS.update(
+            {
+                "risk_per_trade": risk_pct,
+                "drawdown_pct": drawdown_pct,
+                "cooldown": cooldown,
+            }
+        )
         if hasattr(self, "callback"):
             self.callback()
 

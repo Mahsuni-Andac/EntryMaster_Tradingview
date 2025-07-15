@@ -180,6 +180,10 @@ class TradingGUI(TradingGUILogicMixin):
         self.sl_tp_manual_active = self.model.sl_tp_manual_active
         self.sl_tp_status_var = self.model.sl_tp_status_var
 
+        self.risk_trade_pct = self.model.risk_trade_pct
+        self.max_drawdown_pct = self.model.max_drawdown_pct
+        self.cooldown_minutes = self.model.cooldown_minutes
+
         self.api_status_var = tk.StringVar(value="BitMEX API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
         self.api_status_label = None
@@ -324,6 +328,16 @@ class TradingGUI(TradingGUILogicMixin):
 
         manual_frame = ttk.LabelFrame(risk, text="Manuelles SL/TP")
         manual_frame.grid(row=3, column=0, padx=5, pady=(10, 0), sticky="nw")
+
+        risk_frame = ttk.LabelFrame(risk, text="Risikoeinstellungen")
+        risk_frame.grid(row=3, column=1, padx=5, pady=(10, 0), sticky="nw")
+
+        ttk.Label(risk_frame, text="Max Risiko pro Trade (%):").grid(row=0, column=0, sticky="w")
+        ttk.Entry(risk_frame, textvariable=self.risk_trade_pct, width=6).grid(row=0, column=1)
+        ttk.Label(risk_frame, text="Maximaler Drawdown (%):").grid(row=1, column=0, sticky="w")
+        ttk.Entry(risk_frame, textvariable=self.max_drawdown_pct, width=6).grid(row=1, column=1)
+        ttk.Label(risk_frame, text="Cooldown [Minuten]:").grid(row=2, column=0, sticky="w")
+        ttk.Entry(risk_frame, textvariable=self.cooldown_minutes, width=6).grid(row=2, column=1)
 
         self.toggle_sl_tp_button = ttk.Button(
             manual_frame,
