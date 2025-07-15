@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 from console_status import print_warning, print_stop_banner
 
@@ -25,6 +28,12 @@ class RiskManager:
         self.max_risk_pct: float | None = None
         self.drawdown_pct: float | None = None
 
+        # new risk parameters
+        self.max_risk: float = 3.0
+        self.drawdown_limit: float = 15.0
+        self.initial_capital: float = self.start_capital
+        self.total_loss: float = 0.0
+
     def configure(self, **kwargs) -> None:
         """Update risk thresholds dynamically."""
         if "max_loss" in kwargs:
@@ -42,6 +51,7 @@ class RiskManager:
         self.running_loss += realized_pnl
         if realized_pnl < 0:
             self.loss_count += 1
+            self.register_loss(-realized_pnl)
             limit = self.max_risk_pct
             if limit is None:
                 try:
@@ -169,5 +179,31 @@ class RiskManager:
         if self.loss_count >= threshold:
             # CLEANUP: removed old debug print
             self.loss_count = 0
+
+    # ------------------------------------------------------------------
+    # New simplified risk logic
+
+    def set_limits(self, max_risk: float, drawdown_limit: float) -> None:
+        self.max_risk = max_risk
+        self.drawdown_limit = drawdown_limit
+
+    def set_start_capital(self, capital: float) -> None:
+        self.initial_capital = capital
+
+    def register_loss(self, loss_amount: float) -> bool:
+        self.total_loss += loss_amount
+        if self.get_drawdown_percent() >= self.drawdown_limit:
+            logger.critical("❌ Drawdown-Limit erreicht – Bot wird deaktiviert.")
+            return False
+        return True
+
+    def get_drawdown_percent(self) -> float:
+        if self.initial_capital == 0:
+            return 0.0
+        return (self.total_loss / self.initial_capital) * 100
+
+    def is_risk_too_high(self, expected_loss: float, balance: float) -> bool:
+        max_allowed_loss = self.max_risk / 100 * balance
+        return expected_loss > max_allowed_loss
 
 
