@@ -163,7 +163,11 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
 
     timed_exit = False
-    if current_index is not None and position.get("entry_index") is not None:
+    if (
+        not live_trading
+        and current_index is not None
+        and position.get("entry_index") is not None
+    ):
         if current_index - position["entry_index"] >= MAX_HOLD_CANDLES:
             timed_exit = True
 
@@ -200,16 +204,19 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         elif hit_sl:
             reason = "SL erreicht"
         elif timed_exit:
-            reason = f"Timed Exit: {position['side'].upper()} geschlossen nach {MAX_HOLD_CANDLES} Kerzen"
+            reason = f"\u23F1 Timed Exit: {position['side'].upper()} @ {current:.2f} nach {MAX_HOLD_CANDLES} Kerzen"
         else:
             reason = "Gegensignal"
 
-        if timed_exit or opp_exit:
+        if timed_exit:
+            stamp = datetime.now().strftime("%H:%M:%S")
+            log_msg = f"[{stamp}] {reason} | PnL {pnl:.2f}"
+        elif opp_exit:
             stamp = datetime.now().strftime("%H:%M:%S")
             log_msg = f"[{stamp}] {reason} bei {current:.2f} | PnL {pnl:.2f}"
         else:
             log_msg = (
-                f"💥 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
+                f"\U0001F4A5 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
             )
 
         logging.info(log_msg)
