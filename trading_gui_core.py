@@ -76,7 +76,9 @@ class TradingGUI(TradingGUILogicMixin):
 
         self.root.update_idletasks()
         width = self.root.winfo_width()
-        height = int(self.root.winfo_height() * 0.9)
+        height = int(self.root.winfo_height() * 0.9) - 30
+        if height < 200:
+            height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
 
         self.update_trade_display()
@@ -180,6 +182,17 @@ class TradingGUI(TradingGUILogicMixin):
         self.sl_tp_manual_active = self.model.sl_tp_manual_active
         self.sl_tp_status_var = self.model.sl_tp_status_var
 
+        # expert settings
+        self.volume_factor = self.model.volume_factor
+        self.trend_strength = self.model.trend_strength
+        self.min_candle_body_percent = self.model.min_candle_body_percent
+        self.entry_cooldown_seconds = self.model.entry_cooldown_seconds
+        self.sl_tp_mode = self.model.sl_tp_mode
+        self.min_profit_usd = self.model.min_profit_usd
+        self.partial_close_trigger = self.model.partial_close_trigger
+        self.fee_model = self.model.fee_model
+        self.max_trades_per_hour = self.model.max_trades_per_hour
+
         self.risk_trade_pct = self.model.risk_trade_pct
         self.max_drawdown_pct = self.model.max_drawdown_pct
         self.cooldown_minutes = self.model.cooldown_minutes
@@ -246,8 +259,13 @@ class TradingGUI(TradingGUILogicMixin):
         self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
-        container = ttk.Frame(self.main_frame)
-        container.pack(padx=10, pady=5)
+        notebook = ttk.Notebook(self.main_frame)
+        notebook.pack(padx=10, pady=5, fill="both", expand=True)
+
+        container = ttk.Frame(notebook)
+        expert_container = ttk.Frame(notebook)
+        notebook.add(container, text="Einstellungen")
+        notebook.add(expert_container, text="Experteneinstellungen")
         risk = ttk.Frame(container)
         left = ttk.Frame(container)
         right = ttk.Frame(container)
@@ -366,6 +384,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.update_manual_sl_tp_status()
 
         self._build_andac_options(andac)
+        self._build_expert_options(expert_container)
         self._build_controls(self.main_frame)
 
 
@@ -395,6 +414,26 @@ class TradingGUI(TradingGUILogicMixin):
         self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
         self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
         # REMOVED: SessionFilter GUI elements
+
+    def _build_expert_options(self, parent):
+        ttk.Label(parent, text="⚙️ Experteneinstellungen", font=("Arial", 11, "bold")).pack(pady=(0, 5))
+        grid = ttk.Frame(parent)
+        grid.pack()
+
+        rows = [
+            ("Volume Factor", self.volume_factor),
+            ("Trend Strength", self.trend_strength),
+            ("Min Candle Body %", self.min_candle_body_percent),
+            ("Entry Cooldown [s]", self.entry_cooldown_seconds),
+            ("SL/TP Mode", self.sl_tp_mode),
+            ("Min Profit [$]", self.min_profit_usd),
+            ("Partial Close Trigger", self.partial_close_trigger),
+            ("Fee Model", self.fee_model),
+            ("Max Trades/h", self.max_trades_per_hour),
+        ]
+        for idx, (label, var) in enumerate(rows):
+            ttk.Label(grid, text=label+":").grid(row=idx, column=0, sticky="w", pady=2)
+            ttk.Entry(grid, textvariable=var, width=10).grid(row=idx, column=1, sticky="w", pady=2)
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
