@@ -693,6 +693,25 @@ def _run_bot_live_inner(settings=None, app=None):
                 }
                 position_entry_index = len(candles) - 1
                 entry_price = candle["close"]
+                # === Manuelles SL/TP aus GUI anwenden, falls aktiv
+                if settings.get("sl_tp_manual_active", False):
+                    tp_val = settings.get("manual_tp", None)
+                    sl_val = settings.get("manual_sl", None)
+                    if tp_val:
+                        position["tp"] = (
+                            entry_price * (1 + tp_val / 100)
+                            if entry_type == "long"
+                            else entry_price * (1 - tp_val / 100)
+                        )
+                    if sl_val:
+                        position["sl"] = (
+                            entry_price * (1 - sl_val / 100)
+                            if entry_type == "long"
+                            else entry_price * (1 + sl_val / 100)
+                        )
+                    app.log_event(
+                        f"🎯 Manuelles TP/SL gesetzt → TP: {position.get('tp', '–')} | SL: {position.get('sl', '–')}"
+                    )
                 position_open = True
                 current_position_direction = entry_type.upper()
                 last_signal = entry_type
