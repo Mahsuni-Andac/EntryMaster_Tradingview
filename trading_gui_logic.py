@@ -43,6 +43,7 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
+                self.andac_opt_session_filter,
                 self.use_doji_blocker,
                 self.use_time_filter,
             ]
@@ -93,6 +94,7 @@ class TradingGUILogicMixin:
                 "opt_confirm_delay": self.andac_opt_confirm_delay.get(),
                 "opt_mtf_confirm": self.andac_opt_mtf_confirm.get(),
                 "opt_volumen_strong": self.andac_opt_volumen_strong.get(),
+                "opt_session_filter": self.andac_opt_session_filter.get(),
             })
 
             self.log_event("✅ Auto-Empfehlungen angewendet")
@@ -110,6 +112,7 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
+                self.andac_opt_session_filter,
                 self.use_time_filter,
                 self.use_doji_blocker,
             ]:
@@ -191,6 +194,7 @@ class TradingGUILogicMixin:
                 "sl_tp_mode": sl_tp_mode,
                 "max_trades_hour": max_trades_hour,
                 "fee_percent": fee_percent,
+                "opt_session_filter": self.andac_opt_session_filter.get(),
             }
         )
 
@@ -203,6 +207,7 @@ class TradingGUILogicMixin:
             "use_rsi": self.use_rsi.get(),
             "use_macd": self.use_macd.get(),
             "sl_mode": sl_tp_mode,
+            "opt_session_filter": self.andac_opt_session_filter.get(),
         }
         try:
             from strategy import set_filter_config
