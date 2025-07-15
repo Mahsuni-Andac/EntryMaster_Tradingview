@@ -12,6 +12,7 @@ from neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
 from gui_registry import register_element
+from gui_diagnose import add_gui_diagnose_button
 
 class TradingGUI(TradingGUILogicMixin):
     def __getattr__(self, item):
@@ -490,6 +491,7 @@ class TradingGUI(TradingGUILogicMixin):
         export_btn = ttk.Button(button_frame, text="\U0001F4CB GUI-Export erstellen", command=self.export_gui)
         export_btn.grid(row=1, column=5, padx=5)
         register_element(export_btn, "export_button", command=self.export_gui)
+        add_gui_diagnose_button(button_frame)
 
         self.auto_status_label = ttk.Label(button_frame, font=("Arial", 10, "bold"), foreground="green")
         self.auto_status_label.grid(row=2, column=0, columnspan=6, pady=(5, 0), padx=10, sticky="w")
