@@ -552,6 +552,19 @@ def _run_bot_live_inner(settings=None, app=None):
         close_price = candle["close"]
         now = time.time()
 
+        current_index = len(candles) - 1
+        if position:
+            current_price = fetch_last_price()
+            if (
+                (position["side"] == "long" and current_price >= position["tp"]) or
+                (position["side"] == "short" and current_price <= position["tp"]) or
+                (position["side"] == "long" and current_price <= position["sl"]) or
+                (position["side"] == "short" and current_price >= position["sl"])
+            ):
+                capital = simulate_trade(position, current_price, current_index, settings, capital)
+                position = None
+                position_open = False
+
         if not is_within_active_timeframe(app):
             logger.info("⏳ Außerhalb der Handelszeit – kein Entry erlaubt")
             time.sleep(1)
@@ -599,6 +612,21 @@ def _run_bot_live_inner(settings=None, app=None):
             logging.info(msg)
             if hasattr(app, "log_event"):
                 app.log_event(msg)
+        if entry_type and not live_trading and position is None:
+            entry_price = fetch_last_price()
+            amount = capital / entry_price
+            position = {
+                "entry": entry_price,
+                "amount": amount,
+                "side": entry_type,
+                "leverage": settings.get("leverage", 1),
+                "tp": entry_price * (1 + 0.01) if entry_type == "long" else entry_price * (1 - 0.01),
+                "sl": entry_price * (1 - 0.005) if entry_type == "long" else entry_price * (1 + 0.005),
+                "entry_index": len(candles) - 1,
+            }
+            logging.info(f"🧪 Simulierter Entry: {entry_type.upper()} @ {entry_price:.2f}")
+            position_open = True
+            position_entry_index = len(candles) - 1
         elif andac_signal.reasons:
             reason_msg = ", ".join(andac_signal.reasons)
             msg = f"[{stamp}] Signal verworfen: {reason_msg}"
