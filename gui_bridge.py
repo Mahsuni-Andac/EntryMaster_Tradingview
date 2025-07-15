@@ -133,6 +133,7 @@ class GUIBridge:
                 return default
 
         if not self.model:
+            logging.debug("🔁 Dummy update_filter_params aufgerufen (GUIBridge)")
             return
 
         lookback_var = getattr(self.model, "lookback_var", None)
