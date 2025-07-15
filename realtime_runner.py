@@ -142,7 +142,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
                 log_msg = (
                     f"⚡️ Teilverkauf {to_close:.2f} | Entry {entry:.2f} -> "
-                    f"Exit {current:.2f} | PnL {realized:.2f}$ | "
+                    f"Exit {exit_price:.2f} | PnL {realized:.2f}$ | "
                     f"Balance {old_cap:.2f}->{capital:.2f} | Rest {position['amount']:.2f}"
                 )
                 app.log_event(log_msg)
@@ -165,8 +165,27 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         logging.warning("SL/TP Werte fehlen, überspringe Positionsprüfung")
         return position, capital, last_printed_pnl, last_printed_price, False
 
-    hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
-    hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
+    high = candle.get("high", current)
+    low = candle.get("low", current)
+
+    hit_tp = False
+    hit_sl = False
+    exit_price = current
+
+    if position["side"] == "long":
+        if low <= sl_price:
+            hit_sl = True
+            exit_price = sl_price
+        elif high >= tp_price:
+            hit_tp = True
+            exit_price = tp_price
+    else:
+        if high >= sl_price:
+            hit_sl = True
+            exit_price = sl_price
+        elif low <= tp_price:
+            hit_tp = True
+            exit_price = tp_price
 
     timed_exit = False
     hold_duration = 0
@@ -196,7 +215,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     if should_close:
         new_capital = simulate_trade(
             position,
-            current,
+            exit_price,
             current_index if current_index is not None else 0,
             settings,
             capital,
@@ -210,7 +229,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
         app.update_pnl(pnl)
         app.update_capital(capital)
-        app.update_last_trade(position["side"], entry, current, pnl)
+        app.update_last_trade(position["side"], entry, exit_price, pnl)
         if hasattr(app, "current_position"):
             app.current_position = None
             if hasattr(app, "update_trade_display"):
@@ -222,7 +241,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             reason = "SL erreicht"
         elif timed_exit:
             reason = (
-                f"\u23F1 Timed Exit: {position['side'].upper()} @ {current:.2f} "
+                f"\u23F1 Timed Exit: {position['side'].upper()} @ {exit_price:.2f} "
                 f"nach {hold_duration} Kerzen"
             )
         else:
@@ -237,10 +256,10 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             )
         elif opp_exit:
             stamp = datetime.now().strftime("%H:%M:%S")
-            log_msg = f"[{stamp}] {reason} bei {current:.2f} | PnL {pnl:.2f}"
+            log_msg = f"[{stamp}] {reason} bei {exit_price:.2f} | PnL {pnl:.2f}"
         else:
             log_msg = (
-                f"\U0001F4A5 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
+                f"\U0001F4A5 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {exit_price:.2f} | PnL {pnl:.2f}"
             )
         logging.info(log_msg)
         app.log_event(log_msg)
