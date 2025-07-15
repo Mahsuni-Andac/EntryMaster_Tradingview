@@ -46,7 +46,11 @@ from global_state import (
 )
 import global_state
 
-from indicator_utils import calculate_ema, calculate_atr
+from indicator_utils import (
+    calculate_ema,
+    calculate_atr,
+    macd_crossover_detected,
+)
 
 from andac_entry_master import AndacEntryMaster, AndacSignal
 from signal_worker import SignalWorker
@@ -76,7 +80,8 @@ def update_indicators(candles):
     closes = [c["close"] for c in candles if "close" in c]
     ema = calculate_ema(closes[-20:], 20)
     rsi = AndacEntryMaster._rsi(closes, 14)
-    return atr, ema, rsi
+    macd_cross = macd_crossover_detected(closes)
+    return atr, ema, rsi, macd_cross
 
 
 def handle_existing_position(position, candle, app, capital, live_trading,
@@ -357,6 +362,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
         position = None
         position_open = False
+        last_exit_time = now
         entry_time_global = None
         return position, capital, last_printed_pnl, last_printed_price, True
 
@@ -537,16 +543,23 @@ def _run_bot_live_inner(settings=None, app=None):
         "opt_mtf_confirm": app.andac_opt_mtf_confirm.get(),
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
     }
-    volume_factor = settings.get("volume_factor", 1.2)
+    from strategy import get_filter_config
+    filters = get_filter_config()
+    volume_factor = filters.get("volume_factor", settings.get("volume_factor", 1.2))
     trend_strength = settings.get("trend_strength", 2)
-    min_body_percent = settings.get("min_body_percent", 0.4)
+    min_body_percent = filters.get("min_body_percent", settings.get("min_body_percent", 0.4))
     entry_cooldown = settings.get("entry_cooldown", 60)
-    sl_tp_mode = settings.get("sl_tp_mode", "adaptive")
+    cooldown_after_exit = filters.get("cooldown_after_exit", settings.get("cooldown_after_exit", 120))
+    sl_tp_mode = filters.get("sl_mode", settings.get("sl_tp_mode", "adaptive"))
     max_trades_hour = settings.get("max_trades_hour", 5)
     fee_percent = settings.get("fee_percent", 0.075)
+    require_closed_candles = filters.get("require_closed_candles", True)
+    use_rsi_filter = filters.get("use_rsi", False)
+    use_macd_filter = filters.get("use_macd", False)
     FEE_MODEL.taker_fee = fee_percent / 100
 
     last_entry_time = 0.0
+    last_exit_time = 0.0
     trade_times: list[float] = []
     adaptive_sl = AdaptiveSLManager()
 
@@ -575,7 +588,7 @@ def _run_bot_live_inner(settings=None, app=None):
         nonlocal candles, position, capital, last_printed_pnl, last_printed_price, \
                  last_signal, last_signal_time, no_signal_printed, first_feed, \
                  previous_signal, position_entry_index, entry_price, \
-                 position_open, current_position_direction
+                 position_open, current_position_direction, last_exit_time
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
@@ -584,7 +597,7 @@ def _run_bot_live_inner(settings=None, app=None):
         if len(candles) > 100:
             candles.pop(0)
 
-        atr_value, ema, rsi_val = update_indicators(candles)
+        atr_value, ema, rsi_val, macd_cross = update_indicators(candles)
         atr_value_global = atr_value
         settings["ema_value"] = ema
 
@@ -631,6 +644,10 @@ def _run_bot_live_inner(settings=None, app=None):
         prev_close = recent[-2]["close"] if len(recent) > 1 else None
         prev_open = recent[-2]["open"] if len(recent) > 1 else None
 
+        if require_closed_candles and not candle.get("x", True):
+            logging.info("🕒 Candle noch nicht geschlossen – Signal verworfen.")
+            return
+
         body_pct = 0.0
         if candle["high"] > candle["low"]:
             body_pct = abs(candle["close"] - candle["open"]) / (candle["high"] - candle["low"]) * 100
@@ -639,6 +656,12 @@ def _run_bot_live_inner(settings=None, app=None):
             return
         if candle.get("volume", 0.0) < avg_volume * volume_factor:
             logging.info("❌ Volumen zu schwach – kein Entry")
+            return
+        if use_rsi_filter and (rsi_val < 30 or rsi_val > 70):
+            logging.info("❌ RSI außerhalb Range – kein Entry")
+            return
+        if use_macd_filter and not macd_cross:
+            logging.info("❌ Kein MACD-Crossover – kein Entry")
             return
 
         indicator = {
@@ -761,6 +784,9 @@ def _run_bot_live_inner(settings=None, app=None):
                 if now - last_entry_time < entry_cooldown:
                     logging.info("⏸ Entry-Cooldown aktiv – kein neuer Trade")
                     return
+                if now - last_exit_time < cooldown_after_exit:
+                    logging.info("⏳ Cooldown aktiv – kein neuer Entry")
+                    return
                 trade_times[:] = [t for t in trade_times if now - t < 3600]
                 if len(trade_times) >= max_trades_hour:
                     logging.info("⏸ Entry-Limit erreicht – kein neuer Trade")
@@ -783,6 +809,14 @@ def _run_bot_live_inner(settings=None, app=None):
 
                 if sl is None or tp is None:
                     return
+
+                spread_buffer = entry * (fee_percent / 100)
+                if entry_type == "long":
+                    sl -= spread_buffer
+                    tp += spread_buffer
+                else:
+                    sl += spread_buffer
+                    tp -= spread_buffer
 
                 expected_loss = abs(entry_exec - sl) / entry_exec * leverage * amount
                 if risk_manager.is_risk_too_high(expected_loss, capital):

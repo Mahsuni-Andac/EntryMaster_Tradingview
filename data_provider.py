@@ -82,6 +82,7 @@ def _fetch_rest_candles(interval: str, limit: int = 14) -> list["Candle"]:
                 "low": float(row[3]),
                 "close": float(row[4]),
                 "volume": float(row[5]),
+                "x": True,
             }
         )
     return candles

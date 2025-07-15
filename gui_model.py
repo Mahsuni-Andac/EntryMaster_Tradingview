@@ -68,6 +68,10 @@ class GUIModel:
         self.use_time_filter = tk.BooleanVar(master=root)
         self.time_start = tk.StringVar(master=root, value="08:00")
         self.time_end = tk.StringVar(master=root, value="18:00")
+        self.require_closed_candles = tk.BooleanVar(master=root, value=True)
+        self.use_rsi = tk.BooleanVar(master=root, value=False)
+        self.use_macd = tk.BooleanVar(master=root, value=False)
+        self.cooldown_after_exit = tk.StringVar(master=root, value="120")
 
         # manual SL/TP
         self.manual_sl_var = tk.StringVar(master=root, value="")

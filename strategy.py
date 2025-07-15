@@ -1,6 +1,18 @@
 # strategy.py
 
 
+_FILTER_CONFIG = {}
+
+
+def set_filter_config(filters):
+    global _FILTER_CONFIG
+    _FILTER_CONFIG = filters or {}
+
+
+def get_filter_config():
+    return _FILTER_CONFIG
+
+
 def execute_trading_strategy(settings, gui):
     msg = "📡 Starte Trading-Strategie…"
     print(msg)
