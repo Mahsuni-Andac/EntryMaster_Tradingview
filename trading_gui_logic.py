@@ -147,6 +147,7 @@ class TradingGUILogicMixin:
             trend_strength = int(self.trend_strength.get())
             min_body_percent = float(self.min_candle_body_percent.get())
             entry_cooldown = int(self.entry_cooldown_seconds.get())
+            cooldown_after_exit = int(self.cooldown_after_exit.get())
             sl_tp_mode = self.sl_tp_mode.get().lower()
             max_trades_hour = int(self.max_trades_per_hour.get())
             fee_percent = float(self.fee_model.get())
@@ -156,9 +157,14 @@ class TradingGUILogicMixin:
             trend_strength = 2
             min_body_percent = 0.4
             entry_cooldown = 60
+            cooldown_after_exit = 120
             sl_tp_mode = "adaptive"
             max_trades_hour = 5
             fee_percent = 0.075
+
+        if self.manual_sl_var.get() and self.manual_tp_var.get():
+            sl_tp_mode = "manual"
+            self.sl_tp_mode.set("manual")
 
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
@@ -181,11 +187,28 @@ class TradingGUILogicMixin:
                 "trend_strength": trend_strength,
                 "min_body_percent": min_body_percent,
                 "entry_cooldown": entry_cooldown,
+                "cooldown_after_exit": cooldown_after_exit,
                 "sl_tp_mode": sl_tp_mode,
                 "max_trades_hour": max_trades_hour,
                 "fee_percent": fee_percent,
             }
         )
+
+        filters = {
+            "use_adaptive_sl": sl_tp_mode == "adaptive",
+            "require_closed_candles": self.require_closed_candles.get(),
+            "cooldown_after_exit": cooldown_after_exit,
+            "min_body_percent": min_body_percent,
+            "volume_factor": volume_factor,
+            "use_rsi": self.use_rsi.get(),
+            "use_macd": self.use_macd.get(),
+            "sl_mode": sl_tp_mode,
+        }
+        try:
+            from strategy import set_filter_config
+            set_filter_config(filters)
+        except Exception:
+            pass
         if hasattr(self, "callback"):
             self.callback()
 

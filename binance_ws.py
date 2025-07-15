@@ -142,6 +142,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
                 "low": float(k.get("l")),
                 "close": float(k.get("c")),
                 "volume": float(k.get("v")),
+                "x": bool(k.get("x", False)),
                 "source": "ws",
             }
 

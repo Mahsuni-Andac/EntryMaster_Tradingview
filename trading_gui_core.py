@@ -154,6 +154,10 @@ class TradingGUI(TradingGUILogicMixin):
         self.use_time_filter = self.model.use_time_filter
         self.time_start = self.model.time_start
         self.time_end = self.model.time_end
+        self.require_closed_candles = self.model.require_closed_candles
+        self.use_rsi = self.model.use_rsi
+        self.use_macd = self.model.use_macd
+        self.cooldown_after_exit = self.model.cooldown_after_exit
 
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -322,6 +326,20 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
             self.time_filters.append((start, end))
 
+        extra_row = ttk.Frame(middle)
+        extra_row.grid(row=8, column=0, columnspan=6, pady=(0, 8), sticky="w")
+        ttk.Checkbutton(
+            extra_row,
+            text="Nur geschlossene Candles auswerten",
+            variable=self.require_closed_candles,
+        ).pack(side="left")
+        ttk.Checkbutton(extra_row, text="RSI aktivieren", variable=self.use_rsi).pack(
+            side="left", padx=(10, 0)
+        )
+        ttk.Checkbutton(extra_row, text="MACD aktivieren", variable=self.use_macd).pack(
+            side="left", padx=(10, 0)
+        )
+
         ttk.Label(risk, text="⚠️ Risikomanagement", font=("Arial", 11, "bold")).grid(row=0, column=0, pady=(0, 5), sticky="w")
 
         apc_frame = ttk.LabelFrame(risk, text="Auto Partial Close")
@@ -425,13 +443,19 @@ class TradingGUI(TradingGUILogicMixin):
             ("Trend-Stärke", self.trend_strength),
             ("Min. Candle Body %", self.min_candle_body_percent),
             ("Entry-Cooldown [s]", self.entry_cooldown_seconds),
-            ("SL/TP-Modus", self.sl_tp_mode),
+            ("Cooldown nach Exit [s]", self.cooldown_after_exit),
             ("Max Trades/h", self.max_trades_per_hour),
             ("Gebührensimulation [%]", self.fee_model),
         ]
         for idx, (label, var) in enumerate(rows):
             ttk.Label(grid, text=label+":").grid(row=idx, column=0, sticky="w", pady=2)
             ttk.Entry(grid, textvariable=var, width=10).grid(row=idx, column=1, sticky="w", pady=2)
+
+        sl_frame = ttk.Frame(grid)
+        sl_frame.grid(row=len(rows), column=0, columnspan=2, sticky="w", pady=2)
+        ttk.Label(sl_frame, text="SL/TP-Modus:").pack(side="left")
+        ttk.Radiobutton(sl_frame, text="Manuell", variable=self.sl_tp_mode, value="manual").pack(side="left")
+        ttk.Radiobutton(sl_frame, text="Adaptiv", variable=self.sl_tp_mode, value="adaptive").pack(side="left")
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)

@@ -45,3 +45,27 @@ def calculate_atr(candles, length):
 def calculate_volatility_score(candle, atr):
     candle_range = candle["high"] - candle["low"]
     return round(candle_range / atr, 2) if atr else 0
+
+
+def macd_crossover_detected(closes, short=12, long=26, signal=9):
+    if len(closes) < long + signal + 1:
+        return False
+
+    def ema(values, length):
+        k = 2 / (length + 1)
+        e = values[0]
+        for price in values[1:]:
+            e = price * k + e * (1 - k)
+        return e
+
+    prev = closes[-(long + signal + 1):-1]
+    curr = closes[-(long + signal):]
+
+    prev_macd = ema(prev, short) - ema(prev, long)
+    curr_macd = ema(curr, short) - ema(curr, long)
+    prev_signal = ema([prev_macd], signal)
+    curr_signal = ema([prev_macd, curr_macd], signal)
+
+    return (prev_macd < prev_signal and curr_macd > curr_signal) or (
+        prev_macd > prev_signal and curr_macd < curr_signal
+    )
