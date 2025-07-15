@@ -179,6 +179,11 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         if hold_duration >= MAX_HOLD_CANDLES:
             timed_exit = True
 
+    if hasattr(app, "current_position") and app.current_position:
+        app.current_position["bars_open"] = hold_duration
+        if hasattr(app, "update_trade_display"):
+            app.update_trade_display()
+
     opp_exit = False
     if signal and signal in ("long", "short"):
         opp_exit = (
@@ -206,6 +211,10 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         app.update_pnl(pnl)
         app.update_capital(capital)
         app.update_last_trade(position["side"], entry, current, pnl)
+        if hasattr(app, "current_position"):
+            app.current_position = None
+            if hasattr(app, "update_trade_display"):
+                app.update_trade_display()
 
         if hit_tp:
             reason = "TP erreicht"
@@ -283,6 +292,10 @@ def set_gui_bridge(gui_instance):
 def cancel_trade(position, app):
     print(f"❌ Abbruch der Position: {position['side']} @ {position['entry']:.2f}")
     app.position = None
+    if hasattr(app, "current_position"):
+        app.current_position = None
+        if hasattr(app, "update_trade_display"):
+            app.update_trade_display()
     app.log_event("🛑 Position wurde durch Benutzer abgebrochen!")
     return None
 
@@ -516,6 +529,10 @@ def _run_bot_live_inner(settings=None, app=None):
                 app.update_pnl(pnl)
                 app.update_capital(capital)
                 app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
+                if hasattr(app, "current_position"):
+                    app.current_position = None
+                    if hasattr(app, "update_trade_display"):
+                        app.update_trade_display()
                 position_open = False
                 position = None
                 app.position = None
@@ -611,6 +628,12 @@ def _run_bot_live_inner(settings=None, app=None):
                 position_global = position
                 entry_time_global = now
                 app.position = position
+                app.current_position = {
+                    "direction": entry_type.upper(),
+                    "entry_price": entry_exec,
+                    "entry_time": datetime.now(),
+                    "bars_open": 0,
+                }
                 position_entry_index = len(candles) - 1
                 entry_price = candle["close"]
                 position_open = True
@@ -622,6 +645,8 @@ def _run_bot_live_inner(settings=None, app=None):
                 logging.info(msg)
                 if hasattr(app, "log_event"):
                     app.log_event(msg)
+                if hasattr(app, "update_trade_display"):
+                    app.update_trade_display()
 
                 if amount > 0 and live_trading:
                     try:
