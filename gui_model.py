@@ -77,15 +77,15 @@ class GUIModel:
         self.sl_tp_status_var = tk.StringVar(master=root, value="")
 
         # expert settings
-        self.volume_factor = tk.StringVar(master=root, value="1.0")
-        self.trend_strength = tk.StringVar(master=root, value="0.5")
-        self.min_candle_body_percent = tk.StringVar(master=root, value="10")
-        self.entry_cooldown_seconds = tk.StringVar(master=root, value="0")
-        self.sl_tp_mode = tk.StringVar(master=root, value="auto")
+        self.volume_factor = tk.StringVar(master=root, value="1.2")
+        self.trend_strength = tk.StringVar(master=root, value="2")
+        self.min_candle_body_percent = tk.StringVar(master=root, value="0.4")
+        self.entry_cooldown_seconds = tk.StringVar(master=root, value="60")
+        self.sl_tp_mode = tk.StringVar(master=root, value="adaptive")
         self.min_profit_usd = tk.StringVar(master=root, value="1")
         self.partial_close_trigger = tk.StringVar(master=root, value="50")
-        self.fee_model = tk.StringVar(master=root, value="standard")
-        self.max_trades_per_hour = tk.StringVar(master=root, value="10")
+        self.fee_model = tk.StringVar(master=root, value="0.075")
+        self.max_trades_per_hour = tk.StringVar(master=root, value="5")
 
         # connection status
         self.feed_ok: bool = False

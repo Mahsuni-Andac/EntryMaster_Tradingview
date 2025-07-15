@@ -142,6 +142,24 @@ class TradingGUILogicMixin:
         drawdown_pct = self._get_safe_float(self.max_drawdown_pct, 15.0)
         cooldown = int(self.cooldown_minutes.get() or 2)
 
+        try:
+            volume_factor = float(self.volume_factor.get())
+            trend_strength = int(self.trend_strength.get())
+            min_body_percent = float(self.min_candle_body_percent.get())
+            entry_cooldown = int(self.entry_cooldown_seconds.get())
+            sl_tp_mode = self.sl_tp_mode.get().lower()
+            max_trades_hour = int(self.max_trades_per_hour.get())
+            fee_percent = float(self.fee_model.get())
+        except Exception:
+            self.log_event("❗ Ungültige Expertenwerte – Standardwerte werden verwendet.")
+            volume_factor = 1.2
+            trend_strength = 2
+            min_body_percent = 0.4
+            entry_cooldown = 60
+            sl_tp_mode = "adaptive"
+            max_trades_hour = 5
+            fee_percent = 0.075
+
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
             self.bridge.update_params(
@@ -159,6 +177,13 @@ class TradingGUILogicMixin:
                 "risk_per_trade": risk_pct,
                 "drawdown_pct": drawdown_pct,
                 "cooldown": cooldown,
+                "volume_factor": volume_factor,
+                "trend_strength": trend_strength,
+                "min_body_percent": min_body_percent,
+                "entry_cooldown": entry_cooldown,
+                "sl_tp_mode": sl_tp_mode,
+                "max_trades_hour": max_trades_hour,
+                "fee_percent": fee_percent,
             }
         )
         if hasattr(self, "callback"):

@@ -421,15 +421,13 @@ class TradingGUI(TradingGUILogicMixin):
         grid.pack()
 
         rows = [
-            ("Volume Factor", self.volume_factor),
-            ("Trend Strength", self.trend_strength),
-            ("Min Candle Body %", self.min_candle_body_percent),
-            ("Entry Cooldown [s]", self.entry_cooldown_seconds),
-            ("SL/TP Mode", self.sl_tp_mode),
-            ("Min Profit [$]", self.min_profit_usd),
-            ("Partial Close Trigger", self.partial_close_trigger),
-            ("Fee Model", self.fee_model),
+            ("Volume-Faktor", self.volume_factor),
+            ("Trend-Stärke", self.trend_strength),
+            ("Min. Candle Body %", self.min_candle_body_percent),
+            ("Entry-Cooldown [s]", self.entry_cooldown_seconds),
+            ("SL/TP-Modus", self.sl_tp_mode),
             ("Max Trades/h", self.max_trades_per_hour),
+            ("Gebührensimulation [%]", self.fee_model),
         ]
         for idx, (label, var) in enumerate(rows):
             ttk.Label(grid, text=label+":").grid(row=idx, column=0, sticky="w", pady=2)
