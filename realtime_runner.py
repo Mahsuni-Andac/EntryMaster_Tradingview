@@ -546,17 +546,12 @@ def _run_bot_live_inner(settings=None, app=None):
     }
     from strategy import get_filter_config
     filters = get_filter_config()
-    volume_factor = filters.get("volume_factor", settings.get("volume_factor", 1.2))
-    trend_strength = settings.get("trend_strength", 2)
-    min_body_percent = filters.get("min_body_percent", settings.get("min_body_percent", 0.4))
     entry_cooldown = settings.get("entry_cooldown", 60)
     cooldown_after_exit = filters.get("cooldown_after_exit", settings.get("cooldown_after_exit", 120))
     sl_tp_mode = filters.get("sl_mode", settings.get("sl_tp_mode", "adaptive"))
     max_trades_hour = settings.get("max_trades_hour", 5)
     fee_percent = settings.get("fee_percent", 0.075)
     require_closed_candles = filters.get("require_closed_candles", True)
-    use_rsi_filter = filters.get("use_rsi", False)
-    use_macd_filter = filters.get("use_macd", False)
     FEE_MODEL.taker_fee = fee_percent / 100
 
     last_entry_time = 0.0
@@ -647,21 +642,6 @@ def _run_bot_live_inner(settings=None, app=None):
             logging.info("🕒 Candle noch nicht geschlossen – Signal verworfen.")
             return
 
-        body_pct = 0.0
-        if candle["high"] > candle["low"]:
-            body_pct = abs(candle["close"] - candle["open"]) / (candle["high"] - candle["low"]) * 100
-        if body_pct < min_body_percent:
-            logging.info("❌ Body zu klein – kein Entry")
-            return
-        if candle.get("volume", 0.0) < avg_volume * volume_factor:
-            logging.info("❌ Volumen zu schwach – kein Entry")
-            return
-        if use_rsi_filter and (rsi_val < 30 or rsi_val > 70):
-            logging.info("❌ RSI außerhalb Range – kein Entry")
-            return
-        if use_macd_filter and not macd_cross:
-            logging.info("❌ Kein MACD-Crossover – kein Entry")
-            return
 
         indicator = {
             "rsi": rsi_val,

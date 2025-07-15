@@ -155,8 +155,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.time_start = self.model.time_start
         self.time_end = self.model.time_end
         self.require_closed_candles = self.model.require_closed_candles
-        self.use_rsi = self.model.use_rsi
-        self.use_macd = self.model.use_macd
         self.cooldown_after_exit = self.model.cooldown_after_exit
 
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -188,9 +186,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.last_reason_var = self.model.last_reason_var
 
         # expert settings
-        self.volume_factor = self.model.volume_factor
-        self.trend_strength = self.model.trend_strength
-        self.min_candle_body_percent = self.model.min_candle_body_percent
         self.entry_cooldown_seconds = self.model.entry_cooldown_seconds
         self.sl_tp_mode = self.model.sl_tp_mode
         self.min_profit_usd = self.model.min_profit_usd
@@ -334,12 +329,6 @@ class TradingGUI(TradingGUILogicMixin):
             text="Nur geschlossene Candles auswerten",
             variable=self.require_closed_candles,
         ).pack(side="left")
-        ttk.Checkbutton(extra_row, text="RSI aktivieren", variable=self.use_rsi).pack(
-            side="left", padx=(10, 0)
-        )
-        ttk.Checkbutton(extra_row, text="MACD aktivieren", variable=self.use_macd).pack(
-            side="left", padx=(10, 0)
-        )
 
         ttk.Label(risk, text="⚠️ Risikomanagement", font=("Arial", 11, "bold")).grid(row=0, column=0, pady=(0, 5), sticky="w")
 
@@ -440,9 +429,6 @@ class TradingGUI(TradingGUILogicMixin):
         grid.pack()
 
         rows = [
-            ("Volume-Faktor", self.volume_factor),
-            ("Trend-Stärke", self.trend_strength),
-            ("Min. Candle Body %", self.min_candle_body_percent),
             ("Entry-Cooldown [s]", self.entry_cooldown_seconds),
             ("Cooldown nach Exit [s]", self.cooldown_after_exit),
             ("Max Trades/h", self.max_trades_per_hour),

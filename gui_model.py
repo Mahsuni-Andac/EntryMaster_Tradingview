@@ -69,8 +69,6 @@ class GUIModel:
         self.time_start = tk.StringVar(master=root, value="08:00")
         self.time_end = tk.StringVar(master=root, value="18:00")
         self.require_closed_candles = tk.BooleanVar(master=root, value=True)
-        self.use_rsi = tk.BooleanVar(master=root, value=False)
-        self.use_macd = tk.BooleanVar(master=root, value=False)
         self.cooldown_after_exit = tk.StringVar(master=root, value="120")
 
         # manual SL/TP
@@ -82,9 +80,6 @@ class GUIModel:
         self.last_reason_var = tk.StringVar(master=root, value="–")
 
         # expert settings
-        self.volume_factor = tk.StringVar(master=root, value="1.2")
-        self.trend_strength = tk.StringVar(master=root, value="2")
-        self.min_candle_body_percent = tk.StringVar(master=root, value="0.4")
         self.entry_cooldown_seconds = tk.StringVar(master=root, value="60")
         self.sl_tp_mode = tk.StringVar(master=root, value="adaptive")
         self.min_profit_usd = tk.StringVar(master=root, value="1")
