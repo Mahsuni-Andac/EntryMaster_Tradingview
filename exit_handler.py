@@ -1,29 +1,36 @@
 # exit_handler.py
 """Handle closing positions via BitMEX REST."""
 
-from __future__ import annotations
-
-import logging
 from typing import Optional
+from bitmex_client import BitmexClient
 
-import bitmex_interface as bm
-
-logger = logging.getLogger(__name__)
-
+bm = BitmexClient()
 
 def close_position() -> Optional[dict]:
     """Close any open BitMEX position."""
-    try:
-        return bm.close_position()
-    except Exception as exc:
-        logger.error("close_position failed: %s", exc)
+    return bm.close_position()
+
+def close_partial_position(volume: float) -> Optional[dict]:
+    """
+    Closes part of the current position by specified volume.
+
+    Args:
+        volume (float): Contract size to close.
+    """
+    if volume <= 0:
         return None
 
-
-def fetch_open_position() -> Optional[dict]:
-    """Get current open position on BitMEX."""
-    try:
-        return bm.get_open_position()
-    except Exception as exc:
-        logger.error("fetch_open_position failed: %s", exc)
+    position = bm.get_position()
+    if not position:
         return None
+
+    side = "Sell" if position["currentQty"] > 0 else "Buy"
+    response = bm.place_order(
+        symbol="XBTUSD",
+        side=side,
+        orderQty=abs(volume),
+        ordType="Market",
+        reduceOnly=True
+    )
+    return response
+
