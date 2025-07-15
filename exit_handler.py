@@ -2,9 +2,7 @@
 """Handle closing positions via BitMEX REST."""
 
 from typing import Optional
-from bitmex_client import BitmexClient
-
-bm = BitmexClient()
+import bitmex_interface as bm
 
 def close_position() -> Optional[dict]:
     """Close any open BitMEX position."""
@@ -20,17 +18,10 @@ def close_partial_position(volume: float) -> Optional[dict]:
     if volume <= 0:
         return None
 
-    position = bm.get_position()
+    position = bm.get_open_position()
     if not position:
         return None
 
     side = "Sell" if position["currentQty"] > 0 else "Buy"
-    response = bm.place_order(
-        symbol="XBTUSD",
-        side=side,
-        orderQty=abs(volume),
-        ordType="Market",
-        reduceOnly=True
-    )
-    return response
+    return bm.place_order(side, abs(volume), reduce_only=True)
 
