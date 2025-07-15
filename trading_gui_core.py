@@ -322,26 +322,32 @@ class TradingGUI(TradingGUILogicMixin):
 
         manual_frame = ttk.LabelFrame(risk, text="Manuelles SL/TP")
         manual_frame.grid(row=3, column=0, padx=5, pady=(10, 0), sticky="nw")
-        ttk.Label(manual_frame, text="SL:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8).grid(row=0, column=1)
-        ttk.Label(manual_frame, text="TP:").grid(row=1, column=0, sticky="w")
-        ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8).grid(row=1, column=1)
-        self.auto_sl_button = ttk.Button(
+
+        self.toggle_sl_tp_button = ttk.Button(
             manual_frame,
-            text="🔒 SL/TP Auto aktiv",
-            command=self.activate_auto_sl_tp,
-            style="AutoSL.TButton",
-        )
-        self.auto_sl_button.grid(row=2, column=0, columnspan=2, sticky="we", pady=(5,0))
-        self.manual_sl_button = ttk.Button(
-            manual_frame,
-            text="🔒 SL/TP Manuell aktiv",
+            text="SL/TP AUS",
             command=self.toggle_manual_sl_tp,
-            style="ManualSL.TButton",
         )
-        self.manual_sl_button.grid(row=3, column=0, columnspan=2, sticky="we")
-        self.sl_tp_status_label = ttk.Label(manual_frame, textvariable=self.sl_tp_status_var, foreground="green")
-        self.sl_tp_status_label.grid(row=4, column=0, columnspan=2, sticky="w")
+        self.toggle_sl_tp_button.grid(row=0, column=0, sticky="w", pady=(5, 0))
+
+        self.sl_tp_hint_label = ttk.Label(
+            manual_frame,
+            text="❌ Aus: Gegensignal ist dein einziger Exit ⚠️",
+            foreground="red",
+        )
+        self.sl_tp_hint_label.grid(row=0, column=1, columnspan=2, sticky="w")
+
+        ttk.Label(manual_frame, text="SL (%):").grid(row=1, column=0, sticky="w")
+        sl_entry = ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8)
+        sl_entry.grid(row=1, column=1, sticky="w")
+        ttk.Button(manual_frame, text="💾", width=3, command=self.save_manual_sl).grid(row=1, column=2, padx=(5, 0))
+
+        ttk.Label(manual_frame, text="TP (%):").grid(row=2, column=0, sticky="w")
+        tp_entry = ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8)
+        tp_entry.grid(row=2, column=1, sticky="w")
+        ttk.Button(manual_frame, text="💾", width=3, command=self.save_manual_tp).grid(row=2, column=2, padx=(5, 0))
+
+        self.update_manual_sl_tp_status()
 
         self._build_andac_options(andac)
         self._build_controls(self.main_frame)
