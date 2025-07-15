@@ -92,6 +92,8 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         position["amount"],
         position["side"],
     )
+    fee_live = position["amount"] * current * 0.00075
+    pnl_live -= fee_live
 
     if (
         last_printed_pnl is None
@@ -161,6 +163,19 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 app.log_event(
                     f"⚡ Auto Partial Close bei TP ausgelöst! ➖ {partial_volume} Kontrakte glattgestellt."
                 )
+
+    if (
+        settings.get("simulate_partial", False)
+        and tp_price is not None
+        and position["amount"] > 0
+    ):
+        hit_tp_price = (
+            current >= tp_price if position["side"] == "long" else current <= tp_price
+        )
+        if hit_tp_price:
+            partial_amount = position["amount"] * settings.get("partial_pct", 0.5)
+            logging.info(f"🔄 Simulierter Partial Close: {partial_amount} BTC")
+            position["amount"] -= partial_amount
 
     if hasattr(app, "apc_enabled") and app.apc_enabled.get():
         try:

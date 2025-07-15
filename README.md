@@ -27,6 +27,7 @@ Dieses Repository folgt drei Prinzipien:
 - 📈 **Realtime-Log**, Systemstatus, und Telegram-Alerts.
 - 🔄 **Auto Partial Close (APC)**: Gewinnmitnahme nach konfigurierbarer PnL-Logik.
 - ✍️ **Manuelle SL/TP-Eingabe** möglich mit Validierung und Statusanzeige.
+- 💸 **Gebührensimulation** und optionaler Partial-Exit im Paper-Modus.
 
 ---
 
