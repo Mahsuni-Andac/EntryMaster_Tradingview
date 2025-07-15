@@ -127,7 +127,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 if to_close < 1:
                     to_close = 1
 
-                _, realized = simulate_trade(
+                _, realized = _basic_simulate_trade(
                     entry,
                     position["side"],
                     current,
@@ -194,16 +194,16 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     should_close = hit_tp or hit_sl or timed_exit or opp_exit
 
     if should_close:
-        _, pnl = simulate_trade(
-            entry,
-            position["side"],
+        new_capital = simulate_trade(
+            position,
             current,
-            position["amount"],
-            position["leverage"],
-            FEE_MODEL,
+            current_index if current_index is not None else 0,
+            settings,
+            capital,
         )
+        pnl = new_capital - capital
         old_cap = capital
-        capital += pnl
+        capital = new_capital
         check_plausibility(pnl, old_cap, capital, position["amount"])
 
         risk_manager.update_loss(pnl)
@@ -268,7 +268,7 @@ from console_status import (
     print_info,
 )
 from pnl_utils import calculate_futures_pnl, check_plausibility
-from simulator import FeeModel, simulate_trade
+from simulator import FeeModel, simulate_trade as _basic_simulate_trade
 
 # Maximum number of candles to keep a simulated trade open
 MAX_HOLD_CANDLES = 10
@@ -365,6 +365,10 @@ def _run_bot_live_inner(settings=None, app=None):
     print_start_banner(capital)
 
     interval_setting = settings.get("interval", BINANCE_INTERVAL)
+
+    if "track_history" not in settings:
+        settings["track_history"] = True
+        settings["trade_history"] = []
 
     if app:
         settings["log_event"] = app.log_event
@@ -516,15 +520,15 @@ def _run_bot_live_inner(settings=None, app=None):
             if hold_duration >= MAX_HOLD_CANDLES:
                 exit_price = candle["close"]
                 direction = current_position_direction
-                _, pnl = simulate_trade(
-                    entry_price,
-                    direction.lower(),
+                new_capital = simulate_trade(
+                    position,
                     exit_price,
-                    position["amount"],
-                    position["leverage"],
-                    FEE_MODEL,
+                    len(candles) - 1,
+                    settings,
+                    capital,
                 )
-                capital += pnl
+                pnl = new_capital - capital
+                capital = new_capital
                 risk_manager.update_loss(pnl)
                 app.update_pnl(pnl)
                 app.update_capital(capital)
@@ -743,3 +747,43 @@ def run_bot_live(settings=None, app=None):
         if app:
             messagebox.showerror("Startfehler", f"❌ Botstart fehlgeschlagen: {exc}")
         logging.error("Unexpected error during bot start", exc_info=True)
+
+
+def simulate_trade(position: dict, exit_price: float, candle_index: int,
+                   settings: dict, capital: float) -> float:
+    """Simulate a trade outcome and update capital/history."""
+
+    fee_rate = settings.get("fee_percent", 0.04) / 100
+    entry = position["entry"]
+    qty = position["amount"]
+    side = position["side"]
+    leverage = position.get("leverage", 1)
+
+    pnl = (exit_price - entry) if side == "long" else (entry - exit_price)
+    pnl_value = pnl * qty * leverage
+
+    fees = (entry + exit_price) * qty * fee_rate
+    net_result = pnl_value - fees
+
+    percent_change = (net_result / capital) * 100
+
+    direction = "LONG" if side == "long" else "SHORT"
+    logging.info(
+        f"[{time.strftime('%H:%M:%S')}] \U0001F4B0 Trade abgeschlossen: {direction} {entry:.2f} → {exit_price:.2f} | PnL: {net_result:.2f}$ ({percent_change:.2f}%)"
+    )
+
+    if settings.get("track_history"):
+        settings.setdefault("trade_history", [])
+        settings["trade_history"].append(
+            {
+                "time": time.strftime("%H:%M:%S"),
+                "entry": entry,
+                "exit": exit_price,
+                "side": direction,
+                "pnl": round(net_result, 2),
+                "percent": round(percent_change, 2),
+                "bars_open": candle_index - position.get("entry_index", 0),
+            }
+        )
+
+    return capital + net_result
