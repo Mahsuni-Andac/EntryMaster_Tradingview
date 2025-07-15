@@ -754,6 +754,8 @@ def _run_bot_live_inner(settings=None, app=None):
                         res = open_position(direction, amount)
                         if res is None:
                             raise RuntimeError("Order placement failed")
+                        if hasattr(app, "send_status_to_gui"):
+                            app.send_status_to_gui("entry_opened", position)
                     except Exception as e:
                         logging.error("Orderplatzierung fehlgeschlagen: %s", e)
             else:
@@ -794,6 +796,11 @@ def _run_bot_live_inner(settings=None, app=None):
         gui_bridge.update_status("✅ Bereit")
 
     while capital > 0 and not getattr(app, "force_exit", False):
+        if getattr(app, "should_stop", False):
+            logging.info("\U0001F6D1 Bot-Stop erkannt – beende Live-Modus.")
+            if hasattr(app, "send_status_to_gui"):
+                app.send_status_to_gui("status", "stopped")
+            return
         if not worker.is_alive():
             worker.start()
         if not getattr(app, "running", False):
