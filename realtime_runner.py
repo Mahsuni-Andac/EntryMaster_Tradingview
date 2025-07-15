@@ -419,10 +419,10 @@ def _run_bot_live_inner(settings=None, app=None):
     previous_signal = None
 
     def process_candle(candle: dict) -> None:
-        nonlocal (candles, position, capital, last_printed_pnl, last_printed_price,
-                  last_signal, last_signal_time, no_signal_printed, first_feed,
-                  previous_signal, position_entry_index, entry_price,
-                  position_open, current_position_direction)
+        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, \
+                 last_signal, last_signal_time, no_signal_printed, first_feed, \
+                 previous_signal, position_entry_index, entry_price, \
+                 position_open, current_position_direction
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
