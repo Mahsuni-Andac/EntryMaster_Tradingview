@@ -42,6 +42,11 @@ class TradingGUI(TradingGUILogicMixin):
         self.log_box = None
         self.auto_status_label = None
 
+        # trade history and open position tracking
+        self.trade_history = []
+        self.current_position = None
+        self.trade_box = None
+
         # references to model variables for convenience
         self.live_trading = self.model.live_trading
         self.paper_mode = self.model.paper_mode
@@ -69,6 +74,8 @@ class TradingGUI(TradingGUILogicMixin):
         width = self.root.winfo_width()
         height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
+
+        self.update_trade_display()
 
     def _init_neon_panel(self):
         self.neon_panel = NeonStatusPanel(self.root)
@@ -379,6 +386,11 @@ class TradingGUI(TradingGUILogicMixin):
         self.log_box = tk.Text(root, height=13, width=85, wrap="word", bg="#f9f9f9", relief="sunken", borderwidth=2)
         self.log_box.pack(pady=12)
 
+        trade_frame = ttk.LabelFrame(root, text="Letzte Trades und Laufende Position")
+        trade_frame.pack(fill="x", padx=5, pady=(0, 10))
+        self.trade_box = tk.Text(trade_frame, height=8, width=85, wrap="word", bg="#f0f0f0", relief="sunken", borderwidth=2, state="disabled")
+        self.trade_box.pack(fill="both", expand=True)
+
     def stop_and_reset(self):
         self.model.force_exit = True
         self.model.running = False
@@ -540,5 +552,54 @@ class TradingGUI(TradingGUILogicMixin):
             self.update_feed_status(False, "Keine Marktdaten – bitte prüfen")
 
         self.root.after(self.market_interval_ms, self._update_market_monitor)
+
+    def update_trade_display(self):
+        if not self.trade_box:
+            return
+
+        lines = []
+        if self.current_position:
+            direction = self.current_position.get("direction")
+            entry = self.current_position.get("entry_price")
+            bars = self.current_position.get("bars_open", 0)
+            lines.append(f"\U0001F4CA Laufende Position: {direction} @ {entry:.2f} | seit {bars} Kerzen")
+        else:
+            lines.append("\U0001F4CA Laufende Position: ---")
+
+        lines.append("")
+        lines.append("\U0001F4DC Letzte Trades:")
+        for trade in reversed(self.trade_history[-5:]):
+            lines.append(
+                f"[{trade['timestamp']}] {trade['direction']} @ {trade['entry']:.2f} → {trade['exit']:.2f} = {trade['pnl']:+.2f}$ ({trade['percent']:+.2f}%)"
+            )
+
+        self.trade_box.config(state="normal")
+        self.trade_box.delete("1.0", "end")
+        self.trade_box.insert("end", "\n".join(lines))
+        self.trade_box.config(state="disabled")
+
+    def update_last_trade(self, side: str, entry: float, exit_price: float, pnl: float):
+        super().update_last_trade(side, entry, exit_price, pnl)
+        pct = 0.0
+        try:
+            if side.lower() == "long":
+                pct = (exit_price - entry) / entry * 100
+            else:
+                pct = (entry - exit_price) / entry * 100
+        except Exception:
+            pct = 0.0
+
+        stamp = datetime.now().strftime("%H:%M:%S")
+        self.trade_history.append(
+            {
+                "timestamp": stamp,
+                "direction": side.upper(),
+                "entry": entry,
+                "exit": exit_price,
+                "pnl": pnl,
+                "percent": pct,
+            }
+        )
+        self.update_trade_display()
 
 
