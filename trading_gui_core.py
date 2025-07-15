@@ -237,6 +237,8 @@ class TradingGUI(TradingGUILogicMixin):
 
         from data_provider import init_price_var, price_var
         init_price_var(self.root)
+        self.yolo_button = ttk.Button(top_info, text="🚀 10C Entry", command=self.manual_yolo_entry)
+        self.yolo_button.pack(side="right", padx=5)
         self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
