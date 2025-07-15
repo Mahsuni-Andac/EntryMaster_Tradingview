@@ -4,10 +4,8 @@ import numpy as np
 import math
 
 class AdaptiveSLManager:
-    def __init__(self, atr_period=14, wick_lookback=7, atr_buffer=0.15):
+    def __init__(self, atr_period=14):
         self.atr_period = atr_period
-        self.wick_lookback = wick_lookback
-        self.atr_buffer = atr_buffer
 
     def calculate_atr(self, candles):
         if len(candles) < self.atr_period + 1:
@@ -28,13 +26,6 @@ class AdaptiveSLManager:
             raise ValueError("ATR zu klein oder ungültig")
         return atr
 
-    def find_swing_low(self, candles):
-        lows = [c["low"] for c in candles[-self.wick_lookback:]]
-        return min(lows) if lows else None
-
-    def find_swing_high(self, candles):
-        highs = [c["high"] for c in candles[-self.wick_lookback:]]
-        return max(highs) if highs else None
 
     def get_adaptive_sl_tp(self, direction, entry_price, candles, sl_multiplier=0.8, tp_multiplier=1.5):
         direction = direction.lower()
@@ -47,16 +38,10 @@ class AdaptiveSLManager:
         tp_multiplier = float(tp_multiplier)
 
         if direction == "long":
-            swing_low = self.find_swing_low(candles)
-            if swing_low is None:
-                raise ValueError("Nicht genug Kerzen für swing_low.")
-            sl = min(entry_price - atr * sl_multiplier, swing_low - atr * self.atr_buffer)
+            sl = entry_price - atr * sl_multiplier
             tp = entry_price + atr * tp_multiplier
         else:
-            swing_high = self.find_swing_high(candles)
-            if swing_high is None:
-                raise ValueError("Nicht genug Kerzen für swing_high.")
-            sl = max(entry_price + atr * sl_multiplier, swing_high + atr * self.atr_buffer)
+            sl = entry_price + atr * sl_multiplier
             tp = entry_price - atr * tp_multiplier
 
         return round(sl, 2), round(tp, 2)

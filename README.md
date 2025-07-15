@@ -48,7 +48,7 @@ Der Bot verwendet eine fortgeschrittene Entry-Strategie:
 
 ## 🛡️ Risikomanagement
 
-- 🔒 Adaptiver Stop-Loss / Take-Profit via `adaptive_sl_manager.py`.
+- 🔒 ATR-basierter Stop-Loss / Take-Profit via `adaptive_sl_manager.py`.
 - ❌ Kein Fallback – SL/TP müssen valide sein oder der Trade wird nicht ausgeführt.
 - ✅ Live-Bestätigung über GUI (Grün-Schaltung nach Prüfung).
 - 💰 Verlustgrenzen & Drawdown-Prozente via `risk_manager.py`.
