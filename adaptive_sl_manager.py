@@ -27,21 +27,19 @@ class AdaptiveSLManager:
         return atr
 
 
-    def get_adaptive_sl_tp(self, direction, entry_price, candles, sl_multiplier=0.8, tp_multiplier=1.5):
+    def get_adaptive_sl_tp(self, direction, entry_price, candles):
         direction = direction.lower()
         if direction not in ("long", "short"):
             raise ValueError("Richtung muss 'long' oder 'short' sein.")
 
         atr = self.calculate_atr(candles)
         entry_price = float(entry_price)
-        sl_multiplier = float(sl_multiplier)
-        tp_multiplier = float(tp_multiplier)
 
         if direction == "long":
-            sl = entry_price - atr * sl_multiplier
-            tp = entry_price + atr * tp_multiplier
+            sl = entry_price - atr
+            tp = entry_price + atr
         else:
-            sl = entry_price + atr * sl_multiplier
-            tp = entry_price - atr * tp_multiplier
+            sl = entry_price + atr
+            tp = entry_price - atr
 
-        return round(sl, 2), round(tp, 2)
+        return float(sl), float(tp)

@@ -79,6 +79,7 @@ class GUIModel:
         self.sl_tp_auto_active = tk.BooleanVar(master=root, value=False)
         self.sl_tp_manual_active = tk.BooleanVar(master=root, value=False)
         self.sl_tp_status_var = tk.StringVar(master=root, value="")
+        self.last_reason_var = tk.StringVar(master=root, value="–")
 
         # expert settings
         self.volume_factor = tk.StringVar(master=root, value="1.2")
