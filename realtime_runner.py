@@ -30,7 +30,7 @@ from data_provider import (
 )
 from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
-from exit_handler import close_position
+from exit_handler import close_position, close_partial_position
 from cooldown_manager import CooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
@@ -116,6 +116,40 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
     app.update_live_trade_pnl(pnl_live)
     app.live_pnl = pnl_live
+
+    tp_price = position.get("tp")
+    if (
+        settings.get("auto_partial_close", False)
+        and tp_price is not None
+        and not position.get("partial_closed", False)
+    ):
+        hit_tp = (
+            current >= tp_price
+            if position["side"] == "long"
+            else current <= tp_price
+        )
+        if hit_tp:
+            partial_volume = position.get("amount", 0) * 0.5
+            result = close_partial_position(partial_volume) if live_trading else True
+            if result:
+                _, realized = _basic_simulate_trade(
+                    entry,
+                    position["side"],
+                    tp_price,
+                    partial_volume,
+                    position["leverage"],
+                    FEE_MODEL,
+                )
+                old_cap = capital
+                capital += realized
+                check_plausibility(realized, old_cap, capital, partial_volume)
+                position["amount"] -= partial_volume
+                position["partial_closed"] = True
+                app.log_event(
+                    f"⚡ Auto Partial Close bei TP ausgelöst! ➖ {partial_volume} Kontrakte glattgestellt."
+                )
+            else:
+                app.log_event("⚠️ Fehler beim Partial Close!")
 
     if hasattr(app, "apc_enabled") and app.apc_enabled.get():
         try:
