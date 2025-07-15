@@ -11,10 +11,17 @@ import bitmex_interface as bm
 logger = logging.getLogger(__name__)
 
 
-def open_position(side: str, quantity: float, reduce_only: bool = False) -> Optional[dict]:
+def open_position(
+    side: str,
+    quantity: float,
+    reduce_only: bool = False,
+    order_type: str = "Market",
+) -> Optional[dict]:
     """Open a position on BitMEX."""
     try:
-        result = bm.place_order(side, quantity, reduce_only=reduce_only)
+        result = bm.place_order(
+            side, quantity, reduce_only=reduce_only, order_type=order_type
+        )
         if result is None:
             logger.error(
                 "❌ BitMEX-Order fehlgeschlagen | Daten: side=%s qty=%s", side, quantity

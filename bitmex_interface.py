@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 client = BitmexClient()
 
 
-def place_order(side: str, quantity: float, reduce_only: bool = False) -> Optional[dict]:
-    """Place a market order on BitMEX."""
+def place_order(side: str, quantity: float, reduce_only: bool = False,
+                order_type: str = "Market") -> Optional[dict]:
+    """Place an order on BitMEX."""
     try:
-        return client.place_order(side, quantity, reduce_only=reduce_only)
+        return client.place_order(
+            side, quantity, reduce_only=reduce_only, order_type=order_type
+        )
     except Exception as exc:
         logger.error("❌ BitMEX-Order fehlgeschlagen: %s", exc)
         return None
