@@ -14,6 +14,7 @@ class GUIModel:
         # runtime flags
         self.running: bool = False
         self.force_exit: bool = False
+        self.should_stop: bool = False
         self.live_pnl: float = 0.0
         self.total_pnl: float = 0.0
         self.wins: int = 0

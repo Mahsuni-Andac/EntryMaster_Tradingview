@@ -443,10 +443,10 @@ class TradingGUILogicMixin:
 
 def stop_and_reset(self):
     if hasattr(self, "model"):
-        self.model.force_exit = True
+        self.model.should_stop = True
         self.model.running = False
     else:
-        self.force_exit = True
+        self.should_stop = True
         self.running = False
     try:
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")

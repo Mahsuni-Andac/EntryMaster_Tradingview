@@ -392,7 +392,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.trade_box.pack(fill="both", expand=True)
 
     def stop_and_reset(self):
-        self.model.force_exit = True
+        self.model.should_stop = True
         self.model.running = False
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
 
