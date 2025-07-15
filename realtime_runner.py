@@ -573,8 +573,6 @@ def _run_bot_live_inner(settings=None, app=None):
     last_signal = None
     last_signal_time = 0
     entry_repeat_delay = settings.get("entry_repeat_delay", 3)
-    sl_mult = settings["stop_loss_atr_multiplier"]
-    tp_mult = settings["take_profit_atr_multiplier"]
 
     last_printed_pnl = None
     last_printed_price = None
@@ -710,6 +708,8 @@ def _run_bot_live_inner(settings=None, app=None):
             logging.info(msg)
             if hasattr(app, "log_event"):
                 app.log_event(msg)
+            if hasattr(app, "last_reason_var") and andac_signal.reasons:
+                app.last_reason_var.set(f"Verworfen wegen: {andac_signal.reasons[-1]}")
 
         # Timed Exit Logic for simulation mode
         if not live_trading and position_open:
@@ -802,7 +802,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     tp = gui_bridge.manual_tp
                 else:
                     try:
-                        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles, tp_multiplier=tp_mult)
+                        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles)
                     except Exception as e:
                         logging.error("Adaptive SL Fehler: %s", e)
                         sl = tp = None

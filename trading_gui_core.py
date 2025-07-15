@@ -185,6 +185,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.sl_tp_auto_active = self.model.sl_tp_auto_active
         self.sl_tp_manual_active = self.model.sl_tp_manual_active
         self.sl_tp_status_var = self.model.sl_tp_status_var
+        self.last_reason_var = self.model.last_reason_var
 
         # expert settings
         self.volume_factor = self.model.volume_factor
@@ -487,6 +488,8 @@ class TradingGUI(TradingGUILogicMixin):
         trade_frame.pack(fill="x", padx=5, pady=(0, 10))
         self.trade_box = tk.Text(trade_frame, height=8, width=85, wrap="word", bg="#f0f0f0", relief="sunken", borderwidth=2, state="disabled")
         self.trade_box.pack(fill="both", expand=True)
+
+        ttk.Label(root, textvariable=self.last_reason_var, foreground="red").pack(pady=(0, 5))
 
     def stop_and_reset(self):
         self.model.should_stop = True

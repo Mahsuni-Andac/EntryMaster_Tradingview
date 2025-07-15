@@ -7,7 +7,7 @@ class SLTPLogicTest(unittest.TestCase):
         candles = [
             {"high": 105, "low": 95, "close": 100},
         ] * 15
-        sl, tp = manager.get_adaptive_sl_tp("long", 100, candles, sl_multiplier=1, tp_multiplier=2)
+        sl, tp = manager.get_adaptive_sl_tp("long", 100, candles)
         self.assertLess(sl, 100)
         self.assertGreater(tp, 100)
 
