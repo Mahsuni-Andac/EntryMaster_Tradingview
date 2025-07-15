@@ -397,45 +397,62 @@ class TradingGUILogicMixin:
             return default
 
     def toggle_manual_sl_tp(self):
-        sl_val = self._get_safe_float(self.manual_sl_var, None)
-        tp_val = self._get_safe_float(self.manual_tp_var, None)
-        if sl_val is None or tp_val is None:
-            messagebox.showerror("Ungültige Eingabe", "Bitte gültige SL/TP-Werte eingeben.")
-            if hasattr(self, "manual_sl_button"):
-                style = getattr(self, "style", None)
-                if style:
-                    style.configure("ManualSL.TButton", foreground="red")
-                else:
-                    self.manual_sl_button.config(foreground="red")
-            self.log_event("❌ Ungültige manuelle SL/TP Werte")
-            return
-        ok = False
-        if hasattr(self, "model"):
-            sl = self.manual_sl_var.get()
-            tp = self.manual_tp_var.get()
-            ok = self.model.toggle_manual_sl_tp(sl, tp)
-        if not ok:
-            if hasattr(self, "manual_sl_button"):
-                style = getattr(self, "style", None)
-                if style:
-                    style.configure("ManualSL.TButton", foreground="red")
-                else:
-                    self.manual_sl_button.config(foreground="red")
-            self.log_event("❌ Ungültige manuelle SL/TP Werte")
-            return
-        if hasattr(self, "manual_sl_button"):
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("ManualSL.TButton", foreground="blue")
-            else:
-                self.manual_sl_button.config(foreground="blue")
-        if hasattr(self, "auto_sl_button"):
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("AutoSL.TButton", foreground="black")
-            else:
-                self.auto_sl_button.config(foreground="black")
-        self.log_event("📝 Manuelle SL/TP aktiviert")
+        current = self.sl_tp_manual_active.get()
+        self.sl_tp_manual_active.set(not current)
+        self.update_manual_sl_tp_status()
+        state = "aktiviert" if self.sl_tp_manual_active.get() else "deaktiviert"
+        self.log_event(f"📝 Manuelles SL/TP {state}")
+
+    def update_manual_sl_tp_status(self):
+        from config import SETTINGS
+
+        if self.sl_tp_manual_active.get():
+            if hasattr(self, "toggle_sl_tp_button"):
+                self.toggle_sl_tp_button.config(text="SL/TP EIN")
+            msg = "✅ SL/TP Aktiv"
+            color = "green"
+            SETTINGS["sl_tp_manual_active"] = True
+        else:
+            if hasattr(self, "toggle_sl_tp_button"):
+                self.toggle_sl_tp_button.config(text="SL/TP AUS")
+            msg = "❌ Aus: Gegensignal ist dein einziger Exit ⚠️"
+            color = "red"
+            SETTINGS["sl_tp_manual_active"] = False
+
+        if hasattr(self, "sl_tp_hint_label"):
+            self.sl_tp_hint_label.config(text=msg, foreground=color)
+        if hasattr(self, "sl_tp_status_var"):
+            self.sl_tp_status_var.set(msg)
+
+    def save_manual_sl(self):
+        from config import SETTINGS
+
+        try:
+            sl = float(self.manual_sl_var.get())
+            if sl <= 0:
+                raise ValueError
+            SETTINGS["manual_sl"] = sl
+            messagebox.showinfo("SL gespeichert", f"Stop Loss: {sl:.2f} % gesetzt.")
+        except Exception:
+            messagebox.showerror(
+                "Ungültiger SL",
+                "Bitte gültigen SL in Prozent eingeben (z. B. 0.5)",
+            )
+
+    def save_manual_tp(self):
+        from config import SETTINGS
+
+        try:
+            tp = float(self.manual_tp_var.get())
+            if tp <= 0:
+                raise ValueError
+            SETTINGS["manual_tp"] = tp
+            messagebox.showinfo("TP gespeichert", f"Take Profit: {tp:.2f} % gesetzt.")
+        except Exception:
+            messagebox.showerror(
+                "Ungültiger TP",
+                "Bitte gültigen TP in Prozent eingeben (z. B. 1.0)",
+            )
 
     def activate_auto_sl_tp(self):
         if hasattr(self, "model"):
@@ -443,18 +460,6 @@ class TradingGUILogicMixin:
         else:
             self.sl_tp_auto_active.set(True)
             self.sl_tp_manual_active.set(False)
-        if hasattr(self, "auto_sl_button"):
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("AutoSL.TButton", foreground="blue")
-            else:
-                self.auto_sl_button.config(foreground="blue")
-        if hasattr(self, "manual_sl_button"):
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("ManualSL.TButton", foreground="black")
-            else:
-                self.manual_sl_button.config(foreground="black")
         self.log_event("⚙️ Adaptive SL/TP aktiviert")
 
     def set_auto_sl_status(self, ok: bool) -> None:
@@ -464,13 +469,6 @@ class TradingGUILogicMixin:
             self.sl_tp_auto_active.set(ok)
             if ok:
                 self.sl_tp_manual_active.set(False)
-        if hasattr(self, "auto_sl_button"):
-            color = "green" if ok else "red"
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("AutoSL.TButton", foreground=color)
-            else:
-                self.auto_sl_button.config(foreground=color)
 
     def set_manual_sl_status(self, ok: bool) -> None:
         if hasattr(self, "model"):
@@ -479,13 +477,6 @@ class TradingGUILogicMixin:
             self.sl_tp_manual_active.set(ok)
             if ok:
                 self.sl_tp_auto_active.set(False)
-        if hasattr(self, "manual_sl_button"):
-            color = "green" if ok else "red"
-            style = getattr(self, "style", None)
-            if style:
-                style.configure("ManualSL.TButton", foreground=color)
-            else:
-                self.manual_sl_button.config(foreground=color)
 
 def stop_and_reset(self):
     if hasattr(self, "model"):
