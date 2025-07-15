@@ -537,6 +537,17 @@ def _run_bot_live_inner(settings=None, app=None):
         "opt_mtf_confirm": app.andac_opt_mtf_confirm.get(),
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
     }
+    volume_factor = settings.get("volume_factor", 1.2)
+    trend_strength = settings.get("trend_strength", 2)
+    min_body_percent = settings.get("min_body_percent", 0.4)
+    entry_cooldown = settings.get("entry_cooldown", 60)
+    sl_tp_mode = settings.get("sl_tp_mode", "adaptive")
+    max_trades_hour = settings.get("max_trades_hour", 5)
+    fee_percent = settings.get("fee_percent", 0.075)
+    FEE_MODEL.taker_fee = fee_percent / 100
+
+    last_entry_time = 0.0
+    trade_times: list[float] = []
     adaptive_sl = AdaptiveSLManager()
 
     candles = []
@@ -619,6 +630,16 @@ def _run_bot_live_inner(settings=None, app=None):
         low_lb = min(lows) if lows else candle["low"]
         prev_close = recent[-2]["close"] if len(recent) > 1 else None
         prev_open = recent[-2]["open"] if len(recent) > 1 else None
+
+        body_pct = 0.0
+        if candle["high"] > candle["low"]:
+            body_pct = abs(candle["close"] - candle["open"]) / (candle["high"] - candle["low"]) * 100
+        if body_pct < min_body_percent:
+            logging.info("❌ Body zu klein – kein Entry")
+            return
+        if candle.get("volume", 0.0) < avg_volume * volume_factor:
+            logging.info("❌ Volumen zu schwach – kein Entry")
+            return
 
         indicator = {
             "rsi": rsi_val,
@@ -737,36 +758,27 @@ def _run_bot_live_inner(settings=None, app=None):
                 return
             if entry_type:
                 no_signal_printed = False
+                if now - last_entry_time < entry_cooldown:
+                    logging.info("⏸ Entry-Cooldown aktiv – kein neuer Trade")
+                    return
+                trade_times[:] = [t for t in trade_times if now - t < 3600]
+                if len(trade_times) >= max_trades_hour:
+                    logging.info("⏸ Entry-Limit erreicht – kein neuer Trade")
+                    return
                 entry = candle["close"]
                 slip = random.uniform(*FEE_MODEL.slippage_range)
                 entry_exec = entry * (1 + slip) if entry_type == "long" else entry * (1 - slip)
                 amount = capital * POSITION_SIZE
                 sl = tp = None
 
-                if gui_bridge.manual_active:
+                if sl_tp_mode == "manual":
                     sl = gui_bridge.manual_sl
                     tp = gui_bridge.manual_tp
-                    if sl is None or tp is None:
-                        gui_bridge.set_manual_status(False)
-                        sl = tp = None
-                    else:
-                        valid = sl < entry and tp > entry if entry_type == "long" else sl > entry and tp < entry
-                        if valid:
-                            gui_bridge.set_manual_status(True)
-                        else:
-                            gui_bridge.set_manual_status(False)
-                            sl = tp = None
-
-                if sl is None and tp is None and gui_bridge.auto_active:
+                else:
                     try:
                         sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles, tp_multiplier=tp_mult)
-                        valid = (sl < entry and tp > entry) if entry_type == "long" else (sl > entry and tp < entry)
-                        if not valid:
-                            gui_bridge.set_auto_status(False)
-                            sl = tp = None
                     except Exception as e:
                         logging.error("Adaptive SL Fehler: %s", e)
-                        gui_bridge.set_auto_status(False)
                         sl = tp = None
 
                 if sl is None or tp is None:
@@ -830,6 +842,8 @@ def _run_bot_live_inner(settings=None, app=None):
                 current_position_direction = entry_type.upper()
                 last_signal = entry_type
                 last_signal_time = now
+                last_entry_time = now
+                trade_times.append(now)
 
                 msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry_exec:.2f})"
                 logging.info(msg)
@@ -950,7 +964,7 @@ def simulate_trade(position: dict, exit_price: float, candle_index: int,
                    settings: dict, capital: float) -> float:
     """Simulate a trade outcome and update capital/history."""
 
-    fee_rate = settings.get("fee_percent", 0.04) / 100
+    fee_rate = FEE_MODEL.taker_fee
     entry = position["entry"]
     qty = position["amount"]
     side = position["side"]

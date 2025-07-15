@@ -28,6 +28,8 @@ Dieses Repository folgt drei Prinzipien:
 - 🔄 **Auto Partial Close (APC)**: Gewinnmitnahme nach konfigurierbarer PnL-Logik.
 - ✍️ **Manuelle SL/TP-Eingabe** möglich mit Validierung und Statusanzeige.
 - 💸 **Gebührensimulation** und optionaler Partial-Exit im Paper-Modus.
+- 🛠️ **Experteneinstellungen**: Volume-Faktor, Trend-Stärke, Candle-Body-Limit,
+  Entry-Cooldown, SL/TP-Modus, Trade-Limit und Gebührenmodell.
 
 ---
 
