@@ -118,19 +118,29 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     app.live_pnl = pnl_live
 
     tp_price = position.get("tp")
+    partial_pct = settings.get("partial_close_pct", 0.5)
+    partial_order_type = settings.get("partial_order_type", "market")
+
     if (
         settings.get("auto_partial_close", False)
         and tp_price is not None
         and not position.get("partial_closed", False)
     ):
-        hit_tp = (
-            current >= tp_price
-            if position["side"] == "long"
-            else current <= tp_price
-        )
+        hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
         if hit_tp:
-            partial_volume = position.get("amount", 0) * 0.5
-            result = close_partial_position(partial_volume) if live_trading else True
+            partial_volume = round(position.get("amount", 0) * partial_pct, 3)
+            result = False
+            if live_trading:
+                try:
+                    result = close_partial_position(partial_volume, partial_order_type)
+                    if not result:
+                        app.log_event("❗️Retry Partial Close...")
+                        result = close_partial_position(partial_volume, partial_order_type)
+                except Exception as e:
+                    app.log_event(f"❌ Fehler beim Partial Close: {e}")
+            else:
+                result = True  # Simulation immer erfolgreich
+
             if result:
                 _, realized = _basic_simulate_trade(
                     entry,
@@ -148,8 +158,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 app.log_event(
                     f"⚡ Auto Partial Close bei TP ausgelöst! ➖ {partial_volume} Kontrakte glattgestellt."
                 )
-            else:
-                app.log_event("⚠️ Fehler beim Partial Close!")
 
     if hasattr(app, "apc_enabled") and app.apc_enabled.get():
         try:
@@ -330,9 +338,9 @@ POSITION_SIZE = 0.2
 
 gui_bridge = None
 
-def live_partial_close(side: str, qty: float) -> None:
+def live_partial_close(side: str, qty: float, order_type: str = "Market") -> None:
     reduce_side = "SELL" if side == "long" else "BUY"
-    res = open_position(reduce_side, qty, reduce_only=True)
+    res = open_position(reduce_side, qty, reduce_only=True, order_type=order_type)
     if res is not None:
         print(f"⚡️ LIVE-Teilschließung: {qty} {reduce_side} via Reduce Only Market")
     else:
