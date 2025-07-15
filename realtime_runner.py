@@ -30,7 +30,7 @@ from data_provider import (
 )
 from config import BINANCE_INTERVAL, BINANCE_SYMBOL
 from entry_handler import open_position
-from exit_handler import close_position
+from exit_handler import close_position, close_partial_position
 from cooldown_manager import CooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
@@ -164,6 +164,26 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     if tp_price is None or sl_price is None:
         logging.warning("SL/TP Werte fehlen, überspringe Positionsprüfung")
         return position, capital, last_printed_pnl, last_printed_price, False
+
+    # Auto Partial Close when TP is reached
+    if (
+        settings.get("auto_partial_close", False)
+        and current >= tp_price
+        and not position.get("partial_closed", False)
+    ):
+        partial_volume = position.get("amount", 0) * 0.5
+        result = True
+        if live_trading:
+            result = close_partial_position(partial_volume)
+        if result:
+            position["partial_closed"] = True
+            if hasattr(app, "log_event"):
+                app.log_event(
+                    f"⚡ Auto Partial Close bei TP ausgelöst! ➖ {partial_volume} Kontrakte glattgestellt."
+                )
+        else:
+            if hasattr(app, "log_event"):
+                app.log_event("⚠️ Fehler beim Partial Close!")
 
     high = candle.get("high", current)
     low = candle.get("low", current)
