@@ -302,6 +302,13 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         check_plausibility(pnl, old_cap, capital, position["amount"])
 
         risk_manager.update_loss(pnl)
+        if pnl < 0:
+            loss_val = -pnl
+            risk_ok = risk_manager.register_loss(loss_val)
+            if not risk_ok:
+                gui_bridge.stop_bot()
+            else:
+                cooldown.activate()
 
         app.update_pnl(pnl)
         app.update_capital(capital)
@@ -496,6 +503,11 @@ def _run_bot_live_inner(settings=None, app=None):
             cfg[key] = settings[key]
     if cfg:
         risk_manager.configure(**cfg)
+    risk_manager.set_limits(
+        settings.get("risk_per_trade", 3.0),
+        settings.get("drawdown_pct", 15.0),
+    )
+    risk_manager.set_start_capital(start_capital)
 
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
@@ -509,6 +521,7 @@ def _run_bot_live_inner(settings=None, app=None):
     settings["paper_mode"] = not live_trading
 
     cooldown = CooldownManager(settings.get("cooldown", 3))
+    cooldown.set_cooldown(settings.get("cooldown", 3))
     # REMOVED: SessionFilter
 
     config = {
@@ -670,6 +683,13 @@ def _run_bot_live_inner(settings=None, app=None):
                 pnl = new_capital - capital
                 capital = new_capital
                 risk_manager.update_loss(pnl)
+                if pnl < 0:
+                    loss_val = -pnl
+                    risk_ok = risk_manager.register_loss(loss_val)
+                    if not risk_ok:
+                        gui_bridge.stop_bot()
+                    else:
+                        cooldown.activate()
                 app.update_pnl(pnl)
                 app.update_capital(capital)
                 app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
@@ -713,7 +733,7 @@ def _run_bot_live_inner(settings=None, app=None):
             return
 
         if not position:
-            if cooldown.in_cooldown(now):
+            if cooldown.is_active():
                 return
             if entry_type:
                 no_signal_printed = False
@@ -750,6 +770,13 @@ def _run_bot_live_inner(settings=None, app=None):
                         sl = tp = None
 
                 if sl is None or tp is None:
+                    return
+
+                expected_loss = abs(entry_exec - sl) / entry_exec * leverage * amount
+                if risk_manager.is_risk_too_high(expected_loss, capital):
+                    logging.warning("🚫 Risiko zu hoch – Trade abgelehnt.")
+                    if hasattr(app, "log_event"):
+                        app.log_event("🚫 Risiko zu hoch – Trade abgelehnt.")
                     return
 
                 position = {
