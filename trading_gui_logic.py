@@ -390,7 +390,21 @@ class TradingGUILogicMixin:
         except:
             return var.get()
 
+    def _get_safe_float(self, var, default=None):
+        try:
+            return float(var.get().replace(",", "."))
+        except (ValueError, AttributeError):
+            return default
+
     def toggle_manual_sl_tp(self):
+        sl_val = self._get_safe_float(self.manual_sl_var, None)
+        tp_val = self._get_safe_float(self.manual_tp_var, None)
+        if sl_val is None or tp_val is None:
+            messagebox.showerror("Ungültige Eingabe", "Bitte gültige SL/TP-Werte eingeben.")
+            if hasattr(self, "manual_sl_button"):
+                self.manual_sl_button.config(foreground="red")
+            self.log_event("❌ Ungültige manuelle SL/TP Werte")
+            return
         ok = False
         if hasattr(self, "model"):
             sl = self.manual_sl_var.get()
