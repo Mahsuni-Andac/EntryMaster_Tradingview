@@ -15,6 +15,11 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+
+def now_time() -> str:
+    """Return the current time formatted as HH:MM:SS."""
+    return datetime.now().strftime("%H:%M:%S")
+
 from data_provider import (
     fetch_latest_candle,
     fetch_last_price,
@@ -146,6 +151,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                     live_partial_close(position["side"], to_close)
                 if position["amount"] <= 0:
                     position = None
+                    position_open = False
                     entry_time_global = None
                     app.log_event("✅ Position durch APC komplett geschlossen")
                     return position, capital, last_printed_pnl, last_printed_price, True
@@ -163,12 +169,14 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     hit_sl = current <= sl_price if position["side"] == "long" else current >= sl_price
 
     timed_exit = False
+    hold_duration = 0
     if (
         not live_trading
         and current_index is not None
         and position.get("entry_index") is not None
     ):
-        if current_index - position["entry_index"] >= MAX_HOLD_CANDLES:
+        hold_duration = current_index - position["entry_index"]
+        if hold_duration >= MAX_HOLD_CANDLES:
             timed_exit = True
 
     opp_exit = False
@@ -204,13 +212,20 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         elif hit_sl:
             reason = "SL erreicht"
         elif timed_exit:
-            reason = f"\u23F1 Timed Exit: {position['side'].upper()} @ {current:.2f} nach {MAX_HOLD_CANDLES} Kerzen"
+            reason = (
+                f"\u23F1 Timed Exit: {position['side'].upper()} @ {current:.2f} "
+                f"nach {hold_duration} Kerzen"
+            )
         else:
             reason = "Gegensignal"
 
         if timed_exit:
-            stamp = datetime.now().strftime("%H:%M:%S")
-            log_msg = f"[{stamp}] {reason} | PnL {pnl:.2f}"
+            stamp = now_time()
+            log_msg = f"[{stamp}] {reason}"
+            logger.info(log_msg)
+            logger.info(
+                f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+            )
         elif opp_exit:
             stamp = datetime.now().strftime("%H:%M:%S")
             log_msg = f"[{stamp}] {reason} bei {current:.2f} | PnL {pnl:.2f}"
@@ -218,7 +233,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             log_msg = (
                 f"\U0001F4A5 Position geschlossen ({position['side']}) | Entry {entry:.2f} -> Exit {current:.2f} | PnL {pnl:.2f}"
             )
-
         logging.info(log_msg)
         app.log_event(log_msg)
         if live_trading:
@@ -231,6 +245,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             cooldown.register_sl(time.time())
 
         position = None
+        position_open = False
         entry_time_global = None
         return position, capital, last_printed_pnl, last_printed_price, True
 
@@ -246,6 +261,7 @@ from console_status import (
 from pnl_utils import calculate_futures_pnl, check_plausibility
 from simulator import FeeModel, simulate_trade
 
+# Maximum number of candles to keep a simulated trade open
 MAX_HOLD_CANDLES = 10
 FEE_MODEL = FeeModel(taker_fee=0.0004)
 POSITION_SIZE = 0.2
@@ -383,6 +399,10 @@ def _run_bot_live_inner(settings=None, app=None):
 
     candles = []
     position = None
+    position_entry_index = None
+    entry_price = None
+    position_open = False
+    current_position_direction = None
     last_printed_price = None
     last_signal = None
     last_signal_time = 0
@@ -399,7 +419,10 @@ def _run_bot_live_inner(settings=None, app=None):
     previous_signal = None
 
     def process_candle(candle: dict) -> None:
-        nonlocal candles, position, capital, last_printed_pnl, last_printed_price, last_signal, last_signal_time, no_signal_printed, first_feed, previous_signal
+        nonlocal (candles, position, capital, last_printed_pnl, last_printed_price,
+                  last_signal, last_signal_time, no_signal_printed, first_feed,
+                  previous_signal, position_entry_index, entry_price,
+                  position_open, current_position_direction)
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
@@ -473,6 +496,38 @@ def _run_bot_live_inner(settings=None, app=None):
             logging.info(msg)
             if hasattr(app, "log_event"):
                 app.log_event(msg)
+
+        # Timed Exit Logic for simulation mode
+        if not live_trading and position_open:
+            hold_duration = len(candles) - 1 - position_entry_index
+            if hold_duration >= MAX_HOLD_CANDLES:
+                exit_price = candle["close"]
+                direction = current_position_direction
+                _, pnl = simulate_trade(
+                    entry_price,
+                    direction.lower(),
+                    exit_price,
+                    position["amount"],
+                    position["leverage"],
+                    FEE_MODEL,
+                )
+                capital += pnl
+                risk_manager.update_loss(pnl)
+                app.update_pnl(pnl)
+                app.update_capital(capital)
+                app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
+                position_open = False
+                position = None
+                app.position = None
+                position_global = None
+                entry_time_global = None
+                logger.info(
+                    f"[{now_time()}] \u23F1 Timed Exit: {direction} @ {exit_price:.2f} nach {hold_duration} Kerzen"
+                )
+                logger.info(
+                    f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+                )
+                return
 
         if position:
             position_data = handle_existing_position(
@@ -556,6 +611,10 @@ def _run_bot_live_inner(settings=None, app=None):
                 position_global = position
                 entry_time_global = now
                 app.position = position
+                position_entry_index = len(candles) - 1
+                entry_price = candle["close"]
+                position_open = True
+                current_position_direction = entry_type.upper()
                 last_signal = entry_type
                 last_signal_time = now
 
