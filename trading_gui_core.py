@@ -11,7 +11,6 @@ from api_credential_frame import APICredentialFrame, EXCHANGES
 from neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
-from gui_registry import register_element
 from gui_diagnose import add_gui_diagnose_button
 
 class TradingGUI(TradingGUILogicMixin):
@@ -84,16 +83,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.root.geometry(f"{width}x{height}")
 
         self.update_trade_display()
-
-    def export_gui(self) -> None:
-        """Create a JSON export of all registered GUI elements."""
-        from gui_registry import export_gui
-
-        try:
-            export_gui()
-            self.log_event("📋 GUI-Export gespeichert")
-        except Exception as exc:
-            self.log_event(f"❌ GUI-Export fehlgeschlagen: {exc}")
 
     def _init_neon_panel(self):
         self.neon_panel = NeonStatusPanel(self.root)
@@ -461,7 +450,6 @@ class TradingGUI(TradingGUILogicMixin):
 
         start_btn = ttk.Button(button_frame, text="▶️ Bot starten", command=self.start_bot)
         start_btn.grid(row=0, column=0, padx=5)
-        register_element(start_btn, "start_button", command=self.start_bot)
         ttk.Button(button_frame, text="⛔ Trade abbrechen", command=self.emergency_flat_position).grid(row=0, column=1, padx=5)
         ttk.Button(button_frame, text="❗️ Notausstieg", command=self.emergency_exit).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="🛑 Alles stoppen & sichern", command=self.stop_and_reset).grid(row=0, column=3, padx=5)
@@ -473,24 +461,17 @@ class TradingGUI(TradingGUILogicMixin):
             command=self.update_auto_status,
         )
         auto_chk.grid(row=1, column=0, padx=5)
-        register_element(auto_chk, "auto_recommendations_chk", var=self.auto_apply_recommendations, command=self.update_auto_status)
         apply_btn = ttk.Button(button_frame, text="✅ Empfehlungen übernehmen", command=self.apply_recommendations)
         apply_btn.grid(row=1, column=1, padx=5)
-        register_element(apply_btn, "apply_recommendations_button", command=self.apply_recommendations)
         disable_btn = ttk.Button(button_frame, text="🧹 Alles deaktivieren", command=self.disable_all_filters)
         disable_btn.grid(row=1, column=2, padx=5)
-        register_element(disable_btn, "disable_filters_button", command=self.disable_all_filters)
 
         save_btn = ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file)
         save_btn.grid(row=1, column=3, padx=5)
-        register_element(save_btn, "save_settings_button", command=self.save_to_file)
 
         load_btn = ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file)
         load_btn.grid(row=1, column=4, padx=5)
-        register_element(load_btn, "load_settings_button", command=self.load_from_file)
-        export_btn = ttk.Button(button_frame, text="\U0001F4CB GUI-Export erstellen", command=self.export_gui)
-        export_btn.grid(row=1, column=5, padx=5)
-        register_element(export_btn, "export_button", command=self.export_gui)
+        # removed GUI export functionality
         add_gui_diagnose_button(button_frame)
 
         self.auto_status_label = ttk.Label(button_frame, font=("Arial", 10, "bold"), foreground="green")

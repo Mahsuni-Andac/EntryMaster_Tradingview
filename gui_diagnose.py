@@ -1,106 +1,108 @@
 import tkinter as tk
 from tkinter import ttk
-import os
 from datetime import datetime
 
 
-def describe_widget(widget):
-    lines = []
+def _widget_info(widget: tk.Widget) -> dict:
+    name = ''
+    if 'text' in widget.keys():
+        name = widget.cget('text')
+    if not name:
+        name = getattr(widget, '_name', widget.winfo_class())
+    value = ''
     try:
-        name = widget._name
-        widget_type = widget.winfo_class()
-        visible = widget.winfo_ismapped()
-        has_logic = False
-        value = None
-        issues = []
-        actions = []
+        if isinstance(widget, (tk.Entry, ttk.Entry)):
+            value = widget.get()
+        elif isinstance(widget, tk.Text):
+            value = widget.get('1.0', 'end').strip()
+        elif isinstance(widget, ttk.Combobox):
+            value = widget.get()
+        elif 'text' in widget.keys():
+            value = widget.cget('text')
+    except Exception:
+        value = ''
+    visible = bool(widget.winfo_ismapped())
+    has_logic = False
+    try:
+        if 'command' in widget.keys() and widget.cget('command'):
+            has_logic = True
+    except Exception:
+        pass
 
-        try:
-            if hasattr(widget, 'cget') and widget.cget('command'):
-                has_logic = True
-        except Exception:
-            pass
+    hints: list[str] = []
+    if isinstance(widget, (tk.Entry, ttk.Entry, tk.Text, ttk.Combobox)) and value == '':
+        hints.append('kein Wert gesetzt')
+    if isinstance(widget, (tk.Checkbutton, ttk.Checkbutton)) and not widget.cget('variable'):
+        hints.append('keine Variable verbunden')
+    if isinstance(widget, (tk.Entry, ttk.Entry, ttk.Combobox)) and 'textvariable' in widget.keys() and not widget.cget('textvariable'):
+        hints.append('keine Variable verbunden')
 
-        try:
-            if isinstance(widget, tk.Entry):
-                value = widget.get()
-                if value.strip() == "":
-                    issues.append("Feld ist leer.")
-                    actions.append("Feld sollte vorbelegt oder validiert werden.")
-            elif isinstance(widget, tk.Checkbutton):
-                value = widget.var.get() if hasattr(widget, 'var') else None
-                if value is None:
-                    issues.append("Keine Variable verbunden.")
-                    actions.append("`variable`-Objekt fehlt oder ist None.")
-            elif isinstance(widget, tk.Label):
-                value = widget.cget("text")
-            elif isinstance(widget, tk.Scale):
-                value = widget.get()
-            elif isinstance(widget, tk.Text):
-                value = widget.get("1.0", "end").strip()
-            elif isinstance(widget, ttk.Combobox):
-                value = widget.get()
-        except Exception as e:
-            issues.append(f"Fehler beim Lesen des Wertes: {str(e)}")
-
-        lines.append(f"### 🧱 Widget: `{name}`\n")
-        lines.append(f"- **Typ:** `{widget_type}`")
-        lines.append(f"- **Sichtbar:** `{visible}`")
-        lines.append(f"- **Wert:** `{value}`")
-        lines.append(f"- **Logik vorhanden:** `{has_logic}`")
-
-        if issues:
-            lines.append(f"- ❗ **Probleme:**")
-            for issue in issues:
-                lines.append(f"  - {issue}")
-        if actions:
-            lines.append(f"- ✅ **Empfehlungen:**")
-            for act in actions:
-                lines.append(f"  - {act}")
-
-        lines.append("")
-    except Exception as e:
-        lines.append(f"- Fehler bei Analyse eines Widgets: {str(e)}\n")
-
-    return "\n".join(lines)
+    return {
+        'name': name,
+        'type': widget.winfo_class(),
+        'value': value,
+        'visible': visible,
+        'has_logic': has_logic,
+        'hints': hints,
+    }
 
 
-def scan_widgets_to_markdown(root, filename="gui_diagnose.md"):
-    all_widgets = []
+def generate_diagnose_md(root: tk.Widget, filename: str = 'gui_diagnose.md') -> None:
+    report: list[str] = []
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    report.append('# GUI Diagnose')
+    report.append('')
+    report.append('Automatisch erzeugter Bericht der Trading-GUI.')
+    report.append(f'_Erstellt am {timestamp}_')
+    report.append('')
 
-    def recurse(widget):
-        all_widgets.append(widget)
+    stats = {'total': 0, 'no_logic': 0, 'empty': 0}
+
+    def walk(widget: tk.Widget, section: str | None = None):
         for child in widget.winfo_children():
-            recurse(child)
+            if isinstance(child, ttk.Notebook):
+                for tab_id in child.tabs():
+                    frame = child.nametowidget(tab_id)
+                    title = child.tab(tab_id, 'text') or frame.winfo_name()
+                    report.append(f'## Abschnitt: {title}')
+                    walk(frame, title)
+            elif isinstance(child, (tk.LabelFrame, ttk.LabelFrame)):
+                title = child.cget('text') or child.winfo_name()
+                report.append(f'## Abschnitt: {title}')
+                walk(child, title)
+            elif isinstance(child, (tk.Frame, ttk.Frame)):
+                walk(child, section)
+            else:
+                info = _widget_info(child)
+                stats['total'] += 1
+                if not info['has_logic']:
+                    stats['no_logic'] += 1
+                if isinstance(child, (tk.Entry, ttk.Entry, tk.Text, ttk.Combobox)) and info['value'] == '':
+                    stats['empty'] += 1
+                report.append(f"### Widget: {info['name']}")
+                report.append(f"- Typ: {info['type']}")
+                report.append(f"- Standardwert: {info['value']}")
+                report.append(f"- Sichtbar: {'Ja' if info['visible'] else 'Nein'}")
+                report.append(f"- Logik: {'Ja' if info['has_logic'] else 'Nein'}")
+                if info['hints']:
+                    report.append('- Hinweise:')
+                    for h in info['hints']:
+                        report.append(f'  - {h}')
+                report.append('')
 
-    recurse(root)
+    walk(root)
 
-    content = [f"# 🧩 GUI Diagnosebericht – {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"]
-    content.append(f"**Anzahl Widgets insgesamt:** {len(all_widgets)}\n")
+    report.append('---')
+    report.append('## Zusammenfassung')
+    report.append(f"- Anzahl aller Widgets: {stats['total']}")
+    report.append(f"- Anzahl ohne Logik: {stats['no_logic']}")
+    report.append(f"- Anzahl leerer Felder: {stats['empty']}")
 
-    logic_missing = 0
-    issues_found = 0
-
-    for w in all_widgets:
-        desc = describe_widget(w)
-        content.append(desc)
-        if "- **Logik vorhanden:** `False`" in desc:
-            logic_missing += 1
-        if "❗" in desc:
-            issues_found += 1
-
-    content.append("---")
-    content.append("## 📊 Zusammenfassung")
-    content.append(f"- Gesamtzahl Widgets: **{len(all_widgets)}**")
-    content.append(f"- Ohne Logik: **{logic_missing}**")
-    content.append(f"- Mit erkannten Problemen: **{issues_found}**")
-
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write("\n".join(content))
-
-    print(f"📄 Diagnosebericht gespeichert: {filename}")
+    with open(filename, 'w', encoding='utf-8') as fh:
+        fh.write('\n'.join(report))
 
 
-def add_gui_diagnose_button(root):
-    btn = tk.Button(root, text="📋 GUI-Diagnose (Markdown)", command=lambda: scan_widgets_to_markdown(root))
+def add_gui_diagnose_button(root: tk.Widget) -> None:
+    btn = tk.Button(root, text='📋 GUI-Diagnose (Markdown)', command=lambda: generate_diagnose_md(root))
     btn.grid(row=999, column=0, columnspan=2, pady=10)
+
