@@ -56,7 +56,7 @@ from andac_entry_master import (
 )
 
 from andac_entry_master import AndacEntryMaster, AndacSignal
-from andac_entry_master import SignalWorker, should_enter, AdaptiveSLManager
+from andac_entry_master import should_enter, AdaptiveSLManager
 from status_events import StatusDispatcher
 
 
@@ -834,8 +834,6 @@ def _run_bot_live_inner(settings=None, app=None):
                     no_signal_printed = True
 
     candle_queue = get_candle_queue()
-    worker = SignalWorker(process_candle, queue_obj=candle_queue)
-    worker.start()
 
     if not data_provider._CANDLE_WS_STARTED:
         start_candle_websocket(interval_setting)
@@ -853,7 +851,7 @@ def _run_bot_live_inner(settings=None, app=None):
                 break
 
     logging.info(
-        "Candle-Worker gestartet (%s Candles im Buffer)", worker.queue.qsize()
+        "Candle queue initialisiert (%s Candles im Buffer)", candle_queue.qsize()
     )
 
     ATR_REQUIRED = 14
@@ -871,8 +869,6 @@ def _run_bot_live_inner(settings=None, app=None):
             if hasattr(app, "send_status_to_gui"):
                 app.send_status_to_gui("status", "stopped")
             return
-        if not worker.is_alive():
-            worker.start()
         if not getattr(app, "running", False):
             time.sleep(1)
             continue
@@ -882,7 +878,14 @@ def _run_bot_live_inner(settings=None, app=None):
             )
             time.sleep(1)
             continue
-        backlog = worker.queue.qsize()
+        # Verarbeite alle verfügbaren Candles aus der Queue
+        while True:
+            try:
+                process_candle(candle_queue.get_nowait())
+            except queue.Empty:
+                break
+
+        backlog = candle_queue.qsize()
         if backlog > 5:
             if not candle_warning_printed:
                 logging.warning("⚠️ Candle-Backlog > %s – mögliche Latenz!", backlog)
