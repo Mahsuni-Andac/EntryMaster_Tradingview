@@ -73,6 +73,10 @@ class AndacEntryMaster:
         opt_mtf_confirm: bool = False,
         opt_volumen_strong: bool = False,
         opt_session_filter: bool = False,
+        cooldown: Optional[int] = None,
+        max_drawdown_pct: Optional[float] = None,
+        max_loss: Optional[float] = None,
+        sl_tp_manual_active: Optional[bool] = None,
     ) -> None:
         self.lookback = lookback
         self.puffer = puffer
@@ -88,9 +92,22 @@ class AndacEntryMaster:
         self.opt_volumen_strong = opt_volumen_strong
         self.opt_session_filter = opt_session_filter
 
+        self.cooldown = cooldown if cooldown is not None else SETTINGS.get("cooldown", 0)
+        self.max_drawdown_pct = (
+            max_drawdown_pct if max_drawdown_pct is not None else SETTINGS.get("drawdown_pct", 0.0)
+        )
+        self.max_loss = max_loss if max_loss is not None else SETTINGS.get("max_loss", 0.0)
+        self.sl_tp_manual_active = (
+            sl_tp_manual_active if sl_tp_manual_active is not None else SETTINGS.get("sl_tp_manual_active", True)
+        )
+
         self.candles: List[Dict[str, float]] = []
         self.prev_bull_signal = False
         self.prev_bear_signal = False
+        self.last_signal_time = 0.0
+        self.current_drawdown = 0.0
+        self.daily_loss = 0.0
+        self.last_block_reason: Optional[str] = None
 
     @staticmethod
     def _sma(values: List[float], length: int) -> float:
@@ -139,6 +156,23 @@ class AndacEntryMaster:
         rsi = 100 - (100 / (1 + rs))
         return max(0.0, min(100.0, rsi))
 
+    def is_trade_allowed(self) -> tuple[bool, Optional[str]]:
+        now = time.time()
+        if now - self.last_signal_time < self.cooldown:
+            self.last_block_reason = "cooldown"
+            return False, "cooldown"
+        if (
+            self.current_drawdown >= self.max_drawdown_pct
+            or self.daily_loss >= self.max_loss
+        ):
+            self.last_block_reason = "drawdown block"
+            return False, "drawdown block"
+        if not self.sl_tp_manual_active:
+            self.last_block_reason = "sl/tp disabled"
+            return False, "sl/tp disabled"
+        self.last_block_reason = None
+        return True, None
+
     def evaluate(self, candle: Dict[str, float], symbol: str = "BTCUSDT") -> AndacSignal:
 
         self.candles.append(candle)
@@ -146,6 +180,10 @@ class AndacEntryMaster:
             self.candles.pop(0)
         if len(self.candles) < self.lookback + 2:
             return AndacSignal(None, 50.0, False, False)
+
+        allowed, reason = self.is_trade_allowed()
+        if not allowed:
+            return AndacSignal(None, 50.0, False, False, [reason])
 
         highs = [c["high"] for c in self.candles]
         lows = [c["low"] for c in self.candles]
@@ -247,6 +285,8 @@ class AndacEntryMaster:
             elif candidate_short:
                 reasons = reasons_short
 
+        if signal:
+            self.last_signal_time = time.time()
         engulfing = bull_eng if signal == "long" else bear_eng if signal == "short" else False
         return AndacSignal(signal, rsi, vol_spike, engulfing, reasons)
 
@@ -489,6 +529,10 @@ def should_enter(candle: dict, indicator: dict, config: dict) -> AndacSignal:
             opt_mtf_confirm=config.get("opt_mtf_confirm", False),
             opt_volumen_strong=config.get("opt_volumen_strong", False),
             opt_session_filter=config.get("opt_session_filter", False),
+            cooldown=SETTINGS.get("cooldown", 0),
+            max_drawdown_pct=SETTINGS.get("drawdown_pct", 0.0),
+            max_loss=SETTINGS.get("max_loss", 0.0),
+            sl_tp_manual_active=SETTINGS.get("sl_tp_manual_active", True),
         )
     else:
         _MASTER.lookback = config.get("lookback", _MASTER.lookback)
@@ -503,6 +547,10 @@ def should_enter(candle: dict, indicator: dict, config: dict) -> AndacSignal:
         _MASTER.opt_mtf_confirm = config.get("opt_mtf_confirm", _MASTER.opt_mtf_confirm)
         _MASTER.opt_volumen_strong = config.get("opt_volumen_strong", _MASTER.opt_volumen_strong)
         _MASTER.opt_session_filter = config.get("opt_session_filter", _MASTER.opt_session_filter)
+        _MASTER.cooldown = SETTINGS.get("cooldown", _MASTER.cooldown)
+        _MASTER.max_drawdown_pct = SETTINGS.get("drawdown_pct", _MASTER.max_drawdown_pct)
+        _MASTER.max_loss = SETTINGS.get("max_loss", _MASTER.max_loss)
+        _MASTER.sl_tp_manual_active = SETTINGS.get("sl_tp_manual_active", _MASTER.sl_tp_manual_active)
     return _MASTER.evaluate(candle)
 
 
