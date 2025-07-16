@@ -207,9 +207,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
     tp_price = position.get("tp")
     sl_price = position.get("sl")
-    if tp_price is None or sl_price is None:
-        logging.warning("SL/TP Werte fehlen, überspringe Positionsprüfung")
-        return position, capital, last_printed_pnl, last_printed_price, False
 
     high = candle.get("high", current)
     low = candle.get("low", current)
@@ -217,21 +214,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     hit_tp = False
     hit_sl = False
     exit_price = current
-
-    if position["side"] == "long":
-        if low <= sl_price:
-            hit_sl = True
-            exit_price = sl_price
-        elif high >= tp_price:
-            hit_tp = True
-            exit_price = tp_price
-    else:
-        if high >= sl_price:
-            hit_sl = True
-            exit_price = sl_price
-        elif low <= tp_price:
-            hit_tp = True
-            exit_price = tp_price
 
     timed_exit = False
     hold_duration = 0
@@ -243,6 +225,39 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         hold_duration = current_index - position["entry_index"]
         if hold_duration >= MAX_HOLD_CANDLES:
             timed_exit = True
+
+    if tp_price is None or sl_price is None:
+        if timed_exit:
+            logging.warning(
+                "⚠️ SL/TP fehlen – Timed Exit nach %d Kerzen", MAX_HOLD_CANDLES
+            )
+            exit_price = candle["close"]
+        else:
+            logging.warning("SL/TP Werte fehlen, überspringe Positionsprüfung")
+            if hasattr(app, "current_position") and app.current_position:
+                app.current_position["bars_open"] = hold_duration
+                if hasattr(app, "update_trade_display"):
+                    app.update_trade_display()
+            return position, capital, last_printed_pnl, last_printed_price, False
+    else:
+        if position["side"] == "long":
+            if low <= sl_price:
+                hit_sl = True
+                exit_price = sl_price
+            elif high >= tp_price:
+                hit_tp = True
+                exit_price = tp_price
+        else:
+            if high >= sl_price:
+                hit_sl = True
+                exit_price = sl_price
+            elif low <= tp_price:
+                hit_tp = True
+                exit_price = tp_price
+
+    if timed_exit and tp_price is None and sl_price is None:
+        hit_tp = False
+        hit_sl = False
 
     if hasattr(app, "current_position") and app.current_position:
         app.current_position["bars_open"] = hold_duration
