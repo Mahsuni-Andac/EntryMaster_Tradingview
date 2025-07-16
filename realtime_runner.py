@@ -34,7 +34,6 @@ from andac_entry_master import (
     open_position,
     close_position,
     close_partial_position as api_close_partial_position,
-    CooldownManager,
 )
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
@@ -87,7 +86,7 @@ def update_indicators(candles):
 
 
 def handle_existing_position(position, candle, app, capital, live_trading,
-                             cooldown, risk_manager, last_printed_pnl,
+                             risk_manager, last_printed_pnl,
                              last_printed_price, settings, now,
                              signal=None, current_index=None):
     current = candle["close"]
@@ -314,8 +313,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             risk_ok = risk_manager.register_loss(loss_val)
             if not risk_ok:
                 gui_bridge.stop_bot()
-            else:
-                cooldown.activate()
 
         app.update_pnl(pnl)
         app.update_capital(capital)
@@ -358,9 +355,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
         app.update_live_trade_pnl(0.0)
         app.live_pnl = 0.0
-
-        if hit_sl:
-            cooldown.register_sl(time.time())
 
         position = None
         position_open = False
@@ -528,8 +522,6 @@ def _run_bot_live_inner(settings=None, app=None):
     live_trading = live_requested and not paper_mode
     settings["paper_mode"] = not live_trading
 
-    cooldown = CooldownManager(settings.get("cooldown", 3))
-    cooldown.set_cooldown(settings.get("cooldown", 3))
     # REMOVED: SessionFilter
 
     config = {
@@ -715,8 +707,6 @@ def _run_bot_live_inner(settings=None, app=None):
                     risk_ok = risk_manager.register_loss(loss_val)
                     if not risk_ok:
                         gui_bridge.stop_bot()
-                    else:
-                        cooldown.activate()
                 app.update_pnl(pnl)
                 app.update_capital(capital)
                 app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
@@ -744,7 +734,6 @@ def _run_bot_live_inner(settings=None, app=None):
                 app,
                 capital,
                 live_trading,
-                cooldown,
                 risk_manager,
                 last_printed_pnl,
                 last_printed_price,
@@ -760,8 +749,6 @@ def _run_bot_live_inner(settings=None, app=None):
             return
 
         if not position:
-            if cooldown.is_active():
-                return
             if entry_type:
                 no_signal_printed = False
                 if now - last_entry_time < entry_cooldown:
