@@ -1,4 +1,7 @@
 
+# Needed for runtime logging
+import logging
+
 # === Dummy-Ersatz für Objekte aus andac_entry_master.py ===
 BINANCE_SYMBOL = "btcusdt"
 BINANCE_INTERVAL = "1m"
@@ -1184,6 +1187,10 @@ TUNING_FILE = "tuning_config.json"
         
         if hasattr(self, 'position') and self.position is not None:
             self.position = cancel_trade(self.position, self)
+            if self.position is None:
+                logging.info("✅ Position wurde erfolgreich geschlossen und gel\u00f6scht.")
+            else:
+                logging.warning("\u26a0\ufe0f Position konnte nicht vollst\u00e4ndig entfernt werden.")
             self.log_event("✅ Position wurde erfolgreich geschlossen.")
         else:
             self.log_event("❌ Keine offene Position zum Abbrechen gefunden.")
@@ -5771,6 +5778,10 @@ class TradingGUILogicMixin:
         
         if hasattr(self, 'position') and self.position is not None:
             self.position = cancel_trade(self.position, self)
+            if self.position is None:
+                logging.info("✅ Position wurde erfolgreich geschlossen und gel\u00f6scht.")
+            else:
+                logging.warning("\u26a0\ufe0f Position konnte nicht vollst\u00e4ndig entfernt werden.")
             self.log_event("✅ Position wurde erfolgreich geschlossen.")
         else:
             self.log_event("❌ Keine offene Position zum Abbrechen gefunden.")

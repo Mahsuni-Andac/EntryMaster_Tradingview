@@ -2,6 +2,7 @@
 
 import json
 import os
+import logging
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
@@ -167,6 +168,10 @@ class TradingGUILogicMixin:
         if hasattr(self, 'position') and self.position is not None:
             from realtime_runner import cancel_trade
             self.position = cancel_trade(self.position, self)
+            if self.position is None:
+                logging.info("✅ Position wurde erfolgreich geschlossen und gel\u00f6scht.")
+            else:
+                logging.warning("\u26a0\ufe0f Position konnte nicht vollst\u00e4ndig entfernt werden.")
             self.log_event("✅ Position wurde erfolgreich geschlossen.")
         else:
             self.log_event("❌ Keine offene Position zum Abbrechen gefunden.")
