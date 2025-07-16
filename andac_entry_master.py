@@ -389,111 +389,7 @@ def close_partial_position(volume: float, order_type: str = "Market") -> Optiona
         return None
 
 
-# ---------------------------------------------------------------------------
-# AutoRecommender (from auto_recommender.py)
-class AutoRecommender:
-    def __init__(self, gui: Any, interval: int = 10) -> None:
-        self.gui = gui
-        self.interval = interval
-        self._thread: Optional[threading.Thread] = None
-        self._running = False
-
-    def start(self) -> None:
-        if self._thread and self._thread.is_alive():
-            return
-        self._running = True
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
-
-    def stop(self) -> None:
-        self._running = False
-        if self._thread:
-            self._thread.join(timeout=1)
-            self._thread = None
-
-    def _run(self) -> None:
-        while self._running:
-            if (
-                getattr(self.gui, "running", False)
-                and hasattr(self.gui, "auto_apply_recommendations")
-                and self.gui.auto_apply_recommendations.get()
-            ):
-                try:
-                    self.gui.apply_recommendations()
-                except Exception as exc:
-                    if hasattr(self.gui, "log_event"):
-                        self.gui.log_event(f"\u26A0\uFE0F Auto-Empfehlung Fehler: {exc}")
-            time.sleep(self.interval)
-
-
-# ---------------------------------------------------------------------------
-# RiskManager (from risk_manager.py)
-class RiskManager:
-    def __init__(self, gui: Any, start_capital: Optional[float] = None) -> None:
-        self.gui = gui
-        self.start_capital = start_capital or 0.0
-        self.current_capital = start_capital or 0.0
-        self.highest_capital = start_capital or 0.0
-        self.total_loss = 0.0
-        self.max_risk = 3.0
-        self.drawdown_limit = 15.0
-        self.max_loss = 0.0
-        self.max_drawdown = 0.0
-        self.drawdown_pct = 0.0
-
-    def set_limits(self, max_risk: float, drawdown_limit: float) -> None:
-        self.max_risk = max_risk
-        self.drawdown_limit = drawdown_limit
-
-    def configure(self, **cfg: Any) -> None:
-        for key, value in cfg.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-    def set_start_capital(self, capital: float) -> None:
-        self.start_capital = capital
-        self.current_capital = capital
-        self.highest_capital = capital
-        self.total_loss = 0.0
-
-    def update_capital(self, capital: float) -> None:
-        self.current_capital = capital
-        if capital > self.highest_capital:
-            self.highest_capital = capital
-
-    def update_loss(self, pnl: float) -> None:
-        if pnl < 0:
-            self.total_loss += abs(pnl)
-
-    def check_loss_limit(self) -> bool:
-        return self.max_loss > 0 and self.total_loss >= self.max_loss
-
-    def check_drawdown_limit(self) -> bool:
-        if self.max_drawdown <= 0:
-            return False
-        return (self.start_capital - self.current_capital) >= self.max_drawdown
-
-    def check_drawdown_pct_limit(self) -> bool:
-        if self.drawdown_pct <= 0 or self.start_capital == 0:
-            return False
-        dd_pct = (self.start_capital - self.current_capital) / self.start_capital * 100
-        return dd_pct >= self.drawdown_pct
-
-    def is_risk_too_high(self, expected_loss: float, capital: float) -> bool:
-        return expected_loss > capital * (self.max_risk / 100)
-
-    def register_loss(self, loss_amount: float) -> bool:
-        self.total_loss += loss_amount
-        return self.get_drawdown_percent() < self.drawdown_limit
-
-    def get_drawdown_percent(self) -> float:
-        if self.start_capital == 0:
-            return 0.0
-        return (self.total_loss / self.start_capital) * 100
-
-
-# ---------------------------------------------------------------------------
-# BaseWebSocket & BinanceCandleWebSocket (from binance_ws.py)
+# BaseWebSocket & BinanceCandleWebSocket
 class BaseWebSocket:
     def __init__(self, url: str, on_message: Callable) -> None:
         self.url = url
@@ -573,7 +469,7 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
 
 # ---------------------------------------------------------------------------
-# Entry logic facade (from entry_logic.py)
+# Entry logic facade
 _MASTER: Optional[AndacEntryMaster] = None
 
 
@@ -611,7 +507,7 @@ def should_enter(candle: dict, indicator: dict, config: dict) -> AndacSignal:
 
 
 # ---------------------------------------------------------------------------
-# Strategy filter helpers (from strategy.py)
+# Strategy filter helpers
 _FILTER_CONFIG: Dict[str, Any] = {}
 
 
@@ -623,4 +519,28 @@ def set_filter_config(filters: Optional[Dict[str, Any]]) -> None:
 def get_filter_config() -> Dict[str, Any]:
     return _FILTER_CONFIG
 
+
+# ---------------------------------------------------------------------------
+# Main bot wrapper
+class EntryMasterBot:
+    """Central trading bot handling settings and execution."""
+
+    def __init__(self) -> None:
+        self.settings: Dict[str, Any] = SETTINGS.copy()
+
+    def apply_settings(self, params: Optional[Dict[str, Any]] = None) -> None:
+        if params:
+            self.settings.update(params)
+
+    def start(self, gui: Any | None = None) -> None:
+        from realtime_runner import run_bot_live
+        run_bot_live(self.settings, gui)
+
+    def start_simulation(self, gui: Any | None = None) -> None:
+        self.apply_settings({"paper_mode": True})
+        self.start(gui)
+
+    def start_live(self, gui: Any | None = None) -> None:
+        self.apply_settings({"paper_mode": False})
+        self.start(gui)
 

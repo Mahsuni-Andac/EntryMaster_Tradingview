@@ -39,7 +39,6 @@ from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from trading_gui_core import TradingGUI
 from trading_gui_logic import TradingGUILogicMixin
-from andac_entry_master import SETTINGS
 from central_logger import log_triangle_signal
 from global_state import (
     entry_time_global,
@@ -466,7 +465,7 @@ def _run_bot_live_inner(settings=None, app=None):
         set_gui_bridge(None)
 
     capital = float(gui_bridge.capital) if gui_bridge else settings.get(
-        "capital", SETTINGS.get("starting_capital", 1000)
+        "capital", 2000
     )
     start_capital = capital
 

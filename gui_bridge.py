@@ -1,7 +1,8 @@
 # gui_bridge.py
 
-# Bridge to interact with configuration stored in andac_entry_master
-from andac_entry_master import SETTINGS
+# Bridge to interact with configuration stored in EntryMasterBot
+from andac_entry_master import EntryMasterBot
+import logging
 
 def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_multi=20, min_multi=1, max_multi=50):
     """Return a leverage suggestion based on score, ATR and drawdown."""
@@ -15,9 +16,10 @@ def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_
     return round(smart_multi, 2)
 
 class GUIBridge:
-    def __init__(self, gui_instance=None):
+    def __init__(self, gui_instance=None, bot: EntryMasterBot | None = None):
         self.gui = gui_instance
         self.model = getattr(gui_instance, "model", None)
+        self.bot = bot or EntryMasterBot()
 
     def update_params(
         self,
@@ -29,19 +31,20 @@ class GUIBridge:
         drawdown_pct: float | None = None,
         cooldown: int | None = None,
     ) -> None:
-        """Store trading parameters from the GUI into SETTINGS."""
-        SETTINGS.update({
+        """Store trading parameters from the GUI into bot settings."""
+        params = {
             "multiplier": multiplier,
             "auto_multiplier": auto_multi,
             "capital": capital,
             "interval": interval,
-        })
+        }
         if risk_pct is not None:
-            SETTINGS["risk_per_trade"] = risk_pct
+            params["risk_per_trade"] = risk_pct
         if drawdown_pct is not None:
-            SETTINGS["drawdown_pct"] = drawdown_pct
+            params["drawdown_pct"] = drawdown_pct
         if cooldown is not None:
-            SETTINGS["cooldown"] = cooldown
+            params["cooldown"] = cooldown
+        self.bot.apply_settings(params)
 
     def _get_gui_value(self, name: str, fallback):
         if not self.gui or not hasattr(self.gui, name):
@@ -64,23 +67,23 @@ class GUIBridge:
 
     @property
     def multiplier(self):
-        return self._get_gui_value("multiplier_entry", SETTINGS.get("multiplier", 20))
+        return self._get_gui_value("multiplier_entry", self.bot.settings.get("multiplier", 20))
 
     @property
     def auto_multiplier(self):
-        return self._get_gui_value("auto_multiplier", SETTINGS.get("auto_multiplier", False))
+        return self._get_gui_value("auto_multiplier", self.bot.settings.get("auto_multiplier", False))
 
     @property
     def capital(self):
-        return self._get_gui_value("capital_entry", SETTINGS.get("capital", 1000))
+        return self._get_gui_value("capital_entry", self.bot.settings.get("capital", 1000))
 
     @property
     def interval(self):
-        return self._get_gui_value("interval", SETTINGS.get("interval", "15m"))
+        return self._get_gui_value("interval", self.bot.settings.get("interval", "15m"))
 
     @property
     def live_trading(self):
-        return self._get_gui_value("live_trading", not SETTINGS.get("paper_mode", True))
+        return self._get_gui_value("live_trading", not self.bot.settings.get("paper_mode", True))
 
 
     @property
@@ -157,7 +160,7 @@ class GUIBridge:
         volume_var = getattr(self.model, "volume_var", None)
         breakout_var = getattr(self.model, "breakout_var", None)
 
-        SETTINGS.update({
+        self.bot.apply_settings({
             "lookback": get_safe_int(lookback_var, 3),
             "toleranz": get_safe_float(toleranz_var, 0.01),
             "min_volume": get_safe_float(volume_var, 0.0),
