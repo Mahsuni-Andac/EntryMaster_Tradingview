@@ -338,7 +338,7 @@ from simulator import FeeModel, simulate_trade as _basic_simulate_trade
 # Maximum number of candles to keep a simulated trade open
 MAX_HOLD_CANDLES = 10
 FEE_MODEL = FeeModel(taker_fee=0.0004)
-POSITION_SIZE = 0.2
+POSITION_SIZE = 1.0
 
 gui_bridge = None
 
