@@ -1,6 +1,7 @@
 # gui_bridge.py
 
-from config import SETTINGS
+# Bridge to interact with configuration stored in andac_entry_master
+from andac_entry_master import SETTINGS
 
 def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_multi=20, min_multi=1, max_multi=50):
     """Return a leverage suggestion based on score, ATR and drawdown."""

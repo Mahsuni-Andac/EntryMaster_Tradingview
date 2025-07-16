@@ -8,16 +8,16 @@ import time
 import threading
 import queue
 
-import binance_ws
+# Import consolidated WebSocket implementation and settings
+from andac_entry_master import BinanceCandleWebSocket, BINANCE_SYMBOL, BINANCE_INTERVAL
 from tkinter import Tk, StringVar
-from config import BINANCE_SYMBOL, BINANCE_INTERVAL
 import requests
 from status_events import StatusDispatcher
 from config_manager import config
 
 logger = logging.getLogger(__name__)
 
-_CANDLE_WS_CLIENT: binance_ws.BinanceCandleWebSocket | None = None
+_CANDLE_WS_CLIENT: BinanceCandleWebSocket | None = None
 _WS_CANDLES: list[Candle] = []
 _CANDLE_LOCK = threading.Lock()
 _CANDLE_QUEUE: queue.Queue[Candle] = queue.Queue(maxsize=100)
@@ -134,7 +134,7 @@ def start_candle_websocket(interval: str | None = None) -> None:
         raise RuntimeError("Initial candle download failed")
 
     logger.info("WebSocket Candle-Stream gestartet")
-    _CANDLE_WS_CLIENT = binance_ws.BinanceCandleWebSocket(
+    _CANDLE_WS_CLIENT = BinanceCandleWebSocket(
         update_candle_feed,
         interval=interval,
     )
@@ -248,7 +248,12 @@ def stop_feed_monitor() -> None:
         _FEED_MONITOR_THREAD = None
 
 def get_last_candle_time() -> Optional[float]:
-    return binance_ws.last_candle_time
+    """Return timestamp of the latest received candle from the WebSocket."""
+    try:
+        import global_state
+        return global_state.last_candle_ts
+    except Exception:
+        return None
 
 
 
