@@ -573,46 +573,6 @@ class BinanceCandleWebSocket(BaseWebSocket):
 
 
 # ---------------------------------------------------------------------------
-# SignalWorker (from signal_worker.py)
-class SignalWorker:
-    def __init__(self, handler: Callable[[dict], Any], queue_obj: Optional[queue.Queue] = None, maxsize: int = 100) -> None:
-        self.handler = handler
-        self.queue: queue.Queue[dict] = queue_obj or queue.Queue(maxsize=maxsize)
-        self._running = False
-        self.thread: Optional[threading.Thread] = None
-        self._last_submit: Optional[float] = None
-
-    def start(self) -> None:
-        if self.thread and self.thread.is_alive():
-            return
-        self._running = True
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.thread.start()
-
-    def stop(self) -> None:
-        self._running = False
-
-    def submit(self, candle: dict) -> None:
-        now = time.time()
-        self._last_submit = now
-        try:
-            self.queue.put_nowait(candle)
-        except queue.Full:
-            pass
-
-    def _run(self) -> None:
-        while self._running:
-            try:
-                candle = self.queue.get(timeout=1)
-            except queue.Empty:
-                continue
-            try:
-                self.handler(candle)
-            except Exception:
-                pass
-
-
-# ---------------------------------------------------------------------------
 # Entry logic facade (from entry_logic.py)
 _MASTER: Optional[AndacEntryMaster] = None
 
