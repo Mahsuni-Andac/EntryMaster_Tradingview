@@ -5,7 +5,6 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
-from realtime_runner import cancel_trade
 
 TUNING_FILE = "tuning_config.json"
 
@@ -164,8 +163,9 @@ class TradingGUILogicMixin:
             self.force_exit = True
             self.running = False
         self.log_event("⛔ Trade abbrechen: Die Position wird jetzt geschlossen.")
-        
+
         if hasattr(self, 'position') and self.position is not None:
+            from realtime_runner import cancel_trade
             self.position = cancel_trade(self.position, self)
             self.log_event("✅ Position wurde erfolgreich geschlossen.")
         else:
