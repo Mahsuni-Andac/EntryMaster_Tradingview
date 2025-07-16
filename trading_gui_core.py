@@ -67,7 +67,8 @@ class TradingGUI(TradingGUILogicMixin):
         StatusDispatcher.on_feed_status(self.update_feed_status)
 
 
-        from config import SETTINGS
+        # SETTINGS now resides in andac_entry_master
+        from andac_entry_master import SETTINGS
         SETTINGS["data_source_mode"] = "websocket"
         self.model.websocket_active = True
         self._update_feed_mode_display(False)
@@ -630,7 +631,8 @@ class TradingGUI(TradingGUILogicMixin):
             self.api_frame.system_status_label.config(foreground=color)
 
     def _update_market_monitor(self) -> None:
-        from config import BINANCE_SYMBOL
+        # BINANCE_SYMBOL constant moved to andac_entry_master
+        from andac_entry_master import BINANCE_SYMBOL
         from data_provider import fetch_last_price, WebSocketStatus
 
         symbol = BINANCE_SYMBOL

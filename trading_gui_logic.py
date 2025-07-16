@@ -14,7 +14,8 @@ class TradingGUILogicMixin:
         try:
             from datetime import datetime
             from global_state import ema_trend_global, atr_value_global
-            from config import SETTINGS
+            # SETTINGS moved to andac_entry_master
+            from andac_entry_master import SETTINGS
 
             volatility = atr_value_global
             if volatility is None:
@@ -174,7 +175,8 @@ class TradingGUILogicMixin:
                 drawdown_pct,
                 cooldown,
             )
-        from config import SETTINGS
+        # SETTINGS has been relocated
+        from andac_entry_master import SETTINGS
         SETTINGS.update(
             {
                 "risk_per_trade": risk_pct,
@@ -197,7 +199,8 @@ class TradingGUILogicMixin:
             "opt_session_filter": self.andac_opt_session_filter.get(),
         }
         try:
-            from strategy import set_filter_config
+            # Filter configuration helper is now bundled in andac_entry_master
+            from andac_entry_master import set_filter_config
             set_filter_config(filters)
         except Exception:
             pass
@@ -240,7 +243,7 @@ class TradingGUILogicMixin:
             self.running = False
 
     def manual_yolo_entry(self):
-        from config import SETTINGS
+        from andac_entry_master import SETTINGS
         from data_provider import get_live_candles, fetch_last_price
         from realtime_runner import simulate_trade
         from tkinter import messagebox
@@ -287,7 +290,7 @@ class TradingGUILogicMixin:
             SETTINGS["capital"] = simulate_trade(position, price, current_index, SETTINGS, capital)
             self.update_capital(SETTINGS["capital"])
         else:
-            from entry_handler import open_position
+            from andac_entry_master import open_position
             res = open_position("BUY" if direction == "long" else "SELL", amount)
             if not res:
                 messagebox.showerror("Fehlgeschlagen", "Live-Order konnte nicht gesendet werden.")
@@ -518,7 +521,7 @@ class TradingGUILogicMixin:
         self.log_event(f"📝 Manuelles SL/TP {state}")
 
     def update_manual_sl_tp_status(self):
-        from config import SETTINGS
+        from andac_entry_master import SETTINGS
 
         if self.sl_tp_manual_active.get():
             if hasattr(self, "toggle_sl_tp_button"):
@@ -539,7 +542,7 @@ class TradingGUILogicMixin:
             self.sl_tp_status_var.set(msg)
 
     def save_manual_sl(self):
-        from config import SETTINGS
+        from andac_entry_master import SETTINGS
 
         try:
             sl = float(self.manual_sl_var.get())
@@ -554,7 +557,7 @@ class TradingGUILogicMixin:
             )
 
     def save_manual_tp(self):
-        from config import SETTINGS
+        from andac_entry_master import SETTINGS
 
         try:
             tp = float(self.manual_tp_var.get())

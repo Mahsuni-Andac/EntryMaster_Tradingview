@@ -10,9 +10,9 @@ import tkinter as tk
 from colorama import Fore, Style, init
 from central_logger import setup_logging
 
-from config import SETTINGS
+# SETTINGS and helper classes consolidated in andac_entry_master
+from andac_entry_master import SETTINGS, AutoRecommender
 from config_manager import config
-from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
 from trading_gui_core import TradingGUI
 from trading_gui_logic import TradingGUILogicMixin
