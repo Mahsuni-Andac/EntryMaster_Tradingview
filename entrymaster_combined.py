@@ -3962,7 +3962,8 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         )
         sl_val = position.get("sl")
         tp_val = position.get("tp")
-        if sl_val is not None and tp_val is not None:
+
+        if isinstance(sl_val, (int, float)) and isinstance(tp_val, (int, float)):
             logging.info(
                 "🎯 SL: %.2f | TP: %.2f | PnL: %.2f",
                 sl_val,
@@ -3971,9 +3972,9 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             )
         else:
             logging.warning(
-                "🎯 SL oder TP nicht gesetzt – SL: %s | TP: %s | PnL: %.2f",
-                str(sl_val) if sl_val is not None else "None",
-                str(tp_val) if tp_val is not None else "None",
+                "🎯 SL/TP fehlen – SL: %s | TP: %s | PnL: %.2f",
+                sl_val,
+                tp_val,
                 pnl_live,
             )
         last_printed_pnl = pnl_live
