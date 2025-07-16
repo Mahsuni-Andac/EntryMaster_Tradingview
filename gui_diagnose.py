@@ -2,6 +2,15 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 
+# optionale kurze Erklärungen für wichtige Felder
+DESCRIPTIONS = {
+    "Multiplikator": "Gibt an, wie stark die Position gehebelt wird.",
+    "Uhrzeit-Filter": "Nur innerhalb definierter Zeitfenster handeln",
+    "Max Risiko pro Trade (%):": "Begrenzt das Risiko pro Trade.",
+    "SL (%):": "Stop-Loss in Prozent",
+    "TP (%):": "Take-Profit in Prozent",
+}
+
 
 def _widget_info(widget: tk.Widget) -> dict:
     name = ''
@@ -13,10 +22,18 @@ def _widget_info(widget: tk.Widget) -> dict:
     try:
         if isinstance(widget, (tk.Entry, ttk.Entry)):
             value = widget.get()
+            if value == '' and widget.cget('textvariable'):
+                value = widget.getvar(widget.cget('textvariable'))
         elif isinstance(widget, tk.Text):
             value = widget.get('1.0', 'end').strip()
         elif isinstance(widget, ttk.Combobox):
             value = widget.get()
+            if value == '' and widget.cget('textvariable'):
+                value = widget.getvar(widget.cget('textvariable'))
+        elif isinstance(widget, (tk.Checkbutton, ttk.Checkbutton, ttk.Radiobutton)):
+            var = widget.cget('variable') or widget.cget('textvariable')
+            if var:
+                value = widget.getvar(var)
         elif 'text' in widget.keys():
             value = widget.cget('text')
     except Exception:
@@ -37,6 +54,8 @@ def _widget_info(widget: tk.Widget) -> dict:
     if isinstance(widget, (tk.Entry, ttk.Entry, ttk.Combobox)) and 'textvariable' in widget.keys() and not widget.cget('textvariable'):
         hints.append('keine Variable verbunden')
 
+    desc = DESCRIPTIONS.get(name.rstrip(':'), '')
+
     return {
         'name': name,
         'type': widget.winfo_class(),
@@ -44,6 +63,7 @@ def _widget_info(widget: tk.Widget) -> dict:
         'visible': visible,
         'has_logic': has_logic,
         'hints': hints,
+        'desc': desc,
     }
 
 
@@ -59,7 +79,11 @@ def generate_diagnose_md(root: tk.Widget, filename: str = 'gui_diagnose.md') -> 
     stats = {'total': 0, 'no_logic': 0, 'empty': 0}
 
     def walk(widget: tk.Widget, section: str | None = None):
-        for child in widget.winfo_children():
+        pending_label: str | None = None
+        children = list(widget.winfo_children())
+        idx = 0
+        while idx < len(children):
+            child = children[idx]
             if isinstance(child, ttk.Notebook):
                 for tab_id in child.tabs():
                     frame = child.nametowidget(tab_id)
@@ -73,7 +97,17 @@ def generate_diagnose_md(root: tk.Widget, filename: str = 'gui_diagnose.md') -> 
             elif isinstance(child, (tk.Frame, ttk.Frame)):
                 walk(child, section)
             else:
+                if isinstance(child, (tk.Label, ttk.Label)) and child.cget('text'):
+                    pending_label = child.cget('text')
+                    idx += 1
+                    continue
+
                 info = _widget_info(child)
+                if pending_label:
+                    info['name'] = pending_label
+                    if not info['desc']:
+                        info['desc'] = DESCRIPTIONS.get(pending_label.rstrip(':'), '')
+                    pending_label = None
                 stats['total'] += 1
                 if not info['has_logic']:
                     stats['no_logic'] += 1
@@ -84,11 +118,15 @@ def generate_diagnose_md(root: tk.Widget, filename: str = 'gui_diagnose.md') -> 
                 report.append(f"- Standardwert: {info['value']}")
                 report.append(f"- Sichtbar: {'Ja' if info['visible'] else 'Nein'}")
                 report.append(f"- Logik: {'Ja' if info['has_logic'] else 'Nein'}")
+                if info['desc']:
+                    report.append(f"- Funktion: {info['desc']}")
                 if info['hints']:
                     report.append('- Hinweise:')
                     for h in info['hints']:
                         report.append(f'  - {h}')
                 report.append('')
+
+            idx += 1
 
     walk(root)
 
