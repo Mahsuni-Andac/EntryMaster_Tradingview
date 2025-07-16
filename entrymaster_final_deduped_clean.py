@@ -4884,13 +4884,26 @@ def simulate_trade(position: dict, exit_price: float, candle_index: int,
     side = position["side"]
     leverage = position.get("leverage", 1)
 
+    max_qty = (capital * leverage) / entry if entry else qty
+    if qty > max_qty:
+        logging.warning(
+            "⚠️ Kontraktgröße reduziert: %.2f -> %.2f", qty, max_qty
+        )
+        qty = max_qty
+
     pnl = (exit_price - entry) if side == "long" else (entry - exit_price)
     pnl_value = pnl * qty * leverage
 
     fees = (entry + exit_price) * qty * fee_rate
     net_result = pnl_value - fees
+    net_result = max(-capital, net_result)
 
-    percent_change = (net_result / capital) * 100
+    base = capital
+    if base <= 0:
+        logging.warning("⚠️ Kapital <= 0 – PnL-Berechnung kann ungenau werden")
+        base = 1
+
+    percent_change = (net_result / base) * 100
 
     direction = "LONG" if side == "long" else "SHORT"
     logging.info(
