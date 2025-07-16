@@ -5,6 +5,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
+from realtime_runner import cancel_trade
 
 TUNING_FILE = "tuning_config.json"
 
