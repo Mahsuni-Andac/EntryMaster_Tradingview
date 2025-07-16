@@ -513,7 +513,6 @@ def _run_bot_live_inner(settings=None, app=None):
     }
     from andac_entry_master import get_filter_config
     filters = get_filter_config()
-    entry_cooldown = settings.get("entry_cooldown", 60)
     cooldown_after_exit = filters.get("cooldown_after_exit", settings.get("cooldown_after_exit", 120))
     sl_tp_mode = filters.get("sl_mode", settings.get("sl_tp_mode", "adaptive"))
     max_trades_hour = settings.get("max_trades_hour", 5)
@@ -521,7 +520,6 @@ def _run_bot_live_inner(settings=None, app=None):
     require_closed_candles = filters.get("require_closed_candles", True)
     FEE_MODEL.taker_fee = fee_percent / 100
 
-    last_entry_time = 0.0
     last_exit_time = 0.0
     trade_times: list[float] = []
     adaptive_sl = AdaptiveSLManager()
@@ -533,9 +531,6 @@ def _run_bot_live_inner(settings=None, app=None):
     position_open = False
     current_position_direction = None
     last_printed_price = None
-    last_signal = None
-    last_signal_time = 0
-    entry_repeat_delay = settings.get("entry_repeat_delay", 3)
 
     last_printed_pnl = None
     last_printed_price = None
@@ -547,9 +542,8 @@ def _run_bot_live_inner(settings=None, app=None):
 
     def process_candle(candle: dict) -> None:
         nonlocal candles, position, capital, last_printed_pnl, last_printed_price, \
-                 last_signal, last_signal_time, no_signal_printed, first_feed, \
-                 previous_signal, position_entry_index, entry_price, \
-                 position_open, current_position_direction, last_exit_time
+                 no_signal_printed, first_feed, previous_signal, position_entry_index, \
+                 entry_price, position_open, current_position_direction, last_exit_time
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
@@ -717,9 +711,6 @@ def _run_bot_live_inner(settings=None, app=None):
         if not position:
             if entry_type:
                 no_signal_printed = False
-                if now - last_entry_time < entry_cooldown:
-                    logging.info("⏸ Entry-Cooldown aktiv – kein neuer Trade")
-                    return
                 if now - last_exit_time < cooldown_after_exit:
                     logging.info("⏳ Cooldown aktiv – kein neuer Entry")
                     return
@@ -784,30 +775,26 @@ def _run_bot_live_inner(settings=None, app=None):
                 }
                 position_entry_index = len(candles) - 1
                 entry_price = candle["close"]
-                # === Manuelles SL/TP aus GUI anwenden, falls aktiv
-                if settings.get("sl_tp_manual_active", False):
-                    tp_val = settings.get("manual_tp", None)
-                    sl_val = settings.get("manual_sl", None)
-                    if tp_val:
-                        position["tp"] = (
-                            entry_price * (1 + tp_val / 100)
-                            if entry_type == "long"
-                            else entry_price * (1 - tp_val / 100)
-                        )
-                    if sl_val:
-                        position["sl"] = (
-                            entry_price * (1 - sl_val / 100)
-                            if entry_type == "long"
-                            else entry_price * (1 + sl_val / 100)
-                        )
+                tp_val = settings.get("manual_tp", None)
+                sl_val = settings.get("manual_sl", None)
+                if tp_val is not None:
+                    position["tp"] = (
+                        entry_price * (1 + tp_val / 100)
+                        if entry_type == "long"
+                        else entry_price * (1 - tp_val / 100)
+                    )
+                if sl_val is not None:
+                    position["sl"] = (
+                        entry_price * (1 - sl_val / 100)
+                        if entry_type == "long"
+                        else entry_price * (1 + sl_val / 100)
+                    )
+                if tp_val is not None or sl_val is not None:
                     app.log_event(
                         f"🎯 Manuelles TP/SL gesetzt → TP: {position.get('tp', '–')} | SL: {position.get('sl', '–')}"
                     )
                 position_open = True
                 current_position_direction = entry_type.upper()
-                last_signal = entry_type
-                last_signal_time = now
-                last_entry_time = now
                 trade_times.append(now)
 
                 msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry_exec:.2f})"
