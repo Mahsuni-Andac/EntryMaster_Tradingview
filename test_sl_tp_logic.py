@@ -1,5 +1,5 @@
 import unittest
-from adaptive_sl_manager import AdaptiveSLManager
+from andac_entry_master import AdaptiveSLManager
 
 class SLTPLogicTest(unittest.TestCase):
     def test_adaptive_sl_tp_long(self):
