@@ -27,9 +27,6 @@ Dieses Repository folgt drei Prinzipien:
 - 📈 **Realtime-Log**, Systemstatus, und Telegram-Alerts.
 - 🔄 **Auto Partial Close (APC)**: Gewinnmitnahme nach konfigurierbarer PnL-Logik.
 - ✍️ **Manuelle SL/TP-Eingabe** möglich mit Validierung und Statusanzeige.
-- 💸 **Gebührensimulation** und optionaler Partial-Exit im Paper-Modus.
-- 🛠️ **Experteneinstellungen**: Volume-Faktor, Trend-Stärke, Candle-Body-Limit,
-  Entry-Cooldown, SL/TP-Modus, Trade-Limit und Gebührenmodell.
 
 ---
 
@@ -48,7 +45,7 @@ Der Bot verwendet eine fortgeschrittene Entry-Strategie:
 
 ## 🛡️ Risikomanagement
 
-- 🔒 ATR-basierter Stop-Loss / Take-Profit via `adaptive_sl_manager.py`.
+- 🔒 Adaptiver Stop-Loss / Take-Profit via `adaptive_sl_manager.py`.
 - ❌ Kein Fallback – SL/TP müssen valide sein oder der Trade wird nicht ausgeführt.
 - ✅ Live-Bestätigung über GUI (Grün-Schaltung nach Prüfung).
 - 💰 Verlustgrenzen & Drawdown-Prozente via `risk_manager.py`.
@@ -85,7 +82,7 @@ python main.py
 ```
 
 - GUI öffnet sich automatisch.
- - Paper-Konto startet mit $2.000 Kapital (einstellbar).
+- Paper-Konto startet mit $1.000 Kapital (einstellbar).
 - Candle-Feed und Signale starten sofort.
 - Alle Trades simuliert (kein echter Markt-Zugriff).
 - Status: `✅ Marktdaten kommen an`
@@ -152,6 +149,7 @@ EntryMaster_Tradingview/
 ├── central_logger.py
 ├── config.py
 ├── console_status.py
+├── cooldown_manager.py
 ├── data_provider.py
 ├── global_state.py
 ├── gui_bridge.py

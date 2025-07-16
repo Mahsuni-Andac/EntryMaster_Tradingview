@@ -3,46 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Callable, Any
-import json
-import time
-import threading
-import queue
-
-# ---------------------------------------------------------------------------
-# Consolidated defaults (from config.py)
-BINANCE_SYMBOL = "BTCUSDT"
-BINANCE_INTERVAL = "1m"
-SETTINGS = {
-    "symbol": BINANCE_SYMBOL,
-    "interval": BINANCE_INTERVAL,
-    "starting_balance": 2000,
-    "leverage": 10,
-    "stop_loss_atr_multiplier": 0.75,
-    "take_profit_atr_multiplier": 1.5,
-    "multiplier": 10,
-    "auto_multiplier": False,
-    "capital": 2000,
-    "version": "V10.4_Pro",
-    "paper_mode": True,
-    "data_source_mode": "websocket",
-    "auto_partial_close": True,
-    "partial_close_pct": 0.25,
-    "apc_min_profit": 20,
-    "risk_per_trade": 3.0,
-    "drawdown_pct": 15.0,
-    "max_drawdown": 300,
-    "max_loss": 60,
-    "cooldown": 2,
-    "cooldown_after_exit": 120,
-    "sl_tp_mode": "adaptive",
-    "opt_session_filter": False,
-    "sl_tp_manual_active": True,
-    "manual_sl": 0.75,
-    "manual_tp": 1.5,
-}
-
+from datetime import datetime
+from typing import List, Optional, Dict
 
 
 
@@ -73,10 +35,6 @@ class AndacEntryMaster:
         opt_mtf_confirm: bool = False,
         opt_volumen_strong: bool = False,
         opt_session_filter: bool = False,
-        cooldown: Optional[int] = None,
-        max_drawdown_pct: Optional[float] = None,
-        max_loss: Optional[float] = None,
-        sl_tp_manual_active: Optional[bool] = None,
     ) -> None:
         self.lookback = lookback
         self.puffer = puffer
@@ -92,22 +50,9 @@ class AndacEntryMaster:
         self.opt_volumen_strong = opt_volumen_strong
         self.opt_session_filter = opt_session_filter
 
-        self.cooldown = cooldown if cooldown is not None else SETTINGS.get("cooldown", 0)
-        self.max_drawdown_pct = (
-            max_drawdown_pct if max_drawdown_pct is not None else SETTINGS.get("drawdown_pct", 0.0)
-        )
-        self.max_loss = max_loss if max_loss is not None else SETTINGS.get("max_loss", 0.0)
-        self.sl_tp_manual_active = (
-            sl_tp_manual_active if sl_tp_manual_active is not None else SETTINGS.get("sl_tp_manual_active", True)
-        )
-
         self.candles: List[Dict[str, float]] = []
         self.prev_bull_signal = False
         self.prev_bear_signal = False
-        self.last_signal_time = 0.0
-        self.current_drawdown = 0.0
-        self.daily_loss = 0.0
-        self.last_block_reason: Optional[str] = None
 
     @staticmethod
     def _sma(values: List[float], length: int) -> float:
@@ -156,23 +101,6 @@ class AndacEntryMaster:
         rsi = 100 - (100 / (1 + rs))
         return max(0.0, min(100.0, rsi))
 
-    def is_trade_allowed(self) -> tuple[bool, Optional[str]]:
-        now = time.time()
-        if now - self.last_signal_time < self.cooldown:
-            self.last_block_reason = "cooldown"
-            return False, "cooldown"
-        if (
-            self.current_drawdown >= self.max_drawdown_pct
-            or self.daily_loss >= self.max_loss
-        ):
-            self.last_block_reason = "drawdown block"
-            return False, "drawdown block"
-        if not self.sl_tp_manual_active:
-            self.last_block_reason = "sl/tp disabled"
-            return False, "sl/tp disabled"
-        self.last_block_reason = None
-        return True, None
-
     def evaluate(self, candle: Dict[str, float], symbol: str = "BTCUSDT") -> AndacSignal:
 
         self.candles.append(candle)
@@ -180,10 +108,6 @@ class AndacEntryMaster:
             self.candles.pop(0)
         if len(self.candles) < self.lookback + 2:
             return AndacSignal(None, 50.0, False, False)
-
-        allowed, reason = self.is_trade_allowed()
-        if not allowed:
-            return AndacSignal(None, 50.0, False, False, [reason])
 
         highs = [c["high"] for c in self.candles]
         lows = [c["low"] for c in self.candles]
@@ -285,310 +209,6 @@ class AndacEntryMaster:
             elif candidate_short:
                 reasons = reasons_short
 
-        if signal:
-            self.last_signal_time = time.time()
         engulfing = bull_eng if signal == "long" else bear_eng if signal == "short" else False
         return AndacSignal(signal, rsi, vol_spike, engulfing, reasons)
-
-
-# ---------------------------------------------------------------------------
-# Helper indicator functions (from indicator_utils.py)
-def calculate_ema(values: List[float], length: int, round_result: bool = False):
-    if not values or len(values) < length:
-        return None
-    k = 2 / (length + 1)
-    ema = values[0]
-    for price in values[1:]:
-        ema = price * k + ema * (1 - k)
-    return round(ema, 2) if round_result else ema
-
-
-def calculate_rsi(close: float, low: float, high: float) -> float:
-    if high - low == 0:
-        return 50
-    midpoint = (high + low) / 2
-    relative = (close - midpoint) / (high - low)
-    rsi = 50 + (relative * 50)
-    return max(0, min(100, rsi))
-
-
-def calculate_atr(candles: List[Dict[str, float]], length: int) -> float:
-    candles = [
-        c for c in candles if all(k in c and c[k] is not None for k in ("high", "low", "close"))
-    ]
-    if not candles or len(candles) < length:
-        return 0.0
-    trs = []
-    for i in range(1, len(candles)):
-        high = candles[i]["high"]
-        low = candles[i]["low"]
-        prev_close = candles[i - 1]["close"]
-        tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-        trs.append(tr)
-    return round(sum(trs[-length:]) / length, 2)
-
-
-def calculate_volatility_score(candle: Dict[str, float], atr: float) -> float:
-    candle_range = candle["high"] - candle["low"]
-    return round(candle_range / atr, 2) if atr else 0
-
-
-def macd_crossover_detected(closes: List[float], short: int = 12, long: int = 26, signal: int = 9) -> bool:
-    if len(closes) < long + signal + 1:
-        return False
-
-    def ema(values: List[float], length: int) -> float:
-        k = 2 / (length + 1)
-        e = values[0]
-        for price in values[1:]:
-            e = price * k + e * (1 - k)
-        return e
-
-    prev = closes[-(long + signal + 1):-1]
-    curr = closes[-(long + signal):]
-
-    prev_macd = ema(prev, short) - ema(prev, long)
-    curr_macd = ema(curr, short) - ema(curr, long)
-    prev_signal = ema([prev_macd], signal)
-    curr_signal = ema([prev_macd, curr_macd], signal)
-
-    return (prev_macd < prev_signal and curr_macd > curr_signal) or (
-        prev_macd > prev_signal and curr_macd < curr_signal
-    )
-
-
-# ---------------------------------------------------------------------------
-# AdaptiveSLManager (from adaptive_sl_manager.py)
-class AdaptiveSLManager:
-    def __init__(self, atr_period: int = 14) -> None:
-        self.atr_period = atr_period
-
-    def calculate_atr(self, candles: List[Dict[str, float]]) -> float:
-        if len(candles) < self.atr_period + 1:
-            raise ValueError(f"Mindestens {self.atr_period+1} Kerzen f\xC3\xBCr ATR-Berechnung n\xC3\xB6tig.")
-        trs = []
-        for i in range(-self.atr_period, 0):
-            high = candles[i]["high"]
-            low = candles[i]["low"]
-            prev_close = candles[i - 1]["close"]
-            tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-            trs.append(tr)
-        atr = float(sum(trs) / len(trs))
-        if atr < 1e-5:
-            raise ValueError("ATR zu klein oder ung\xC3\xBCltig")
-        return atr
-
-    def get_adaptive_sl_tp(self, direction: str, entry_price: float, candles: List[Dict[str, float]]):
-        direction = direction.lower()
-        if direction not in ("long", "short"):
-            raise ValueError("Richtung muss 'long' oder 'short' sein.")
-        atr = self.calculate_atr(candles)
-        if direction == "long":
-            sl = entry_price - atr
-            tp = entry_price + atr
-        else:
-            sl = entry_price + atr
-            tp = entry_price - atr
-        return float(sl), float(tp)
-
-
-
-# ---------------------------------------------------------------------------
-# Entry/Exit handler wrappers (from entry_handler.py & exit_handler.py)
-def open_position(side: str, quantity: float, reduce_only: bool = False, order_type: str = "Market") -> Optional[dict]:
-    try:
-        import bitmex_interface as bm
-        return bm.place_order(side, quantity, reduce_only=reduce_only, order_type=order_type)
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).error("open_position failed: %s", exc)
-        return None
-
-
-def close_position() -> Optional[dict]:
-    try:
-        import bitmex_interface as bm
-        return bm.close_position()
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).error("close_position failed: %s", exc)
-        return None
-
-
-def close_partial_position(volume: float, order_type: str = "Market") -> Optional[dict]:
-    if volume <= 0:
-        return None
-    try:
-        import bitmex_interface as bm
-        position = bm.get_open_position()
-        if not position:
-            return None
-        side = "Sell" if position["currentQty"] > 0 else "Buy"
-        return bm.place_order(side, abs(volume), reduce_only=True, order_type=order_type)
-    except Exception:
-        return None
-
-
-# BaseWebSocket & BinanceCandleWebSocket
-class BaseWebSocket:
-    def __init__(self, url: str, on_message: Callable) -> None:
-        self.url = url
-        self.on_message = on_message
-        self.ws: Optional[Any] = None
-        self.thread: Optional[threading.Thread] = None
-        self._running = False
-
-    def _run(self) -> None:
-        time.sleep(2)
-        while self._running:
-            try:
-                from websocket import WebSocketApp
-                self.ws = WebSocketApp(self.url, on_message=self.on_message)
-                self.ws.run_forever(ping_interval=20, ping_timeout=10)
-            except Exception:
-                time.sleep(5)
-
-    def start(self) -> None:
-        if self._running:
-            return
-        self._running = True
-        if not self.thread or not self.thread.is_alive():
-            self.thread = threading.Thread(target=self._run, daemon=True)
-            self.thread.start()
-
-    def stop(self) -> None:
-        self._running = False
-        if self.ws:
-            try:
-                self.ws.close()
-            except Exception:
-                pass
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1)
-
-
-class BinanceCandleWebSocket(BaseWebSocket):
-    def __init__(self, on_candle: Optional[Callable[[dict], None]] = None, interval: str | None = None) -> None:
-        self.on_candle = on_candle
-        self.symbol = BINANCE_SYMBOL.lower()
-        self.interval = interval or BINANCE_INTERVAL
-        url = f"wss://stream.binance.com:9443/ws/{self.symbol}@kline_{self.interval}"
-        super().__init__(url, self._on_message)
-        self._warning_printed = False
-
-    def _on_message(self, ws: Any, message: str) -> None:
-        try:
-            data = json.loads(message)
-            k = data.get("k")
-            if not k or not k.get("x"):
-                return
-            candle_ts = k.get("t") // 1000
-            now = int(datetime.now(tz=timezone.utc).timestamp())
-            if now - candle_ts > 90:
-                return
-            import global_state
-            if global_state.last_candle_ts is not None and candle_ts <= global_state.last_candle_ts:
-                return
-            candle = {
-                "timestamp": candle_ts,
-                "open": float(k.get("o")),
-                "high": float(k.get("h")),
-                "low": float(k.get("l")),
-                "close": float(k.get("c")),
-                "volume": float(k.get("v")),
-                "x": bool(k.get("x", False)),
-                "source": "ws",
-            }
-            global_state.last_feed_time = time.time()
-            if self.on_candle:
-                self.on_candle(candle)
-                global_state.last_candle_ts = candle_ts
-        except Exception:
-            if not self._warning_printed:
-                self._warning_printed = True
-
-
-# ---------------------------------------------------------------------------
-# Entry logic facade
-_MASTER: Optional[AndacEntryMaster] = None
-
-
-def should_enter(candle: dict, indicator: dict, config: dict) -> AndacSignal:
-    global _MASTER
-    if _MASTER is None:
-        _MASTER = AndacEntryMaster(
-            lookback=config.get("lookback", SETTINGS.get("lookback", 20)),
-            puffer=config.get("puffer", 10.0),
-            vol_mult=config.get("volumen_factor", 1.2),
-            opt_rsi_ema=config.get("opt_rsi_ema", False),
-            opt_safe_mode=config.get("opt_safe_mode", False),
-            opt_engulf=config.get("opt_engulf", False),
-            opt_engulf_bruch=config.get("opt_engulf_bruch", False),
-            opt_engulf_big=config.get("opt_engulf_big", False),
-            opt_confirm_delay=config.get("opt_confirm_delay", False),
-            opt_mtf_confirm=config.get("opt_mtf_confirm", False),
-            opt_volumen_strong=config.get("opt_volumen_strong", False),
-            opt_session_filter=config.get("opt_session_filter", False),
-            cooldown=SETTINGS.get("cooldown", 0),
-            max_drawdown_pct=SETTINGS.get("drawdown_pct", 0.0),
-            max_loss=SETTINGS.get("max_loss", 0.0),
-            sl_tp_manual_active=SETTINGS.get("sl_tp_manual_active", True),
-        )
-    else:
-        _MASTER.lookback = config.get("lookback", _MASTER.lookback)
-        _MASTER.puffer = config.get("puffer", _MASTER.puffer)
-        _MASTER.vol_mult = config.get("volumen_factor", _MASTER.vol_mult)
-        _MASTER.opt_rsi_ema = config.get("opt_rsi_ema", _MASTER.opt_rsi_ema)
-        _MASTER.opt_safe_mode = config.get("opt_safe_mode", _MASTER.opt_safe_mode)
-        _MASTER.opt_engulf = config.get("opt_engulf", _MASTER.opt_engulf)
-        _MASTER.opt_engulf_bruch = config.get("opt_engulf_bruch", _MASTER.opt_engulf_bruch)
-        _MASTER.opt_engulf_big = config.get("opt_engulf_big", _MASTER.opt_engulf_big)
-        _MASTER.opt_confirm_delay = config.get("opt_confirm_delay", _MASTER.opt_confirm_delay)
-        _MASTER.opt_mtf_confirm = config.get("opt_mtf_confirm", _MASTER.opt_mtf_confirm)
-        _MASTER.opt_volumen_strong = config.get("opt_volumen_strong", _MASTER.opt_volumen_strong)
-        _MASTER.opt_session_filter = config.get("opt_session_filter", _MASTER.opt_session_filter)
-        _MASTER.cooldown = SETTINGS.get("cooldown", _MASTER.cooldown)
-        _MASTER.max_drawdown_pct = SETTINGS.get("drawdown_pct", _MASTER.max_drawdown_pct)
-        _MASTER.max_loss = SETTINGS.get("max_loss", _MASTER.max_loss)
-        _MASTER.sl_tp_manual_active = SETTINGS.get("sl_tp_manual_active", _MASTER.sl_tp_manual_active)
-    return _MASTER.evaluate(candle)
-
-
-# ---------------------------------------------------------------------------
-# Strategy filter helpers
-_FILTER_CONFIG: Dict[str, Any] = {}
-
-
-def set_filter_config(filters: Optional[Dict[str, Any]]) -> None:
-    global _FILTER_CONFIG
-    _FILTER_CONFIG = filters or {}
-
-
-def get_filter_config() -> Dict[str, Any]:
-    return _FILTER_CONFIG
-
-
-# ---------------------------------------------------------------------------
-# Main bot wrapper
-class EntryMasterBot:
-    """Central trading bot handling settings and execution."""
-
-    def __init__(self) -> None:
-        self.settings: Dict[str, Any] = SETTINGS.copy()
-
-    def apply_settings(self, params: Optional[Dict[str, Any]] = None) -> None:
-        if params:
-            self.settings.update(params)
-
-    def start(self, gui: Any | None = None) -> None:
-        from realtime_runner import run_bot_live
-        run_bot_live(self.settings, gui)
-
-    def start_simulation(self, gui: Any | None = None) -> None:
-        self.apply_settings({"paper_mode": True})
-        self.start(gui)
-
-    def start_live(self, gui: Any | None = None) -> None:
-        self.apply_settings({"paper_mode": False})
-        self.start(gui)
 

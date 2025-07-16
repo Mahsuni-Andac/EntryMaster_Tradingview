@@ -1,8 +1,6 @@
 # gui_bridge.py
 
-# Bridge to interact with configuration stored in EntryMasterBot
-from andac_entry_master import EntryMasterBot
-import logging
+from config import SETTINGS
 
 def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_multi=20, min_multi=1, max_multi=50):
     """Return a leverage suggestion based on score, ATR and drawdown."""
@@ -16,35 +14,17 @@ def smart_auto_multiplier(score, atr, balance, drawdown, max_risk_pct=1.0, base_
     return round(smart_multi, 2)
 
 class GUIBridge:
-    def __init__(self, gui_instance=None, bot: EntryMasterBot | None = None):
+    def __init__(self, gui_instance=None):
         self.gui = gui_instance
-        self.model = getattr(gui_instance, "model", None)
-        self.bot = bot or EntryMasterBot()
 
-    def update_params(
-        self,
-        multiplier: float,
-        auto_multi: bool,
-        capital: float,
-        interval: str,
-        risk_pct: float | None = None,
-        drawdown_pct: float | None = None,
-        cooldown: int | None = None,
-    ) -> None:
-        """Store trading parameters from the GUI into bot settings."""
-        params = {
+    def update_params(self, multiplier: float, auto_multi: bool, capital: float, interval: str) -> None:
+        """Store basic trading parameters from the GUI into SETTINGS."""
+        SETTINGS.update({
             "multiplier": multiplier,
             "auto_multiplier": auto_multi,
             "capital": capital,
             "interval": interval,
-        }
-        if risk_pct is not None:
-            params["risk_per_trade"] = risk_pct
-        if drawdown_pct is not None:
-            params["drawdown_pct"] = drawdown_pct
-        if cooldown is not None:
-            params["cooldown"] = cooldown
-        self.bot.apply_settings(params)
+        })
 
     def _get_gui_value(self, name: str, fallback):
         if not self.gui or not hasattr(self.gui, name):
@@ -67,23 +47,23 @@ class GUIBridge:
 
     @property
     def multiplier(self):
-        return self._get_gui_value("multiplier_entry", self.bot.settings.get("multiplier", 20))
+        return self._get_gui_value("multiplier_entry", SETTINGS.get("multiplier", 20))
 
     @property
     def auto_multiplier(self):
-        return self._get_gui_value("auto_multiplier", self.bot.settings.get("auto_multiplier", False))
+        return self._get_gui_value("auto_multiplier", SETTINGS.get("auto_multiplier", False))
 
     @property
     def capital(self):
-        return self._get_gui_value("capital_entry", self.bot.settings.get("capital", 1000))
+        return self._get_gui_value("capital_entry", SETTINGS.get("capital", 1000))
 
     @property
     def interval(self):
-        return self._get_gui_value("interval", self.bot.settings.get("interval", "15m"))
+        return self._get_gui_value("interval", SETTINGS.get("interval", "15m"))
 
     @property
     def live_trading(self):
-        return self._get_gui_value("live_trading", not self.bot.settings.get("paper_mode", True))
+        return self._get_gui_value("live_trading", not SETTINGS.get("paper_mode", True))
 
 
     @property
@@ -137,34 +117,4 @@ class GUIBridge:
         return
 
     # REMOVED: SessionFilter configuration
-
-    def update_filter_params(self):
-        def get_safe_float(var, default=0.0):
-            try:
-                return float(var.get())
-            except Exception:
-                return default
-
-        def get_safe_int(var, default=0):
-            try:
-                return int(var.get())
-            except Exception:
-                return default
-
-        if not self.model:
-            logging.debug("🔁 Dummy update_filter_params aufgerufen (GUIBridge)")
-            return
-
-        lookback_var = getattr(self.model, "lookback_var", None)
-        toleranz_var = getattr(self.model, "toleranz_var", None)
-        volume_var = getattr(self.model, "volume_var", None)
-        breakout_var = getattr(self.model, "breakout_var", None)
-
-        self.bot.apply_settings({
-            "lookback": get_safe_int(lookback_var, 3),
-            "toleranz": get_safe_float(toleranz_var, 0.01),
-            "min_volume": get_safe_float(volume_var, 0.0),
-            "breakout_only": breakout_var.get() if breakout_var else False,
-        })
-
 

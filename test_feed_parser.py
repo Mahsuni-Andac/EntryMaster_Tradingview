@@ -2,7 +2,7 @@ import unittest
 import json
 from datetime import datetime, timezone
 
-from andac_entry_master import BinanceCandleWebSocket
+from binance_ws import BinanceCandleWebSocket
 
 class FeedParserTest(unittest.TestCase):
     def test_parse_ws_candle(self):

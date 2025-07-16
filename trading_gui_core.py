@@ -11,7 +11,6 @@ from api_credential_frame import APICredentialFrame, EXCHANGES
 from neon_status_panel import NeonStatusPanel
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
-from gui_diagnose import add_gui_diagnose_button
 
 class TradingGUI(TradingGUILogicMixin):
     def __getattr__(self, item):
@@ -54,10 +53,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.trading_mode = self.model.trading_mode
         self.mode_label = None
 
-        self.style = ttk.Style()
-        self.style.configure("AutoSL.TButton", foreground="black")
-        self.style.configure("ManualSL.TButton", foreground="black")
-
         self._init_variables()
         self._build_gui()
         self._init_neon_panel()
@@ -67,8 +62,7 @@ class TradingGUI(TradingGUILogicMixin):
         StatusDispatcher.on_feed_status(self.update_feed_status)
 
 
-        # SETTINGS now resides in andac_entry_master
-        from andac_entry_master import SETTINGS
+        from config import SETTINGS
         SETTINGS["data_source_mode"] = "websocket"
         self.model.websocket_active = True
         self._update_feed_mode_display(False)
@@ -78,9 +72,7 @@ class TradingGUI(TradingGUILogicMixin):
 
         self.root.update_idletasks()
         width = self.root.winfo_width()
-        height = int(self.root.winfo_height() * 0.9) - 30
-        if height < 200:
-            height = int(self.root.winfo_height() * 0.9)
+        height = int(self.root.winfo_height() * 0.9)
         self.root.geometry(f"{width}x{height}")
 
         self.update_trade_display()
@@ -148,7 +140,7 @@ class TradingGUI(TradingGUILogicMixin):
         self.andac_opt_mtf_confirm = self.model.andac_opt_mtf_confirm
         self.andac_opt_volumen_strong = self.model.andac_opt_volumen_strong
 
-        self.andac_opt_session_filter = self.model.andac_opt_session_filter
+        # REMOVED: SessionFilter variables
 
         self.use_doji_blocker = self.model.use_doji_blocker
 
@@ -156,8 +148,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.use_time_filter = self.model.use_time_filter
         self.time_start = self.model.time_start
         self.time_end = self.model.time_end
-        self.require_closed_candles = self.model.require_closed_candles
-        self.cooldown_after_exit = self.model.cooldown_after_exit
 
         self.rsi_rec_label = ttk.Label(self.root, text="", foreground="green")
         self.volume_rec_label = ttk.Label(self.root, text="", foreground="green")
@@ -185,19 +175,6 @@ class TradingGUI(TradingGUILogicMixin):
         self.sl_tp_auto_active = self.model.sl_tp_auto_active
         self.sl_tp_manual_active = self.model.sl_tp_manual_active
         self.sl_tp_status_var = self.model.sl_tp_status_var
-        self.last_reason_var = self.model.last_reason_var
-
-        # expert settings
-        self.entry_cooldown_seconds = self.model.entry_cooldown_seconds
-        self.sl_tp_mode = self.model.sl_tp_mode
-        self.min_profit_usd = self.model.min_profit_usd
-        self.partial_close_trigger = self.model.partial_close_trigger
-        self.fee_model = self.model.fee_model
-        self.max_trades_per_hour = self.model.max_trades_per_hour
-
-        self.risk_trade_pct = self.model.risk_trade_pct
-        self.max_drawdown_pct = self.model.max_drawdown_pct
-        self.cooldown_minutes = self.model.cooldown_minutes
 
         self.api_status_var = tk.StringVar(value="BitMEX API ❌")
         self.feed_status_var = tk.StringVar(value="Feed ❌")
@@ -256,18 +233,11 @@ class TradingGUI(TradingGUILogicMixin):
 
         from data_provider import init_price_var, price_var
         init_price_var(self.root)
-        self.yolo_button = ttk.Button(top_info, text="🚀 10C Entry", command=self.manual_yolo_entry)
-        self.yolo_button.pack(side="right", padx=5)
         self.price_label = ttk.Label(top_info, textvariable=price_var, foreground="blue", font=("Arial", 11, "bold"))
         self.price_label.pack(side="right", padx=10)
 
-        notebook = ttk.Notebook(self.main_frame)
-        notebook.pack(padx=10, pady=5, fill="both", expand=True)
-
-        container = ttk.Frame(notebook)
-        expert_container = ttk.Frame(notebook)
-        notebook.add(container, text="Einstellungen")
-        notebook.add(expert_container, text="Experteneinstellungen")
+        container = ttk.Frame(self.main_frame)
+        container.pack(padx=10, pady=5)
         risk = ttk.Frame(container)
         left = ttk.Frame(container)
         right = ttk.Frame(container)
@@ -324,14 +294,6 @@ class TradingGUI(TradingGUILogicMixin):
             ttk.Entry(middle, textvariable=end, width=8).grid(row=row*2+1, column=col*2+1, padx=5)
             self.time_filters.append((start, end))
 
-        extra_row = ttk.Frame(middle)
-        extra_row.grid(row=8, column=0, columnspan=6, pady=(0, 8), sticky="w")
-        ttk.Checkbutton(
-            extra_row,
-            text="Nur geschlossene Candles auswerten",
-            variable=self.require_closed_candles,
-        ).pack(side="left")
-
         ttk.Label(risk, text="⚠️ Risikomanagement", font=("Arial", 11, "bold")).grid(row=0, column=0, pady=(0, 5), sticky="w")
 
         apc_frame = ttk.LabelFrame(risk, text="Auto Partial Close")
@@ -356,45 +318,18 @@ class TradingGUI(TradingGUILogicMixin):
 
         manual_frame = ttk.LabelFrame(risk, text="Manuelles SL/TP")
         manual_frame.grid(row=3, column=0, padx=5, pady=(10, 0), sticky="nw")
-
-        risk_frame = ttk.LabelFrame(risk, text="Risikoeinstellungen")
-        risk_frame.grid(row=3, column=1, padx=5, pady=(10, 0), sticky="nw")
-
-        ttk.Label(risk_frame, text="Max Risiko pro Trade (%):").grid(row=0, column=0, sticky="w")
-        ttk.Entry(risk_frame, textvariable=self.risk_trade_pct, width=6).grid(row=0, column=1)
-        ttk.Label(risk_frame, text="Maximaler Drawdown (%):").grid(row=1, column=0, sticky="w")
-        ttk.Entry(risk_frame, textvariable=self.max_drawdown_pct, width=6).grid(row=1, column=1)
-        ttk.Label(risk_frame, text="Cooldown [Minuten]:").grid(row=2, column=0, sticky="w")
-        ttk.Entry(risk_frame, textvariable=self.cooldown_minutes, width=6).grid(row=2, column=1)
-
-        self.toggle_sl_tp_button = ttk.Button(
-            manual_frame,
-            text="SL/TP AUS",
-            command=self.toggle_manual_sl_tp,
-        )
-        self.toggle_sl_tp_button.grid(row=0, column=0, sticky="w", pady=(5, 0))
-
-        self.sl_tp_hint_label = ttk.Label(
-            manual_frame,
-            text="❌ Aus: Gegensignal ist dein einziger Exit ⚠️",
-            foreground="red",
-        )
-        self.sl_tp_hint_label.grid(row=0, column=1, columnspan=2, sticky="w")
-
-        ttk.Label(manual_frame, text="SL (%):").grid(row=1, column=0, sticky="w")
-        sl_entry = ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8)
-        sl_entry.grid(row=1, column=1, sticky="w")
-        ttk.Button(manual_frame, text="💾", width=3, command=self.save_manual_sl).grid(row=1, column=2, padx=(5, 0))
-
-        ttk.Label(manual_frame, text="TP (%):").grid(row=2, column=0, sticky="w")
-        tp_entry = ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8)
-        tp_entry.grid(row=2, column=1, sticky="w")
-        ttk.Button(manual_frame, text="💾", width=3, command=self.save_manual_tp).grid(row=2, column=2, padx=(5, 0))
-
-        self.update_manual_sl_tp_status()
+        ttk.Label(manual_frame, text="SL:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(manual_frame, textvariable=self.manual_sl_var, width=8).grid(row=0, column=1)
+        ttk.Label(manual_frame, text="TP:").grid(row=1, column=0, sticky="w")
+        ttk.Entry(manual_frame, textvariable=self.manual_tp_var, width=8).grid(row=1, column=1)
+        self.auto_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Auto aktiv", command=self.activate_auto_sl_tp)
+        self.auto_sl_button.grid(row=2, column=0, columnspan=2, sticky="we", pady=(5,0))
+        self.manual_sl_button = ttk.Button(manual_frame, text="🔒 SL/TP Manuell aktiv", command=self.toggle_manual_sl_tp)
+        self.manual_sl_button.grid(row=3, column=0, columnspan=2, sticky="we")
+        self.sl_tp_status_label = ttk.Label(manual_frame, textvariable=self.sl_tp_status_var, foreground="green")
+        self.sl_tp_status_label.grid(row=4, column=0, columnspan=2, sticky="w")
 
         self._build_andac_options(andac)
-        self._build_expert_options(expert_container)
         self._build_controls(self.main_frame)
 
 
@@ -414,70 +349,39 @@ class TradingGUI(TradingGUILogicMixin):
             ("Engulfing", self.andac_opt_engulf),
             ("Engulfing + Breakout", self.andac_opt_engulf_bruch),
             ("Engulfing > ATR", self.andac_opt_engulf_big),
-            ("Bestätigungskerze (Delay)", self.andac_opt_confirm_delay),
+            ("Bestätigungskerze", self.andac_opt_confirm_delay),
             ("MTF Bestätigung", self.andac_opt_mtf_confirm),
             ("Starkes Volumen", self.andac_opt_volumen_strong),
-            ("Session 7-20 UTC", self.andac_opt_session_filter),
         ]:
             ttk.Checkbutton(left_col, text=text, variable=var).pack(anchor="w")
 
         self._add_entry_group(right_col, "Lookback", [self.andac_lookback])
         self._add_entry_group(right_col, "Toleranz", [self.andac_puffer])
         self._add_entry_group(right_col, "Volumen-Faktor", [self.andac_vol_mult])
-
-    def _build_expert_options(self, parent):
-        ttk.Label(parent, text="⚙️ Experteneinstellungen", font=("Arial", 11, "bold")).pack(pady=(0, 5))
-        grid = ttk.Frame(parent)
-        grid.pack()
-
-        rows = [
-            ("Entry-Cooldown [s]", self.entry_cooldown_seconds),
-            ("Cooldown nach Exit [s]", self.cooldown_after_exit),
-            ("Max Trades/h", self.max_trades_per_hour),
-            ("Gebührensimulation [%]", self.fee_model),
-        ]
-        for idx, (label, var) in enumerate(rows):
-            ttk.Label(grid, text=label+":").grid(row=idx, column=0, sticky="w", pady=2)
-            ttk.Entry(grid, textvariable=var, width=10).grid(row=idx, column=1, sticky="w", pady=2)
-
-        sl_frame = ttk.Frame(grid)
-        sl_frame.grid(row=len(rows), column=0, columnspan=2, sticky="w", pady=2)
-        ttk.Label(sl_frame, text="SL/TP-Modus:").pack(side="left")
-        ttk.Radiobutton(sl_frame, text="Manuell", variable=self.sl_tp_mode, value="manual").pack(side="left")
-        ttk.Radiobutton(sl_frame, text="Adaptiv", variable=self.sl_tp_mode, value="adaptive").pack(side="left")
+        # REMOVED: SessionFilter GUI elements
 
     def _build_controls(self, root):
         button_frame = ttk.Frame(root)
         button_frame.pack(pady=10, fill="x")
 
-        start_btn = ttk.Button(button_frame, text="▶️ Bot starten", command=self.start_bot)
-        start_btn.grid(row=0, column=0, padx=5)
+        ttk.Button(button_frame, text="▶️ Bot starten", command=self.start_bot).grid(row=0, column=0, padx=5)
         ttk.Button(button_frame, text="⛔ Trade abbrechen", command=self.emergency_flat_position).grid(row=0, column=1, padx=5)
         ttk.Button(button_frame, text="❗️ Notausstieg", command=self.emergency_exit).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="🛑 Alles stoppen & sichern", command=self.stop_and_reset).grid(row=0, column=3, padx=5)
 
-        auto_chk = ttk.Checkbutton(
+        ttk.Checkbutton(
             button_frame,
             text="🔁 Auto-Empfehlungen",
             variable=self.auto_apply_recommendations,
             command=self.update_auto_status,
-        )
-        auto_chk.grid(row=1, column=0, padx=5)
-        apply_btn = ttk.Button(button_frame, text="✅ Empfehlungen übernehmen", command=self.apply_recommendations)
-        apply_btn.grid(row=1, column=1, padx=5)
-        disable_btn = ttk.Button(button_frame, text="🧹 Alles deaktivieren", command=self.disable_all_filters)
-        disable_btn.grid(row=1, column=2, padx=5)
-
-        save_btn = ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file)
-        save_btn.grid(row=1, column=3, padx=5)
-
-        load_btn = ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file)
-        load_btn.grid(row=1, column=4, padx=5)
-        # removed GUI export functionality
-        add_gui_diagnose_button(button_frame)
+        ).grid(row=1, column=0, padx=5)
+        ttk.Button(button_frame, text="✅ Empfehlungen übernehmen", command=self.apply_recommendations).grid(row=1, column=1, padx=5)
+        ttk.Button(button_frame, text="🧹 Alles deaktivieren", command=self.disable_all_filters).grid(row=1, column=2, padx=5)
+        ttk.Button(button_frame, text="💾 Einstellungen speichern", command=self.save_to_file).grid(row=1, column=3, padx=5)
+        ttk.Button(button_frame, text="⏏️ Einstellungen laden", command=self.load_from_file).grid(row=1, column=4, padx=5)
 
         self.auto_status_label = ttk.Label(button_frame, font=("Arial", 10, "bold"), foreground="green")
-        self.auto_status_label.grid(row=2, column=0, columnspan=6, pady=(5, 0), padx=10, sticky="w")
+        self.auto_status_label.grid(row=2, column=0, columnspan=5, pady=(5, 0), padx=10, sticky="w")
 
         self.log_box = tk.Text(root, height=13, width=85, wrap="word", bg="#f9f9f9", relief="sunken", borderwidth=2)
         self.log_box.pack(pady=12)
@@ -487,10 +391,8 @@ class TradingGUI(TradingGUILogicMixin):
         self.trade_box = tk.Text(trade_frame, height=8, width=85, wrap="word", bg="#f0f0f0", relief="sunken", borderwidth=2, state="disabled")
         self.trade_box.pack(fill="both", expand=True)
 
-        ttk.Label(root, textvariable=self.last_reason_var, foreground="red").pack(pady=(0, 5))
-
     def stop_and_reset(self):
-        self.model.should_stop = True
+        self.model.force_exit = True
         self.model.running = False
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
 
@@ -631,8 +533,7 @@ class TradingGUI(TradingGUILogicMixin):
             self.api_frame.system_status_label.config(foreground=color)
 
     def _update_market_monitor(self) -> None:
-        # BINANCE_SYMBOL constant moved to andac_entry_master
-        from andac_entry_master import BINANCE_SYMBOL
+        from config import BINANCE_SYMBOL
         from data_provider import fetch_last_price, WebSocketStatus
 
         symbol = BINANCE_SYMBOL

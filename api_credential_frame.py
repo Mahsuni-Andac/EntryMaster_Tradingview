@@ -5,8 +5,7 @@ from typing import Dict
 
 from api_key_manager import APICredentialManager
 from status_events import StatusDispatcher
-# Access bot settings from the consolidated module
-from andac_entry_master import SETTINGS
+from config import SETTINGS
 from bitmex_interface import set_credentials, check_credentials
 
 EXCHANGES = ["BitMEX"]

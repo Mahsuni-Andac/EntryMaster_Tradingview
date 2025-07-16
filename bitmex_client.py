@@ -47,19 +47,13 @@ class BitmexClient:
         response.raise_for_status()
         return response.json()
 
-    def place_order(
-        self,
-        side: str,
-        quantity: float,
-        reduce_only: bool = False,
-        order_type: str = "Market",
-    ) -> dict:
+    def place_order(self, side: str, quantity: float, reduce_only: bool = False) -> dict:
         side = side.upper()
         payload = {
             "symbol": self.symbol,
             "orderQty": quantity,
             "side": side,
-            "ordType": order_type.capitalize(),
+            "ordType": "Market",
         }
         if reduce_only:
             payload["execInst"] = "ReduceOnly"

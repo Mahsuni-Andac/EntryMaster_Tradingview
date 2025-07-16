@@ -6,9 +6,7 @@ import os
 import logging
 from typing import Any, Dict
 
-# SETTINGS was previously defined in config.py which has been removed.
-# Import defaults from the consolidated logic module instead.
-from andac_entry_master import SETTINGS as DEFAULTS
+from config import SETTINGS as DEFAULTS
 
 
 class ConfigManager:

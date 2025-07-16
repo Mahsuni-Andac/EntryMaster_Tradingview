@@ -28,17 +28,15 @@ from data_provider import (
     start_candle_websocket,
     get_candle_queue,
 )
-from andac_entry_master import (
-    BINANCE_INTERVAL,
-    BINANCE_SYMBOL,
-    open_position,
-    close_position,
-    close_partial_position as api_close_partial_position,
-)
+from config import BINANCE_INTERVAL, BINANCE_SYMBOL
+from entry_handler import open_position
+from exit_handler import close_position, close_partial_position
+from cooldown_manager import CooldownManager
 from status_block import print_entry_status
 from gui_bridge import GUIBridge
 from trading_gui_core import TradingGUI
 from trading_gui_logic import TradingGUILogicMixin
+from config import SETTINGS
 from central_logger import log_triangle_signal
 from global_state import (
     entry_time_global,
@@ -48,14 +46,12 @@ from global_state import (
 )
 import global_state
 
-from andac_entry_master import (
-    calculate_ema,
-    calculate_atr,
-    macd_crossover_detected,
-)
+from indicator_utils import calculate_ema, calculate_atr
 
 from andac_entry_master import AndacEntryMaster, AndacSignal
-from andac_entry_master import should_enter, AdaptiveSLManager
+from signal_worker import SignalWorker
+from entry_logic import should_enter
+from adaptive_sl_manager import AdaptiveSLManager
 from status_events import StatusDispatcher
 
 
@@ -80,13 +76,13 @@ def update_indicators(candles):
     closes = [c["close"] for c in candles if "close" in c]
     ema = calculate_ema(closes[-20:], 20)
     rsi = AndacEntryMaster._rsi(closes, 14)
-    macd_cross = macd_crossover_detected(closes)
-    return atr, ema, rsi, macd_cross
+    return atr, ema, rsi
 
 
 def handle_existing_position(position, candle, app, capital, live_trading,
-                             last_printed_pnl, last_printed_price,
-                             settings, now, signal=None, current_index=None):
+                             cooldown, risk_manager, last_printed_pnl,
+                             last_printed_price, settings, now,
+                             signal=None, current_index=None):
     current = candle["close"]
     entry = position["entry"]
     pnl_live = calculate_futures_pnl(
@@ -96,8 +92,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         position["amount"],
         position["side"],
     )
-    fee_live = position["amount"] * current * 0.00075
-    pnl_live -= fee_live
 
     if (
         last_printed_pnl is None
@@ -124,32 +118,19 @@ def handle_existing_position(position, candle, app, capital, live_trading,
     app.live_pnl = pnl_live
 
     tp_price = position.get("tp")
-    partial_pct = settings.get("partial_close_pct", 0.5)
-    partial_order_type = settings.get("partial_order_type", "market")
-
     if (
         settings.get("auto_partial_close", False)
         and tp_price is not None
         and not position.get("partial_closed", False)
     ):
-        hit_tp = current >= tp_price if position["side"] == "long" else current <= tp_price
+        hit_tp = (
+            current >= tp_price
+            if position["side"] == "long"
+            else current <= tp_price
+        )
         if hit_tp:
-            logging.info("💰 TP erreicht – Exit ausgelöst.")
-            partial_volume = round(position.get("amount", 0) * partial_pct, 3)
-            result = False
-            if live_trading:
-                try:
-                    result = api_close_partial_position(partial_volume, partial_order_type)
-                    if result is None:
-                        logging.error("\u2757 Partial Close fehlgeschlagen – keine Position reduziert!")
-                    if not result:
-                        app.log_event("❗️Retry Partial Close...")
-                        result = api_close_partial_position(partial_volume, partial_order_type)
-                except Exception as e:
-                    app.log_event(f"❌ Fehler beim Partial Close: {e}")
-            else:
-                result = True  # Simulation immer erfolgreich
-
+            partial_volume = position.get("amount", 0) * 0.5
+            result = close_partial_position(partial_volume) if live_trading else True
             if result:
                 _, realized = _basic_simulate_trade(
                     entry,
@@ -167,19 +148,8 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 app.log_event(
                     f"⚡ Auto Partial Close bei TP ausgelöst! ➖ {partial_volume} Kontrakte glattgestellt."
                 )
-
-    if (
-        settings.get("simulate_partial", False)
-        and tp_price is not None
-        and position["amount"] > 0
-    ):
-        hit_tp_price = (
-            current >= tp_price if position["side"] == "long" else current <= tp_price
-        )
-        if hit_tp_price:
-            partial_amount = position["amount"] * settings.get("partial_pct", 0.5)
-            logging.info(f"🔄 Simulierter Partial Close: {partial_amount} BTC")
-            position["amount"] -= partial_amount
+            else:
+                app.log_event("⚠️ Fehler beim Partial Close!")
 
     if hasattr(app, "apc_enabled") and app.apc_enabled.get():
         try:
@@ -212,7 +182,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
                 app.log_event(log_msg)
                 app.apc_status_label.config(text=log_msg, foreground="blue")
                 if live_trading:
-                    live_partial_close(position, capital, app, settings)
+                    live_partial_close(position["side"], to_close)
                 if position["amount"] <= 0:
                     position = None
                     position_open = False
@@ -240,20 +210,16 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         if low <= sl_price:
             hit_sl = True
             exit_price = sl_price
-            logging.info("\u26d4 SL erreicht – Exit ausgelöst.")
         elif high >= tp_price:
             hit_tp = True
             exit_price = tp_price
-            logging.info("💰 TP erreicht – Exit ausgelöst.")
     else:
         if high >= sl_price:
             hit_sl = True
             exit_price = sl_price
-            logging.info("\u26d4 SL erreicht – Exit ausgelöst.")
         elif low <= tp_price:
             hit_tp = True
             exit_price = tp_price
-            logging.info("💰 TP erreicht – Exit ausgelöst.")
 
     timed_exit = False
     hold_duration = 0
@@ -272,23 +238,11 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             app.update_trade_display()
 
     opp_exit = False
-    if app:
-        try:
-            if hasattr(app, "update_filter_params"):
-                app.update_filter_params()
-            else:
-                logging.debug("🔁 update_filter_params() nicht verfügbar – übersprungen.")
-        except Exception as e:
-            logging.warning(f"⚠️ update_filter_params() fehlgeschlagen: {e}")
     if signal and signal in ("long", "short"):
         opp_exit = (
             (position["side"] == "long" and signal == "short") or
             (position["side"] == "short" and signal == "long")
         )
-        if opp_exit:
-            logging.info(
-                f"📉 Gegensignal erkannt ({signal}) – Exit ausgelöst."
-            )
 
     should_close = hit_tp or hit_sl or timed_exit or opp_exit
 
@@ -305,6 +259,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         capital = new_capital
         check_plausibility(pnl, old_cap, capital, position["amount"])
 
+        risk_manager.update_loss(pnl)
 
         app.update_pnl(pnl)
         app.update_capital(capital)
@@ -331,7 +286,7 @@ def handle_existing_position(position, candle, app, capital, live_trading,
             log_msg = f"[{stamp}] {reason}"
             logger.info(log_msg)
             logger.info(
-                f"💸 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+                f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
             )
         elif opp_exit:
             stamp = datetime.now().strftime("%H:%M:%S")
@@ -348,14 +303,17 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         app.update_live_trade_pnl(0.0)
         app.live_pnl = 0.0
 
+        if hit_sl:
+            cooldown.register_sl(time.time())
+
         position = None
         position_open = False
-        last_exit_time = now
         entry_time_global = None
         return position, capital, last_printed_pnl, last_printed_price, True
 
     return position, capital, last_printed_pnl, last_printed_price, False
 
+from risk_manager import RiskManager
 from console_status import (
     print_start_banner,
     print_stop_banner,
@@ -372,18 +330,13 @@ POSITION_SIZE = 0.2
 
 gui_bridge = None
 
-def live_partial_close(position, capital, app, settings):
-    partial_pct = settings.get("partial_pct", 0.5)
-    partial_amount = position["amount"] * partial_pct
-    result = api_close_partial_position(
-        partial_amount,
-        settings.get("partial_order_type", "market"),
-    )
-    if result:
-        if hasattr(app, "send_status_to_gui"):
-            app.send_status_to_gui("partial_closed", result)
+def live_partial_close(side: str, qty: float) -> None:
+    reduce_side = "SELL" if side == "long" else "BUY"
+    res = open_position(reduce_side, qty, reduce_only=True)
+    if res is not None:
+        print(f"⚡️ LIVE-Teilschließung: {qty} {reduce_side} via Reduce Only Market")
     else:
-        logging.error("❗ Auto Partial Close fehlgeschlagen.")
+        print("❌ Fehler beim Live-Teilverkauf")
 
 def set_gui_bridge(gui_instance):
     global gui_bridge
@@ -459,14 +412,7 @@ def wait_for_initial_candles(
 def _run_bot_live_inner(settings=None, app=None):
     global entry_time_global, position_global, ema_trend_global, atr_value_global
 
-    if app:
-        set_gui_bridge(app)
-    else:
-        set_gui_bridge(None)
-
-    capital = float(gui_bridge.capital) if gui_bridge else settings.get(
-        "capital", 2000
-    )
+    capital = SETTINGS.get("starting_capital", 1000)
     start_capital = capital
 
     print_start_banner(capital)
@@ -479,10 +425,18 @@ def _run_bot_live_inner(settings=None, app=None):
 
     if app:
         settings["log_event"] = app.log_event
+        set_gui_bridge(app)
         start_capital = capital
         if hasattr(app, "sl_tp_status_var"):
             app.sl_tp_status_var.set("")
     
+    risk_manager = RiskManager(app, start_capital)
+    cfg = {}
+    for key in ("max_loss", "max_drawdown", "max_trades"):
+        if key in settings:
+            cfg[key] = settings[key]
+    if cfg:
+        risk_manager.configure(**cfg)
 
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
@@ -495,6 +449,7 @@ def _run_bot_live_inner(settings=None, app=None):
     live_trading = live_requested and not paper_mode
     settings["paper_mode"] = not live_trading
 
+    cooldown = CooldownManager(settings.get("cooldown", 3))
     # REMOVED: SessionFilter
 
     config = {
@@ -509,19 +464,7 @@ def _run_bot_live_inner(settings=None, app=None):
         "opt_confirm_delay": app.andac_opt_confirm_delay.get(),
         "opt_mtf_confirm": app.andac_opt_mtf_confirm.get(),
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
-        "opt_session_filter": app.andac_opt_session_filter.get(),
     }
-    from andac_entry_master import get_filter_config
-    filters = get_filter_config()
-    cooldown_after_exit = filters.get("cooldown_after_exit", settings.get("cooldown_after_exit", 120))
-    sl_tp_mode = filters.get("sl_mode", settings.get("sl_tp_mode", "adaptive"))
-    max_trades_hour = settings.get("max_trades_hour", 5)
-    fee_percent = settings.get("fee_percent", 0.075)
-    require_closed_candles = filters.get("require_closed_candles", True)
-    FEE_MODEL.taker_fee = fee_percent / 100
-
-    last_exit_time = 0.0
-    trade_times: list[float] = []
     adaptive_sl = AdaptiveSLManager()
 
     candles = []
@@ -531,6 +474,11 @@ def _run_bot_live_inner(settings=None, app=None):
     position_open = False
     current_position_direction = None
     last_printed_price = None
+    last_signal = None
+    last_signal_time = 0
+    entry_repeat_delay = settings.get("entry_repeat_delay", 3)
+    sl_mult = settings["stop_loss_atr_multiplier"]
+    tp_mult = settings["take_profit_atr_multiplier"]
 
     last_printed_pnl = None
     last_printed_price = None
@@ -542,8 +490,9 @@ def _run_bot_live_inner(settings=None, app=None):
 
     def process_candle(candle: dict) -> None:
         nonlocal candles, position, capital, last_printed_pnl, last_printed_price, \
-                 no_signal_printed, first_feed, previous_signal, position_entry_index, \
-                 entry_price, position_open, current_position_direction, last_exit_time
+                 last_signal, last_signal_time, no_signal_printed, first_feed, \
+                 previous_signal, position_entry_index, entry_price, \
+                 position_open, current_position_direction
         if not first_feed:
             first_feed = True
             if hasattr(app, "log_event"):
@@ -552,7 +501,7 @@ def _run_bot_live_inner(settings=None, app=None):
         if len(candles) > 100:
             candles.pop(0)
 
-        atr_value, ema, rsi_val, macd_cross = update_indicators(candles)
+        atr_value, ema, rsi_val = update_indicators(candles)
         atr_value_global = atr_value
         settings["ema_value"] = ema
 
@@ -563,19 +512,6 @@ def _run_bot_live_inner(settings=None, app=None):
 
         close_price = candle["close"]
         now = time.time()
-
-        current_index = len(candles) - 1
-        if position:
-            current_price = fetch_last_price()
-            if (
-                (position["side"] == "long" and current_price >= position["tp"]) or
-                (position["side"] == "short" and current_price <= position["tp"]) or
-                (position["side"] == "long" and current_price <= position["sl"]) or
-                (position["side"] == "short" and current_price >= position["sl"])
-            ):
-                capital = simulate_trade(position, current_price, current_index, settings, capital)
-                position = None
-                position_open = False
 
         if not is_within_active_timeframe(app):
             logger.info("⏳ Außerhalb der Handelszeit – kein Entry erlaubt")
@@ -598,11 +534,6 @@ def _run_bot_live_inner(settings=None, app=None):
         low_lb = min(lows) if lows else candle["low"]
         prev_close = recent[-2]["close"] if len(recent) > 1 else None
         prev_open = recent[-2]["open"] if len(recent) > 1 else None
-
-        if require_closed_candles and not candle.get("x", True):
-            logging.info("🕒 Candle noch nicht geschlossen – Signal verworfen.")
-            return
-
 
         indicator = {
             "rsi": rsi_val,
@@ -629,29 +560,12 @@ def _run_bot_live_inner(settings=None, app=None):
             logging.info(msg)
             if hasattr(app, "log_event"):
                 app.log_event(msg)
-        if entry_type and not live_trading and position is None:
-            entry_price = fetch_last_price()
-            amount = capital / entry_price
-            position = {
-                "entry": entry_price,
-                "amount": amount,
-                "side": entry_type,
-                "leverage": settings.get("leverage", 1),
-                "tp": entry_price * (1 + 0.01) if entry_type == "long" else entry_price * (1 - 0.01),
-                "sl": entry_price * (1 - 0.005) if entry_type == "long" else entry_price * (1 + 0.005),
-                "entry_index": len(candles) - 1,
-            }
-            logging.info(f"🧪 Simulierter Entry: {entry_type.upper()} @ {entry_price:.2f}")
-            position_open = True
-            position_entry_index = len(candles) - 1
         elif andac_signal.reasons:
             reason_msg = ", ".join(andac_signal.reasons)
             msg = f"[{stamp}] Signal verworfen: {reason_msg}"
             logging.info(msg)
             if hasattr(app, "log_event"):
                 app.log_event(msg)
-            if hasattr(app, "last_reason_var") and andac_signal.reasons:
-                app.last_reason_var.set(f"Verworfen wegen: {andac_signal.reasons[-1]}")
 
         # Timed Exit Logic for simulation mode
         if not live_trading and position_open:
@@ -668,6 +582,7 @@ def _run_bot_live_inner(settings=None, app=None):
                 )
                 pnl = new_capital - capital
                 capital = new_capital
+                risk_manager.update_loss(pnl)
                 app.update_pnl(pnl)
                 app.update_capital(capital)
                 app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
@@ -684,7 +599,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     f"[{now_time()}] \u23F1 Timed Exit: {direction} @ {exit_price:.2f} nach {hold_duration} Kerzen"
                 )
                 logger.info(
-                    f"💸 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
+                    f"\ud83d\udcb8 Simuliertes Kapital: ${capital:.2f} | Realisierter PnL: {pnl:.2f}"
                 )
                 return
 
@@ -695,6 +610,8 @@ def _run_bot_live_inner(settings=None, app=None):
                 app,
                 capital,
                 live_trading,
+                cooldown,
+                risk_manager,
                 last_printed_pnl,
                 last_printed_price,
                 settings,
@@ -709,43 +626,52 @@ def _run_bot_live_inner(settings=None, app=None):
             return
 
         if not position:
+            if cooldown.in_cooldown(now):
+                return
             if entry_type:
                 no_signal_printed = False
-                if now - last_exit_time < cooldown_after_exit:
-                    logging.info("⏳ Cooldown aktiv – kein neuer Entry")
-                    return
-                trade_times[:] = [t for t in trade_times if now - t < 3600]
-                if len(trade_times) >= max_trades_hour:
-                    logging.info("⏸ Entry-Limit erreicht – kein neuer Trade")
-                    return
                 entry = candle["close"]
                 slip = random.uniform(*FEE_MODEL.slippage_range)
                 entry_exec = entry * (1 + slip) if entry_type == "long" else entry * (1 - slip)
                 amount = capital * POSITION_SIZE
                 sl = tp = None
 
-                if sl_tp_mode == "manual":
+                if gui_bridge.manual_active:
                     sl = gui_bridge.manual_sl
                     tp = gui_bridge.manual_tp
-                else:
-                    try:
-                        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles)
-                    except Exception as e:
-                        logging.error("Adaptive SL Fehler: %s", e)
+                    if sl is None or tp is None:
+                        gui_bridge.set_manual_status(False)
                         sl = tp = None
+                    else:
+                        valid = sl < entry and tp > entry if entry_type == "long" else sl > entry and tp < entry
+                        if valid:
+                            gui_bridge.set_manual_status(True)
+                        else:
+                            gui_bridge.set_manual_status(False)
+                            sl = tp = None
+
+                if sl is None and tp is None and gui_bridge.auto_active:
+    try:
+        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles, tp_multiplier=tp_mult)
+        valid = (sl < entry and tp > entry) if entry_type == "long" else (sl > entry and tp < entry)
+        if not valid:
+            raise ValueError("Ungültige SL/TP-Relation")
+    except Exception as e:
+        logging.error(f"Adaptive SL Fehler – Fallback aktiviert: {e}")
+        if entry_type == "long":
+            sl = round(entry * 0.995, 2)
+            tp = round(entry * 1.01, 2)
+        else:
+            sl = round(entry * 1.005, 2)
+            tp = round(entry * 0.99, 2)
+    if sl is None or tp is None:
+        return
+        sl = round(entry * 1.005, 2)  # +0.5%
+        tp = round(entry * 0.99, 2)   # -1%
+
 
                 if sl is None or tp is None:
                     return
-
-                spread_buffer = entry * (fee_percent / 100)
-                if entry_type == "long":
-                    sl -= spread_buffer
-                    tp += spread_buffer
-                else:
-                    sl += spread_buffer
-                    tp -= spread_buffer
-
-
 
                 position = {
                     "side": entry_type,
@@ -775,27 +701,29 @@ def _run_bot_live_inner(settings=None, app=None):
                 }
                 position_entry_index = len(candles) - 1
                 entry_price = candle["close"]
-                tp_val = settings.get("manual_tp", None)
-                sl_val = settings.get("manual_sl", None)
-                if tp_val is not None:
-                    position["tp"] = (
-                        entry_price * (1 + tp_val / 100)
-                        if entry_type == "long"
-                        else entry_price * (1 - tp_val / 100)
-                    )
-                if sl_val is not None:
-                    position["sl"] = (
-                        entry_price * (1 - sl_val / 100)
-                        if entry_type == "long"
-                        else entry_price * (1 + sl_val / 100)
-                    )
-                if tp_val is not None or sl_val is not None:
+                # === Manuelles SL/TP aus GUI anwenden, falls aktiv
+                if settings.get("sl_tp_manual_active", False):
+                    tp_val = settings.get("manual_tp", None)
+                    sl_val = settings.get("manual_sl", None)
+                    if tp_val:
+                        position["tp"] = (
+                            entry_price * (1 + tp_val / 100)
+                            if entry_type == "long"
+                            else entry_price * (1 - tp_val / 100)
+                        )
+                    if sl_val:
+                        position["sl"] = (
+                            entry_price * (1 - sl_val / 100)
+                            if entry_type == "long"
+                            else entry_price * (1 + sl_val / 100)
+                        )
                     app.log_event(
                         f"🎯 Manuelles TP/SL gesetzt → TP: {position.get('tp', '–')} | SL: {position.get('sl', '–')}"
                     )
                 position_open = True
                 current_position_direction = entry_type.upper()
-                trade_times.append(now)
+                last_signal = entry_type
+                last_signal_time = now
 
                 msg = f"[{stamp}] Trade platziert: {entry_type.upper()} ({entry_exec:.2f})"
                 logging.info(msg)
@@ -810,8 +738,6 @@ def _run_bot_live_inner(settings=None, app=None):
                         res = open_position(direction, amount)
                         if res is None:
                             raise RuntimeError("Order placement failed")
-                        if hasattr(app, "send_status_to_gui"):
-                            app.send_status_to_gui("entry_opened", position)
                     except Exception as e:
                         logging.error("Orderplatzierung fehlgeschlagen: %s", e)
             else:
@@ -820,6 +746,8 @@ def _run_bot_live_inner(settings=None, app=None):
                     no_signal_printed = True
 
     candle_queue = get_candle_queue()
+    worker = SignalWorker(process_candle, queue_obj=candle_queue)
+    worker.start()
 
     if not data_provider._CANDLE_WS_STARTED:
         start_candle_websocket(interval_setting)
@@ -837,7 +765,7 @@ def _run_bot_live_inner(settings=None, app=None):
                 break
 
     logging.info(
-        "Candle queue initialisiert (%s Candles im Buffer)", candle_queue.qsize()
+        "Candle-Worker gestartet (%s Candles im Buffer)", worker.queue.qsize()
     )
 
     ATR_REQUIRED = 14
@@ -850,11 +778,8 @@ def _run_bot_live_inner(settings=None, app=None):
         gui_bridge.update_status("✅ Bereit")
 
     while capital > 0 and not getattr(app, "force_exit", False):
-        if getattr(app, "should_stop", False):
-            logging.info("\U0001F6D1 Bot-Stop erkannt – beende Live-Modus.")
-            if hasattr(app, "send_status_to_gui"):
-                app.send_status_to_gui("status", "stopped")
-            return
+        if not worker.is_alive():
+            worker.start()
         if not getattr(app, "running", False):
             time.sleep(1)
             continue
@@ -864,14 +789,11 @@ def _run_bot_live_inner(settings=None, app=None):
             )
             time.sleep(1)
             continue
-        # Verarbeite alle verfügbaren Candles aus der Queue
-        while True:
-            try:
-                process_candle(candle_queue.get_nowait())
-            except queue.Empty:
-                break
-
-        backlog = candle_queue.qsize()
+        risk_manager.update_capital(capital)
+        if risk_manager.check_loss_limit() or risk_manager.check_drawdown_limit():
+            time.sleep(1)
+            continue
+        backlog = worker.queue.qsize()
         if backlog > 5:
             if not candle_warning_printed:
                 logging.warning("⚠️ Candle-Backlog > %s – mögliche Latenz!", backlog)
@@ -911,7 +833,7 @@ def simulate_trade(position: dict, exit_price: float, candle_index: int,
                    settings: dict, capital: float) -> float:
     """Simulate a trade outcome and update capital/history."""
 
-    fee_rate = FEE_MODEL.taker_fee
+    fee_rate = settings.get("fee_percent", 0.04) / 100
     entry = position["entry"]
     qty = position["amount"]
     side = position["side"]

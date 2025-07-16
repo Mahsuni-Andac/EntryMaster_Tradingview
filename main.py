@@ -10,14 +10,15 @@ import tkinter as tk
 from colorama import Fore, Style, init
 from central_logger import setup_logging
 
-# Bot wrapper from andac_entry_master
-from andac_entry_master import EntryMasterBot
+from config import SETTINGS
 from config_manager import config
+from auto_recommender import AutoRecommender
 from system_monitor import SystemMonitor
 from trading_gui_core import TradingGUI
 from trading_gui_logic import TradingGUILogicMixin
 from api_key_manager import APICredentialManager
 from gui_bridge import GUIBridge
+from realtime_runner import run_bot_live
 from tkinter import messagebox
 from requests.exceptions import RequestException
 from global_state import entry_time_global, ema_trend_global, atr_value_global
@@ -29,7 +30,6 @@ price_var = data_provider.price_var
 
 init(autoreset=True)
 setup_logging()
-bot = EntryMasterBot()
 
 class EntryMasterGUI(TradingGUI, TradingGUILogicMixin):
     pass
@@ -41,15 +41,15 @@ def load_settings_from_file(filename="tuning_config.json"):
     try:
         with open(filename, "r", encoding="utf-8") as f:
             data = json.load(f)
-        bot.apply_settings(data)
+        SETTINGS.update(data)
         config.load_json(filename)
     except Exception as e:
         print(f"⚠️ Konnte {filename} nicht laden: {e}")
 
-def safe_run_bot(gui):
-    """Start EntryMasterBot with GUI-friendly error handling."""
+def safe_run_bot_live(settings, gui):
+    """Start run_bot_live with GUI-friendly error handling."""
     try:
-        bot.start(gui)
+        run_bot_live(settings, gui)
     except RequestException:
         messagebox.showerror(
             "Startfehler",
@@ -69,11 +69,11 @@ def bot_control(gui):
         if cmd == "start":
             if not gui.running:
                 load_settings_from_file()
-                bot.apply_settings({"paper_mode": not gui.live_trading.get()})
+                SETTINGS["paper_mode"] = not gui.live_trading.get()
                 mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
                 print(f"🚀 Bot gestartet: {mode_text}")
                 gui.running = True
-                threading.Thread(target=safe_run_bot, args=(gui,), daemon=True).start()
+                threading.Thread(target=safe_run_bot_live, args=(SETTINGS, gui), daemon=True).start()
             else:
                 print("⚠️ Bot läuft bereits")
         elif cmd == "stop":
@@ -96,7 +96,7 @@ def bot_control(gui):
                         capital = float(gui.capital_var.get())
                     except Exception:
                         pass
-                leverage = bot.settings.get("leverage", 20)
+                leverage = SETTINGS.get("leverage", 20)
                 if hasattr(gui, "multiplier_var") and hasattr(gui.multiplier_var, "get"):
                     try:
                         leverage = float(gui.multiplier_var.get())
@@ -140,14 +140,12 @@ def on_gui_start(gui):
         print("⚠️ Bot läuft bereits (GUI-Schutz)")
         return
     load_settings_from_file()
-    bot.apply_settings({
-        "interval": gui.interval.get(),
-        "paper_mode": not gui.live_trading.get(),
-    })
+    SETTINGS["interval"] = gui.interval.get()
+    SETTINGS["paper_mode"] = not gui.live_trading.get()
     mode_text = "LIVE-MODUS" if gui.live_trading.get() else "SIMULATIONS-MODUS"
     print(f"🚀 Bot gestartet: {mode_text}")
     gui.running = True
-    threading.Thread(target=safe_run_bot, args=(gui,), daemon=True).start()
+    threading.Thread(target=safe_run_bot_live, args=(SETTINGS, gui), daemon=True).start()
 
 def main():
     load_settings_from_file()
@@ -156,9 +154,11 @@ def main():
     # Candle WebSocket will start automatically when needed
     cred_manager = APICredentialManager()
     gui = EntryMasterGUI(root, cred_manager=cred_manager)
-    gui_bridge = GUIBridge(gui_instance=gui, bot=bot)
+    gui_bridge = GUIBridge(gui_instance=gui)
     gui.callback = lambda: on_gui_start(gui)
 
+    gui.auto_recommender = AutoRecommender(gui)
+    gui.auto_recommender.start()
     gui.system_monitor = SystemMonitor(gui)
     gui.system_monitor.start()
 

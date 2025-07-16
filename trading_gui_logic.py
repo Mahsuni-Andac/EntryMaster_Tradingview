@@ -5,7 +5,6 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
-import logging
 
 TUNING_FILE = "tuning_config.json"
 
@@ -14,8 +13,7 @@ class TradingGUILogicMixin:
         try:
             from datetime import datetime
             from global_state import ema_trend_global, atr_value_global
-            # SETTINGS moved to andac_entry_master
-            from andac_entry_master import SETTINGS
+            from config import SETTINGS
 
             volatility = atr_value_global
             if volatility is None:
@@ -44,7 +42,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
-                self.andac_opt_session_filter,
                 self.use_doji_blocker,
                 self.use_time_filter,
             ]
@@ -95,7 +92,6 @@ class TradingGUILogicMixin:
                 "opt_confirm_delay": self.andac_opt_confirm_delay.get(),
                 "opt_mtf_confirm": self.andac_opt_mtf_confirm.get(),
                 "opt_volumen_strong": self.andac_opt_volumen_strong.get(),
-                "opt_session_filter": self.andac_opt_session_filter.get(),
             })
 
             self.log_event("✅ Auto-Empfehlungen angewendet")
@@ -113,7 +109,6 @@ class TradingGUILogicMixin:
                 self.andac_opt_confirm_delay,
                 self.andac_opt_mtf_confirm,
                 self.andac_opt_volumen_strong,
-                self.andac_opt_session_filter,
                 self.use_time_filter,
                 self.use_doji_blocker,
             ]:
@@ -142,68 +137,9 @@ class TradingGUILogicMixin:
         if capital <= 0:
             self.log_event("⚠️ Einsatz muss größer 0 sein")
             return
-        risk_pct = self._get_safe_float(self.risk_trade_pct, 3.0)
-        drawdown_pct = self._get_safe_float(self.max_drawdown_pct, 15.0)
-        cooldown = int(self.cooldown_minutes.get() or 2)
-
-        try:
-            entry_cooldown = int(self.entry_cooldown_seconds.get())
-            cooldown_after_exit = int(self.cooldown_after_exit.get())
-            sl_tp_mode = self.sl_tp_mode.get().lower()
-            max_trades_hour = int(self.max_trades_per_hour.get())
-            fee_percent = float(self.fee_model.get())
-        except Exception:
-            self.log_event("❗ Ungültige Expertenwerte – Standardwerte werden verwendet.")
-            entry_cooldown = 60
-            cooldown_after_exit = 120
-            sl_tp_mode = "adaptive"
-            max_trades_hour = 5
-            fee_percent = 0.075
-
-        if self.manual_sl_var.get() and self.manual_tp_var.get():
-            sl_tp_mode = "manual"
-            self.sl_tp_mode.set("manual")
-
         interval = self.interval.get()
         if hasattr(self, "bridge") and self.bridge is not None:
-            self.bridge.update_params(
-                multiplier,
-                auto_multi,
-                capital,
-                interval,
-                risk_pct,
-                drawdown_pct,
-                cooldown,
-            )
-        # SETTINGS has been relocated
-        from andac_entry_master import SETTINGS
-        SETTINGS.update(
-            {
-                "risk_per_trade": risk_pct,
-                "drawdown_pct": drawdown_pct,
-                "cooldown": cooldown,
-                "entry_cooldown": entry_cooldown,
-                "cooldown_after_exit": cooldown_after_exit,
-                "sl_tp_mode": sl_tp_mode,
-                "max_trades_hour": max_trades_hour,
-                "fee_percent": fee_percent,
-                "opt_session_filter": self.andac_opt_session_filter.get(),
-            }
-        )
-
-        filters = {
-            "use_adaptive_sl": sl_tp_mode == "adaptive",
-            "require_closed_candles": self.require_closed_candles.get(),
-            "cooldown_after_exit": cooldown_after_exit,
-            "sl_mode": sl_tp_mode,
-            "opt_session_filter": self.andac_opt_session_filter.get(),
-        }
-        try:
-            # Filter configuration helper is now bundled in andac_entry_master
-            from andac_entry_master import set_filter_config
-            set_filter_config(filters)
-        except Exception:
-            pass
+            self.bridge.update_params(multiplier, auto_multi, capital, interval)
         if hasattr(self, "callback"):
             self.callback()
 
@@ -241,59 +177,6 @@ class TradingGUILogicMixin:
         else:
             self.force_exit = True
             self.running = False
-
-    def manual_yolo_entry(self):
-        from andac_entry_master import SETTINGS
-        from data_provider import get_live_candles, fetch_last_price
-        from realtime_runner import simulate_trade
-        from tkinter import messagebox
-        import time
-
-        candles = get_live_candles(10)
-        if len(candles) < 10:
-            messagebox.showwarning("Nicht genug Daten", "Mindestens 10 Candles nötig.")
-            return
-
-        last_10 = candles[-10:]
-        avg_open = sum(c["open"] for c in last_10) / 10
-        avg_close = sum(c["close"] for c in last_10) / 10
-        direction = "long" if avg_close > avg_open else "short"
-
-        price = fetch_last_price()
-        if price is None:
-            messagebox.showerror("Keine Daten", "Preis konnte nicht ermittelt werden.")
-            return
-
-        capital = SETTINGS.get("capital", 1000)
-        leverage = SETTINGS.get("leverage", 20)
-        amount = capital * leverage / price
-
-        sl = price * (0.995 if direction == "long" else 1.005)
-        tp = price * (1.01 if direction == "long" else 0.99)
-
-        position = {
-            "entry": price,
-            "amount": amount,
-            "side": direction,
-            "tp": tp,
-            "sl": sl,
-            "leverage": leverage,
-            "entry_index": 0,
-        }
-
-        logging.info(
-            f"[{time.strftime('%H:%M:%S')}] \U0001F680 Trend-Entry (10C): {direction.upper()} @ {price:.2f}"
-        )
-
-        if SETTINGS.get("paper_mode", True):
-            current_index = 0
-            SETTINGS["capital"] = simulate_trade(position, price, current_index, SETTINGS, capital)
-            self.update_capital(SETTINGS["capital"])
-        else:
-            from andac_entry_master import open_position
-            res = open_position("BUY" if direction == "long" else "SELL", amount)
-            if not res:
-                messagebox.showerror("Fehlgeschlagen", "Live-Order konnte nicht gesendet werden.")
 
     def update_live_trade_pnl(self, pnl):
         color = "green" if pnl >= 0 else "red"
@@ -507,69 +390,22 @@ class TradingGUILogicMixin:
         except:
             return var.get()
 
-    def _get_safe_float(self, var, default=None):
-        try:
-            return float(var.get().replace(",", "."))
-        except (ValueError, AttributeError):
-            return default
-
     def toggle_manual_sl_tp(self):
-        current = self.sl_tp_manual_active.get()
-        self.sl_tp_manual_active.set(not current)
-        self.update_manual_sl_tp_status()
-        state = "aktiviert" if self.sl_tp_manual_active.get() else "deaktiviert"
-        self.log_event(f"📝 Manuelles SL/TP {state}")
-
-    def update_manual_sl_tp_status(self):
-        from andac_entry_master import SETTINGS
-
-        if self.sl_tp_manual_active.get():
-            if hasattr(self, "toggle_sl_tp_button"):
-                self.toggle_sl_tp_button.config(text="SL/TP EIN")
-            msg = "✅ SL/TP Aktiv"
-            color = "green"
-            SETTINGS["sl_tp_manual_active"] = True
-        else:
-            if hasattr(self, "toggle_sl_tp_button"):
-                self.toggle_sl_tp_button.config(text="SL/TP AUS")
-            msg = "❌ Aus: Gegensignal ist dein einziger Exit ⚠️"
-            color = "red"
-            SETTINGS["sl_tp_manual_active"] = False
-
-        if hasattr(self, "sl_tp_hint_label"):
-            self.sl_tp_hint_label.config(text=msg, foreground=color)
-        if hasattr(self, "sl_tp_status_var"):
-            self.sl_tp_status_var.set(msg)
-
-    def save_manual_sl(self):
-        from andac_entry_master import SETTINGS
-
-        try:
-            sl = float(self.manual_sl_var.get())
-            if sl <= 0:
-                raise ValueError
-            SETTINGS["manual_sl"] = sl
-            messagebox.showinfo("SL gespeichert", f"Stop Loss: {sl:.2f} % gesetzt.")
-        except Exception:
-            messagebox.showerror(
-                "Ungültiger SL",
-                "Bitte gültigen SL in Prozent eingeben (z. B. 0.5)",
-            )
-
-    def save_manual_tp(self):
-        from andac_entry_master import SETTINGS
-
-        try:
-            tp = float(self.manual_tp_var.get())
-            if tp <= 0:
-                raise ValueError
-            SETTINGS["manual_tp"] = tp
-            messagebox.showinfo("TP gespeichert", f"Take Profit: {tp:.2f} % gesetzt.")
-        except Exception:
-            messagebox.showerror(
-                "Ungültiger TP",
-                "Bitte gültigen TP in Prozent eingeben (z. B. 1.0)",
-            )
+        ok = False
+        if hasattr(self, "model"):
+            sl = self.manual_sl_var.get()
+            tp = self.manual_tp_var.get()
+            ok = self.model.toggle_manual_sl_tp(sl, tp)
+        if not ok:
+            if hasattr(self, "manual_sl_button"):
+                self.manual_sl_button.config(foreground="red")
+            self.log_event("❌ Ungültige manuelle SL/TP Werte")
+            return
+        if hasattr(self, "manual_sl_button"):
+            self.manual_sl_button.config(foreground="blue")
+        if hasattr(self, "auto_sl_button"):
+            self.auto_sl_button.config(foreground="black")
+        self.log_event("📝 Manuelle SL/TP aktiviert")
 
     def activate_auto_sl_tp(self):
         if hasattr(self, "model"):
@@ -577,6 +413,10 @@ class TradingGUILogicMixin:
         else:
             self.sl_tp_auto_active.set(True)
             self.sl_tp_manual_active.set(False)
+        if hasattr(self, "auto_sl_button"):
+            self.auto_sl_button.config(foreground="blue")
+        if hasattr(self, "manual_sl_button"):
+            self.manual_sl_button.config(foreground="black")
         self.log_event("⚙️ Adaptive SL/TP aktiviert")
 
     def set_auto_sl_status(self, ok: bool) -> None:
@@ -586,6 +426,9 @@ class TradingGUILogicMixin:
             self.sl_tp_auto_active.set(ok)
             if ok:
                 self.sl_tp_manual_active.set(False)
+        if hasattr(self, "auto_sl_button"):
+            color = "green" if ok else "red"
+            self.auto_sl_button.config(foreground=color)
 
     def set_manual_sl_status(self, ok: bool) -> None:
         if hasattr(self, "model"):
@@ -594,13 +437,16 @@ class TradingGUILogicMixin:
             self.sl_tp_manual_active.set(ok)
             if ok:
                 self.sl_tp_auto_active.set(False)
+        if hasattr(self, "manual_sl_button"):
+            color = "green" if ok else "red"
+            self.manual_sl_button.config(foreground=color)
 
 def stop_and_reset(self):
     if hasattr(self, "model"):
-        self.model.should_stop = True
+        self.model.force_exit = True
         self.model.running = False
     else:
-        self.should_stop = True
+        self.force_exit = True
         self.running = False
     try:
         self.log_event("🧹 Bot gestoppt – Keine Rücksetzung der Konfiguration vorgenommen.")
