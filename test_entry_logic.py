@@ -1,5 +1,5 @@
 import unittest
-from entry_logic import should_enter, _MASTER
+from andac_entry_master import should_enter, _MASTER
 
 class EntryLogicTest(unittest.TestCase):
     def test_entry_signal_rsi_engulfing(self):
