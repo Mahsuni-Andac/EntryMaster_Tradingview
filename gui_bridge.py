@@ -153,11 +153,13 @@ class GUIBridge:
 
         lookback_var = getattr(self.model, "lookback_var", None)
         toleranz_var = getattr(self.model, "toleranz_var", None)
+        volume_var = getattr(self.model, "volume_var", None)
         breakout_var = getattr(self.model, "breakout_var", None)
 
         SETTINGS.update({
             "lookback": get_safe_int(lookback_var, 3),
             "toleranz": get_safe_float(toleranz_var, 0.01),
+            "min_volume": get_safe_float(volume_var, 0.0),
             "breakout_only": breakout_var.get() if breakout_var else False,
         })
 

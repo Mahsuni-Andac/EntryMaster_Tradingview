@@ -96,6 +96,7 @@ class TradingGUI(TradingGUILogicMixin):
             "auto_rec": ("Auto Empfehlungen", self.auto_apply_recommendations),
             "auto_multi": ("Auto Multiplikator", self.auto_multiplier),
             "safe": ("Sicherheitsfilter", self.andac_opt_safe_mode),
+            "vol": ("Volumenfilter", self.andac_opt_volumen_strong),
             "paper": ("Paper-Trading aktiv", self.paper_mode),
             "saved": ("Konfiguration gespeichert", None),
         }
