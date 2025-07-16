@@ -152,7 +152,6 @@ EntryMaster_Tradingview/
 ├── central_logger.py
 ├── config.py
 ├── console_status.py
-├── cooldown_manager.py
 ├── data_provider.py
 ├── global_state.py
 ├── gui_bridge.py

@@ -352,26 +352,6 @@ class AdaptiveSLManager:
         return float(sl), float(tp)
 
 
-# ---------------------------------------------------------------------------
-# CooldownManager (from cooldown_manager.py)
-class CooldownManager:
-    def __init__(self, cooldown_minutes: int = 3, debug: bool = False) -> None:
-        self.cooldown_duration = cooldown_minutes * 60
-        self.cooldown_until = 0.0
-        self.debug = debug
-
-    def register_sl(self, time_of_sl: float) -> None:
-        self.cooldown_until = time_of_sl + self.cooldown_duration
-        if self.debug:
-            end_time = datetime.fromtimestamp(self.cooldown_until)
-            print(f"\uD83D\uDD34 Cooldown aktiviert bis: {end_time.strftime('%H:%M:%S')}")
-
-    def in_cooldown(self, current_time: float) -> bool:
-        return current_time < self.cooldown_until
-
-    def reset(self) -> None:
-        self.cooldown_until = 0.0
-
 
 # ---------------------------------------------------------------------------
 # Entry/Exit handler wrappers (from entry_handler.py & exit_handler.py)
