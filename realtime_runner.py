@@ -546,7 +546,7 @@ def _run_bot_live_inner(settings=None, app=None):
         "opt_volumen_strong": app.andac_opt_volumen_strong.get(),
         "opt_session_filter": app.andac_opt_session_filter.get(),
     }
-    from strategy import get_filter_config
+    from andac_entry_master import get_filter_config
     filters = get_filter_config()
     entry_cooldown = settings.get("entry_cooldown", 60)
     cooldown_after_exit = filters.get("cooldown_after_exit", settings.get("cooldown_after_exit", 120))

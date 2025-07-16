@@ -457,10 +457,50 @@ class RiskManager:
         self.total_loss = 0.0
         self.max_risk = 3.0
         self.drawdown_limit = 15.0
+        self.max_loss = 0.0
+        self.max_drawdown = 0.0
+        self.drawdown_pct = 0.0
 
     def set_limits(self, max_risk: float, drawdown_limit: float) -> None:
         self.max_risk = max_risk
         self.drawdown_limit = drawdown_limit
+
+    def configure(self, **cfg: Any) -> None:
+        for key, value in cfg.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+    def set_start_capital(self, capital: float) -> None:
+        self.start_capital = capital
+        self.current_capital = capital
+        self.highest_capital = capital
+        self.total_loss = 0.0
+
+    def update_capital(self, capital: float) -> None:
+        self.current_capital = capital
+        if capital > self.highest_capital:
+            self.highest_capital = capital
+
+    def update_loss(self, pnl: float) -> None:
+        if pnl < 0:
+            self.total_loss += abs(pnl)
+
+    def check_loss_limit(self) -> bool:
+        return self.max_loss > 0 and self.total_loss >= self.max_loss
+
+    def check_drawdown_limit(self) -> bool:
+        if self.max_drawdown <= 0:
+            return False
+        return (self.start_capital - self.current_capital) >= self.max_drawdown
+
+    def check_drawdown_pct_limit(self) -> bool:
+        if self.drawdown_pct <= 0 or self.start_capital == 0:
+            return False
+        dd_pct = (self.start_capital - self.current_capital) / self.start_capital * 100
+        return dd_pct >= self.drawdown_pct
+
+    def is_risk_too_high(self, expected_loss: float, capital: float) -> bool:
+        return expected_loss > capital * (self.max_risk / 100)
 
     def register_loss(self, loss_amount: float) -> bool:
         self.total_loss += loss_amount
