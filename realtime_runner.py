@@ -86,9 +86,8 @@ def update_indicators(candles):
 
 
 def handle_existing_position(position, candle, app, capital, live_trading,
-                             risk_manager, last_printed_pnl,
-                             last_printed_price, settings, now,
-                             signal=None, current_index=None):
+                             last_printed_pnl, last_printed_price,
+                             settings, now, signal=None, current_index=None):
     current = candle["close"]
     entry = position["entry"]
     pnl_live = calculate_futures_pnl(
@@ -307,12 +306,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
         capital = new_capital
         check_plausibility(pnl, old_cap, capital, position["amount"])
 
-        risk_manager.update_loss(pnl)
-        if pnl < 0:
-            loss_val = -pnl
-            risk_ok = risk_manager.register_loss(loss_val)
-            if not risk_ok:
-                gui_bridge.stop_bot()
 
         app.update_pnl(pnl)
         app.update_capital(capital)
@@ -364,7 +357,6 @@ def handle_existing_position(position, candle, app, capital, live_trading,
 
     return position, capital, last_printed_pnl, last_printed_price, False
 
-from andac_entry_master import RiskManager
 from console_status import (
     print_start_banner,
     print_stop_banner,
@@ -492,24 +484,6 @@ def _run_bot_live_inner(settings=None, app=None):
         if hasattr(app, "sl_tp_status_var"):
             app.sl_tp_status_var.set("")
     
-    risk_manager = RiskManager(app, start_capital)
-    cfg = {}
-    for key in (
-        "max_loss",
-        "max_drawdown",
-        "max_trades",
-        "risk_per_trade",
-        "drawdown_pct",
-    ):
-        if key in settings:
-            cfg[key] = settings[key]
-    if cfg:
-        risk_manager.configure(**cfg)
-    risk_manager.set_limits(
-        settings.get("risk_per_trade", 3.0),
-        settings.get("drawdown_pct", 15.0),
-    )
-    risk_manager.set_start_capital(start_capital)
 
     multiplier = gui_bridge.multiplier
     capital = float(gui_bridge.capital)
@@ -701,12 +675,6 @@ def _run_bot_live_inner(settings=None, app=None):
                 )
                 pnl = new_capital - capital
                 capital = new_capital
-                risk_manager.update_loss(pnl)
-                if pnl < 0:
-                    loss_val = -pnl
-                    risk_ok = risk_manager.register_loss(loss_val)
-                    if not risk_ok:
-                        gui_bridge.stop_bot()
                 app.update_pnl(pnl)
                 app.update_capital(capital)
                 app.update_last_trade(direction.lower(), entry_price, exit_price, pnl)
@@ -734,7 +702,6 @@ def _run_bot_live_inner(settings=None, app=None):
                 app,
                 capital,
                 live_trading,
-                risk_manager,
                 last_printed_pnl,
                 last_printed_price,
                 settings,
@@ -788,12 +755,7 @@ def _run_bot_live_inner(settings=None, app=None):
                     sl += spread_buffer
                     tp -= spread_buffer
 
-                expected_loss = abs(entry_exec - sl) / entry_exec * leverage * amount
-                if risk_manager.is_risk_too_high(expected_loss, capital):
-                    logging.warning("🚫 Risiko zu hoch – Trade abgelehnt.")
-                    if hasattr(app, "log_event"):
-                        app.log_event("🚫 Risiko zu hoch – Trade abgelehnt.")
-                    return
+
 
                 position = {
                     "side": entry_type,
@@ -918,14 +880,6 @@ def _run_bot_live_inner(settings=None, app=None):
             print(
                 f"🧪 Letzter Feed-Eingang vor {time.time() - global_state.last_feed_time:.1f} Sekunden"
             )
-            time.sleep(1)
-            continue
-        risk_manager.update_capital(capital)
-        if (
-            risk_manager.check_loss_limit()
-            or risk_manager.check_drawdown_limit()
-            or risk_manager.check_drawdown_pct_limit()
-        ):
             time.sleep(1)
             continue
         backlog = worker.queue.qsize()
