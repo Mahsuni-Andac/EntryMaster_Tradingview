@@ -651,27 +651,32 @@ def _run_bot_live_inner(settings=None, app=None):
                             sl = tp = None
 
                 if sl is None and tp is None and gui_bridge.auto_active:
-    try:
-        sl, tp = adaptive_sl.get_adaptive_sl_tp(entry_type, entry, candles, tp_multiplier=tp_mult)
-        valid = (sl < entry and tp > entry) if entry_type == "long" else (sl > entry and tp < entry)
-        if not valid:
-            raise ValueError("Ungültige SL/TP-Relation")
-    except Exception as e:
-        logging.error(f"Adaptive SL Fehler – Fallback aktiviert: {e}")
-        if entry_type == "long":
-            sl = round(entry * 0.995, 2)
-            tp = round(entry * 1.01, 2)
-        else:
-            sl = round(entry * 1.005, 2)
-            tp = round(entry * 0.99, 2)
-    if sl is None or tp is None:
-        return
-        sl = round(entry * 1.005, 2)  # +0.5%
-        tp = round(entry * 0.99, 2)   # -1%
-
-
-                if sl is None or tp is None:
-                    return
+                    try:
+                        sl, tp = adaptive_sl.get_adaptive_sl_tp(
+                            entry_type,
+                            entry,
+                            candles,
+                            tp_multiplier=tp_mult,
+                        )
+                        valid = (
+                            sl < entry and tp > entry
+                            if entry_type == "long"
+                            else sl > entry and tp < entry
+                        )
+                        if not valid:
+                            raise ValueError("Ungültige SL/TP-Relation")
+                    except Exception as e:
+                        logging.error(
+                            f"Adaptive SL Fehler – Fallback aktiviert: {e}"
+                        )
+                        if entry_type == "long":
+                            sl = round(entry * 0.995, 2)
+                            tp = round(entry * 1.01, 2)
+                        else:
+                            sl = round(entry * 1.005, 2)
+                            tp = round(entry * 0.99, 2)
+                    if sl is None or tp is None:
+                        return
 
                 position = {
                     "side": entry_type,
